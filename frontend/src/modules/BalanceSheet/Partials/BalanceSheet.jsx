@@ -1619,7 +1619,7 @@ const DesignT = styled.div`
     font-size: 20px;
     color: white;
     cursor: pointer;
-    background: #990000;
+    background: #065F46;
     padding: 15px;
     text-align: center;
   };

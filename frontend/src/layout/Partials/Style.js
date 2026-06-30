@@ -125,8 +125,8 @@ export const HeaderNav = styled.div`
     padding-left: 10px;
     font-size: 20px;
     margin-left: 10px;
-    color: #990000;
     font-weight: 800;
+    color: #065F46;
     visibility: visible;
     opacity: 1;
     width: 100%;
@@ -258,7 +258,7 @@ export const SideMenuLayout = styled(Layout.Sider)`
   .ant-menu-light:not(.ant-menu-horizontal)
     .ant-menu-item:not(.ant-menu-item-selected):active {
     color: white !important;
-    background-color: #990000 !important;
+    background-color: #065F46 !important;
     border-radius: 10px !important;
   }
 

@@ -40,7 +40,7 @@ import FundLease from "@modules/Fund/FundLease";
 import ViewProfileFundLease from "./ViewProfileFundLease";
 
 const CardStyle = styled.div`
-  border: 2px solid #990000;
+  border: 2px solid #065F46;
   /* background-color: #fff; */
   backdrop-filter: blur(10px);
   border-radius: 20px;

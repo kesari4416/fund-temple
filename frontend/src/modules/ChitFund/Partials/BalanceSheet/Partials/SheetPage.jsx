@@ -430,7 +430,7 @@ export const ChitSheetStyle = styled.div`
    .Titleshow {
     text-align: center;
     padding: 15px;
-    background-color: #990000;
+    background-color: #065F46;
     color: #fff;
     font-size: 18px;
     font-weight: 700;

@@ -126,7 +126,7 @@ const RegisterForm = ({ handleSignIn }) => {
               </StyledButton>
             </Flex>
             <Flex center={'true'}>
-            <p>Already Have An Account ? <span style={{ color: "#990000" }} onClick={TakeToSignIn}>Sign In</span></p>
+            <p>Already Have An Account ? <span style={{ color: "#065F46" }} onClick={TakeToSignIn}>Sign In</span></p>
             </Flex>
           </Form>
         </SignInCard>

@@ -8,7 +8,7 @@ const TotalStyle = styled.div`
     height: 88px;
   }
   .ant-spin .ant-spin-dot-item{
-    background-color: #990000;
+    background-color: #065F46;
   }
 `
 

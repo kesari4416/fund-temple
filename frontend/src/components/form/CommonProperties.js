@@ -16,6 +16,6 @@ export const Styles= {
     BtnHeight:'50px',
     BtnSize:'16px',
     BtnWeight:'600',
-    BrowserColor:'#990000',
+    BrowserColor:'#065F46',
     Browserweight:'600'
 }

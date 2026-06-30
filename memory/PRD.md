@@ -65,6 +65,10 @@ Business rule clarified with the user:
 - [x] API endpoints for pending/recompute/summary
 - [x] PendingPenaltyList page wired to real API
 - [x] Interest year-condition bug fixed
+- [x] App-wide visual refresh: emerald + saffron-gold theme (replaces red/maroon)
+- [x] Plus Jakarta Sans body font, Fraunces for headings
+- [x] Table styling refresh: green-tinted headers, zebra striping, hover row, larger row padding
+- [x] Sign-in page: soft mint-cream background with green/gold radial gradients, emerald button
 
 ## Backlog / Future
 - P1: Add a daily scheduled job (django-apscheduler is already installed)

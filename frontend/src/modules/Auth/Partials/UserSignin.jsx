@@ -14,7 +14,10 @@ export const Wrapper = styled.div`
   width: 100%;
   margin:auto;
   display:grid;
-  background: #FFF5F5;;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(212, 160, 23, 0.10), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(6, 95, 70, 0.10), transparent 60%),
+    #F4F8F5;
 `
 
 const SignInCard = styled.div`
@@ -26,7 +29,7 @@ const SignInCard = styled.div`
   margin: auto;
   /* height: 50%; */
   border-radius: 20px;
-  box-shadow: 4px 4px 20px 0px #F3BC2E40;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(6,95,70,0.06);
 `
 
 const UserSignin = () => {
