@@ -11,6 +11,7 @@ GET  /api/penalty/summary/        -> summary numbers only (no item list)
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import AuthenticationFailed
 
 from token_app.views import token_checking
 from management.models import ManagementDetails
@@ -19,8 +20,13 @@ from amount.penalty_engine import recompute_all, PENALTY_PER_MONTH
 
 
 def _require_auth(request):
-    rejin = token_checking(request)
-    if not rejin or not rejin.is_active:
+    try:
+        rejin = token_checking(request)
+    except AuthenticationFailed:
+        return None, Response(
+            {"message": "Not Authorized"}, status=status.HTTP_401_UNAUTHORIZED
+        )
+    if not rejin or (hasattr(rejin, "is_active") and not rejin.is_active):
         return None, Response(
             {"message": "Not Authorized"}, status=status.HTTP_401_UNAUTHORIZED
         )
