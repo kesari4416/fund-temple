@@ -47,6 +47,25 @@ Business rule clarified with the user:
 3. **`PendingPenaltyList.jsx`** — was a hardcoded mock. Wired to the new
    `/api/penalty/pending/` endpoint with category filter, search,
    "Recompute" button and live total.
+4. **Layout overlap** — `SideMenuLayout` was `position: fixed` but the
+   right-side `<Layout>` had no offset → header text and home image
+   rendered under the sidebar.  Added `ContentLayout` styled component
+   with `margin-left: 280px` (or 80 when collapsed), sticky TopHeader
+   with z-index, `BodyContent` switched from `height: 80vh` to
+   `min-height: calc(100vh - 70px)`, home image bounded by
+   `objectFit: contain` and `maxHeight: calc(100vh - 180px)`,
+   NavHeader temple-name uses flex + ellipsis.
+5. **Chit-Fund EMI double-counting** (`collection/views.py` lines 624-632)
+   — for Installment-Interest payments, `cash_inhand_amount` was
+   adding both `temp_family.amount` (full EMI, already contains the
+   interest portion) AND `temp_family.interst_amount` again, inflating
+   cash-in-hand by the interest amount on every EMI payment.  Fixed to
+   only add `amount + penalty_amount`.
+6. **Chit-Fund loan edit not re-applied** (`interest/views.py` line 413-419)
+   — when editing an existing chit-fund interest (loan), the old principal
+   was reversed from `cash_inhand_amount` and `principal_given_amount`
+   but the new principal was never re-applied.  Editing left chit-fund
+   accounting out of sync.  Now reverses old AND applies new.
 
 ## New API endpoints
 - `GET  /api/penalty/pending/`   → list members with pending penalty

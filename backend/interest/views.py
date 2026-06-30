@@ -414,9 +414,15 @@ def edit_interest_given_details(request,pk):
                     chit_fund_object= ChitFundsDetails.objects.filter(id=temp_family.chitt_fund.id)
                     if chit_fund_object:
                         chit_fund_get_new=ChitFundsDetails.objects.get(id=temp_family.chitt_fund.id)
-                        chit_fund_get_new.cash_inhand_amount=float(chit_fund_get_new.cash_inhand_amount) + float(request.data['principal_amt'])
-                        chit_fund_get_new.principal_given_amount=float(chit_fund_get_new.principal_given_amount) - float(request.data['principal_amt'])
-                        chit_fund_get_new.save()        
+                        # Reverse the OLD principal that was loaned out
+                        old_principal = float(customer.principal_amt or 0)
+                        chit_fund_get_new.cash_inhand_amount = float(chit_fund_get_new.cash_inhand_amount) + old_principal
+                        chit_fund_get_new.principal_given_amount = float(chit_fund_get_new.principal_given_amount) - old_principal
+                        # Apply the NEW principal coming in the request (edit flow)
+                        new_principal = float(request.data.get('principal_amt', old_principal))
+                        chit_fund_get_new.cash_inhand_amount = float(chit_fund_get_new.cash_inhand_amount) - new_principal
+                        chit_fund_get_new.principal_given_amount = float(chit_fund_get_new.principal_given_amount) + new_principal
+                        chit_fund_get_new.save()
                 
                 temp_family=serializer876.save()
                 temp_family.created_by=rejin.id

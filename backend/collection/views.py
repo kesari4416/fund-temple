@@ -622,11 +622,14 @@ def add_collection_details(request):
                                     new_principal_amt = float(temp_family.amount) - new_pro_amount  # converted to float
 
                             if interest_obj.interest_category == "Installment Interest":
+                                # For EMI/installment loans, `temp_family.amount` is the
+                                # full EMI (principal portion + interest portion).
+                                # Adding interst_amount on top would double-count the
+                                # interest — so only amount + penalty enter cash-in-hand.
                                 chit_fund_get.collected_principal_amount = float(
                                     chit_fund_get.collected_principal_amount) + new_principal_amt
                                 chit_fund_get.cash_inhand_amount = float(chit_fund_get.cash_inhand_amount) + float(
-                                    temp_family.amount) + float(temp_family.interst_amount) + float(
-                                    temp_family.penalty_amount)
+                                    temp_family.amount) + float(temp_family.penalty_amount)
                                 chit_fund_get.profit_amount = float(
                                     chit_fund_get.profit_amount) + new_pro_amount + float(temp_family.penalty_amount)
                                 chit_fund_get.save()
