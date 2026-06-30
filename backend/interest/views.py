@@ -174,8 +174,13 @@ def add_interest_given_details(request):
                     new_interest_report = InterestPeopleReport.objects.create(debit_amt=temp_family.interest_amt,credit_amt=temp_family.interest_amt,management_profile=management,interest=temp_family,reportdate=temp_family.interest_date,balance_amt=bal_sheet.balance_amt,type_choice="Interest",created_by =rejin.id)
                     
                     
-                # rejin
-                if date_object.year==datetime.datetime.now().year and date_object.month!=datetime.datetime.now().month:
+                # Bug fix: previously this only ran when interest_date is in the
+                # current calendar year and a previous month of the same year,
+                # which silently skipped penalty/interest application for
+                # records created in earlier years.  We now run whenever the
+                # interest_date is at least one full month in the past.
+                from dateutil.relativedelta import relativedelta as _rdelta
+                if date_object + _rdelta(months=1) <= datetime.date.today():
                    
                     inter_check=PeopleInterestDetails.objects.filter(id=temp_family.id).first()
                     inter_bal = PeopleInterestBalanceSheet.objects.get(interest_id=inter_check.id)

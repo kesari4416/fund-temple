@@ -8,13 +8,7 @@ import { message } from 'antd';
 
 
 const baseURLs = {
-   //development: 'http://127.0.0.1:8000/', // API server url (Development)
-  //production: 'https://temple.api.ideauxbill.in', // API server url (Production)
-  //Testing: 'https://temple.test.api.ideauxbill.in', // API server url (Testing)
-  //staging: 'https://temple.ideauxbill.in',  // API server url (Staging)
-  // backendconnect: 'http://192.168.29.103:8000/'
-   production: 'http://127.0.0.1:8000/', // API server url (Development)
-
+  production: (import.meta.env?.VITE_BACKEND_URL || '') + '/api/',
 };
 
 // const environment = process.env.NODE_ENV || 'development'; 

@@ -16,7 +16,7 @@
 
 
 -- Dumping database structure for temple
-CREATE DATABASE IF NOT EXISTS `temple` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+CREATE DATABASE IF NOT EXISTS `temple` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
 USE `temple`;
 
 -- Dumping structure for table temple.amount_cashtransactiondetails
@@ -6740,7 +6740,7 @@ CREATE TABLE IF NOT EXISTS `django_admin_log` (
   KEY `django_admin_log_user_id_c564eba6_fk_user_user_id` (`user_id`),
   CONSTRAINT `django_admin_log_content_type_id_c4bce8eb_fk_django_co` FOREIGN KEY (`content_type_id`) REFERENCES `django_content_type` (`id`),
   CONSTRAINT `django_admin_log_user_id_c564eba6_fk_user_user_id` FOREIGN KEY (`user_id`) REFERENCES `user_user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Dumping data for table temple.django_admin_log: ~0 rows (approximately)
 
@@ -7663,7 +7663,7 @@ CREATE TABLE IF NOT EXISTS `fund_fundgroupdetails` (
   CONSTRAINT `fund_fundgroupdetail_secretrary_member_id_814f08bf_fk_family_me` FOREIGN KEY (`secretrary_member_id`) REFERENCES `family_member_details` (`id`),
   CONSTRAINT `fund_fundgroupdetail_treasury_member_id_c579a824_fk_family_me` FOREIGN KEY (`treasury_member_id`) REFERENCES `family_member_details` (`id`),
   CONSTRAINT `fund_fundgroupdetails_fund_id_770ae095_fk_fund_addfunddetails_id` FOREIGN KEY (`fund_id`) REFERENCES `fund_addfunddetails` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Dumping data for table temple.fund_fundgroupdetails: ~0 rows (approximately)
 
@@ -7702,7 +7702,7 @@ CREATE TABLE IF NOT EXISTS `fund_fundleasedetailss` (
   CONSTRAINT `fund_fundleasedetail_fund_group_id_6913a36c_fk_fund_fund` FOREIGN KEY (`fund_group_id`) REFERENCES `fund_fundgroupdetails` (`id`),
   CONSTRAINT `fund_fundleasedetail_fund_mem_id_ff4ebce1_fk_fund_fund` FOREIGN KEY (`fund_mem_id`) REFERENCES `fund_fundmemberdetailss` (`id`),
   CONSTRAINT `fund_fundleasedetail_management_profile_i_a8eb790b_fk_managemen` FOREIGN KEY (`management_profile_id`) REFERENCES `management_managementdetails` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Dumping data for table temple.fund_fundleasedetailss: ~0 rows (approximately)
 
@@ -7762,7 +7762,7 @@ CREATE TABLE IF NOT EXISTS `fund_fundmemberdetailss` (
   CONSTRAINT `fund_fundmemberdetai_fund_member_id_20dca94c_fk_family_me` FOREIGN KEY (`fund_member_id`) REFERENCES `family_member_details` (`id`),
   CONSTRAINT `fund_fundmemberdetai_management_profile_i_154982c1_fk_managemen` FOREIGN KEY (`management_profile_id`) REFERENCES `management_managementdetails` (`id`),
   CONSTRAINT `fund_fundmemberdetai_nominee_member_id_918b987c_fk_family_me` FOREIGN KEY (`nominee_member_id`) REFERENCES `family_member_details` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Dumping data for table temple.fund_fundmemberdetailss: ~0 rows (approximately)
 
@@ -7957,7 +7957,7 @@ CREATE TABLE IF NOT EXISTS `interest_peopleinterestdetails` (
   CONSTRAINT `interest_peopleinter_management_profile_i_b53d5754_fk_managemen` FOREIGN KEY (`management_profile_id`) REFERENCES `management_managementdetails` (`id`),
   CONSTRAINT `interest_peopleinter_nominee_member_id_d746480e_fk_family_me` FOREIGN KEY (`nominee_member_id`) REFERENCES `family_member_details` (`id`),
   CONSTRAINT `interest_peopleinter_people_member_id_23d9c2dd_fk_family_me` FOREIGN KEY (`people_member_id`) REFERENCES `family_member_details` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=229 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=229 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Dumping data for table temple.interest_peopleinterestdetails: ~213 rows (approximately)
 INSERT INTO `interest_peopleinterestdetails` (`id`, `intrest_no`, `interest_category`, `interest_type`, `chit_name`, `photo`, `people_type`, `people_name`, `people_address`, `people_email`, `people_mobile`, `principal_amt`, `fix_interest_rate_percent`, `interest_amt`, `interest_period`, `interest_period_type`, `apply_first_interest`, `first_interest_amt`, `final_amt_given`, `penalty_percentage`, `penalty_type`, `penalty_amount`, `nominee_apply`, `nominee_person_type`, `nominee_member_name`, `nominee_mobile_no`, `nominee_address`, `cheque_no`, `action`, `created_by`, `created_at`, `updated_at`, `chitt_fund_id`, `management_profile_id`, `nominee_member_id`, `people_member_id`, `interest_type_new`, `interest_new_amt`, `installment_amt`, `total_counts`, `paid_counts`, `interest_date`) VALUES
@@ -8247,7 +8247,7 @@ CREATE TABLE IF NOT EXISTS `management_managementdetails` (
   `created_at` datetime(6) DEFAULT NULL,
   `updated_at` datetime(6) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Dumping data for table temple.management_managementdetails: ~0 rows (approximately)
 INSERT INTO `management_managementdetails` (`id`, `temple_name`, `address`, `comments`, `opening_balance`, `opening_balance_type`, `tax_age`, `reg_no`, `documents`, `images`, `action`, `created_by`, `created_at`, `updated_at`) VALUES
@@ -8586,7 +8586,7 @@ CREATE TABLE IF NOT EXISTS `rental_rentalandleasedetails` (
   CONSTRAINT `rental_rentalandleas_category_id_dcfd6c50_fk_assets_as` FOREIGN KEY (`category_id`) REFERENCES `assets_assetcategory` (`id`),
   CONSTRAINT `rental_rentalandleas_management_profile_i_9536bda0_fk_managemen` FOREIGN KEY (`management_profile_id`) REFERENCES `management_managementdetails` (`id`),
   CONSTRAINT `rental_rentalandleas_tenat_member_id_1ff061c7_fk_family_me` FOREIGN KEY (`tenat_member_id`) REFERENCES `family_member_details` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Dumping data for table temple.rental_rentalandleasedetails: ~3 rows (approximately)
 INSERT INTO `rental_rentalandleasedetails` (`id`, `lease_rent_no`, `rent`, `date`, `asset_category_name`, `asset_name`, `tenat_type`, `tenat_name`, `tenat_address`, `tenat_email`, `tenat_mobile`, `start_date`, `end_date`, `documents`, `images`, `initial_advance_amt`, `rent_amt`, `rent_pay_type`, `from_date`, `increment_apply`, `increase_time_period`, `increase_time_period_choice`, `increment_amt_prcnt`, `increase_amt_choice`, `action`, `created_by`, `created_at`, `updated_at`, `asset_id`, `category_id`, `management_profile_id`, `tenat_member_id`, `end_range`, `advance_settlement_amt`, `advance_return`, `advance_return_date`, `retun_person_by`, `penalty_amt`, `shutdown_by`, `shutdown_date`, `previous_end_date`, `previous_rent_amt`, `payment_mode`, `transaction_type`, `bank_link_id`, `bank_name`, `transaction_date`, `trans_no`, `cheque_no`, `bank_pay`, `settlement_payment_mode`, `settlement_transaction_type`, `settlement_bank_link_id`, `settlement_bank_name`, `settlement_transaction_date`, `settlement_trans_no`, `settlement_cheque_no`, `settlement_bank_pay`, `bill_by_name`) VALUES

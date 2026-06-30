@@ -19,11 +19,9 @@ from django.urls import path,include
 from django.conf.urls.static import static
 from django.conf import settings
 
-urlpatterns = [
-    path('admin/', admin.site.urls),
+api_patterns = [
     path('assets/', include('assets.urls')),
     path('amount/', include('amount.urls')),
-
     path('authorities/', include('authorities.urls')),
     path('chit_fund/', include('chit_fund.urls')),
     path('collection/', include('collection.urls')),
@@ -46,13 +44,18 @@ urlpatterns = [
     path('user/',include('user.urls')),
     path('permisions/',include('permisions.urls')),
     path('other_people/',include('other_people.urls')),
-    path('amount/',include('amount.urls')),
     path('my_tasks/',include('my_tasks.urls')),
     path('balancesheet/',include('balancesheet.urls')),
     path('treasure/',include('treasure.urls')),
     path('reports/',include('reports.urls')),
-    
-    
-    
+    path('penalty/', include('amount.penalty_urls')),
+]
 
-]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api/', include(api_patterns)),
+]
+
+# also expose the same routes at root for legacy clients
+urlpatterns += api_patterns
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
