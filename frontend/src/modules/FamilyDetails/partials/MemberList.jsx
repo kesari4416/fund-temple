@@ -222,6 +222,10 @@ const MemberList = () => {
                   width: "70px",
                   objectFit: "cover",
                 }}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = DummyMember;
+                }}
               />
             ) : (
               <img
@@ -328,6 +332,10 @@ const MemberList = () => {
                   height: "70px",
                   width: "70px",
                   objectFit: "cover",
+                }}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = DummyMember;
                 }}
               />
             ) : (
