@@ -12,14 +12,28 @@ const HomeView = () => {
 
   return (
     <CustomCardView>
-      {/* {ManagementDetails && ManagementDetails?.images ? (
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#fff",
+        }}
+      >
         <img
-          src={ManagementDetails.images}
-          style={{ width: "100%", height: "auto", objectFit: 'cover' }}
+          src={FirstLogo}
+          alt="Temple"
+          style={{
+            maxWidth: "100%",
+            maxHeight: "calc(100vh - 180px)",
+            width: "auto",
+            height: "auto",
+            objectFit: "contain",
+            borderRadius: 8,
+          }}
         />
-      ) : ( */}
-        <img src={FirstLogo} style={{ width: "100%", height: "auto", objectFit: 'cover' }} />
-      {/* )} */}
+      </div>
     </CustomCardView>
   );
 };

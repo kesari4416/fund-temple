@@ -39,7 +39,7 @@ export const FestivalMemberView = ({ festivalDataModal }) => {
         <Fragment>
             {festivalDataModal?.map((item, index) => (
                 <div key={index}>
-                      <h3 style={{ color: '#065F46', fontSize: '15px' }}>{item?.name}</h3>
+                      <h3 style={{ color: '#990000', fontSize: '15px' }}>{item?.name}</h3>
                     <CustomStandardTable columns={ColumnTable} data={item?.member_details} pagination={false} />
                     <CustomRow>
                         <Col span={15} md={15}><span style={{ color: '#df0606', fontSize: '15px', fontWeight: 600 }}>Bank : </span><span>{formatIndianNumber(item.bank_amount)}</span></Col>
@@ -122,7 +122,7 @@ export const TariffMemberView = ({ tarifTabModal }) => {
         <Fragment>
             {tarifTabModal?.map((item, index) => (
                 <div key={index}>
-                      <h3 style={{ color: '#065F46', fontSize: '15px' }}>{item?.name}</h3>
+                      <h3 style={{ color: '#990000', fontSize: '15px' }}>{item?.name}</h3>
                     <CustomStandardTable columns={ColumnTable} data={item?.member_details} pagination={false} />
                     <CustomRow>
                         <Col span={15} md={15}><span style={{ color: '#df0606', fontSize: '15px', fontWeight: 600 }}>Bank : </span><span>{formatIndianNumber(item.bank_amount)}</span></Col>
@@ -192,7 +192,7 @@ export const IncomeMemberView = ({ incomModal }) => {
         <div>
             {incomModal?.map((item, index) => (
                 <div key={index}>
-                      <h3 style={{ color: '#065F46', fontSize: '15px' }}>{item?.name}</h3>
+                      <h3 style={{ color: '#990000', fontSize: '15px' }}>{item?.name}</h3>
                     <CustomStandardTable columns={ColumnTable} data={item?.details} pagination={false} />
                 </div>
             ))}
@@ -240,7 +240,7 @@ export const DeathMemberView = ({ deathtabModal }) => {
         <Fragment>
             {deathtabModal?.map((item, index) => (
                 <div key={index}>
-                     <h3 style={{ color: '#065F46', fontSize: '15px' }}>{item?.name}</h3>
+                     <h3 style={{ color: '#990000', fontSize: '15px' }}>{item?.name}</h3>
                     <CustomStandardTable columns={ColumnTable} data={item?.member_details} pagination={false} />
                     <CustomRow>
                         <Col span={15} md={15}><span style={{ color: '#df0606', fontSize: '15px', fontWeight: 600 }}>Bank : </span><span>{formatIndianNumber(item.bank_amount)}</span></Col>
@@ -405,7 +405,7 @@ export const ExpenseMemberView = ({ expensedataModal }) => {
         <div>
             {expensedataModal?.map((item, index) => (
                 <div key={index}>
-                    <h3 style={{ color: '#065F46', fontSize: '15px' }}>{item?.name}</h3>
+                    <h3 style={{ color: '#990000', fontSize: '15px' }}>{item?.name}</h3>
                     <CustomStandardTable columns={ColumnTable} data={item?.details} pagination={false} />
                 </div>
             ))}
@@ -519,7 +519,7 @@ export const ChitfundTabView = ({ chitfundModals }) => {
         <Fragment>
             {chitfundModals?.map((item, index) => (
                 <div key={index}>
-                    <h3 style={{ color: '#065F46', fontSize: '15px' }}>{item?.chitfund_name}</h3>
+                    <h3 style={{ color: '#990000', fontSize: '15px' }}>{item?.chitfund_name}</h3>
                     <CustomStandardTable columns={ColumnTable} data={item?.details} pagination={false} />
                 </div>
             ))}

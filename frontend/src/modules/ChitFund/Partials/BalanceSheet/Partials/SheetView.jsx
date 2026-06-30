@@ -20,7 +20,7 @@ export const ChitfundInvesView = ({ datas }) => {
         <Fragment>
             {datas?.map((item, index) => (
                 <div key={index}>
-                    <h4 style={{color:'#065F46'}}>{item?.chitfund_name}</h4>
+                    <h4 style={{color:'#990000'}}>{item?.chitfund_name}</h4>
                     <CustomStandardTable columns={ColumnTable} data={item?.details} pagination={false} />
                 </div>
             ))}

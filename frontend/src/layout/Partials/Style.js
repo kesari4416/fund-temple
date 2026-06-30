@@ -126,7 +126,7 @@ export const HeaderNav = styled.div`
     font-size: 20px;
     margin-left: 10px;
     font-weight: 800;
-    color: #065F46;
+    color: #990000;
     visibility: visible;
     opacity: 1;
     width: 100%;
@@ -220,6 +220,7 @@ export const SideMenuLayout = styled(Layout.Sider)`
   left: 0;
   top: 0;
   bottom: 0;
+  z-index: 100;
 
   @media (max-width: 900px) {
     display: none;
@@ -258,7 +259,7 @@ export const SideMenuLayout = styled(Layout.Sider)`
   .ant-menu-light:not(.ant-menu-horizontal)
     .ant-menu-item:not(.ant-menu-item-selected):active {
     color: white !important;
-    background-color: #065F46 !important;
+    background-color: #990000 !important;
     border-radius: 10px !important;
   }
 
@@ -315,18 +316,28 @@ export const SideMenuLayout = styled(Layout.Sider)`
 `;
 
 export const TopHeader = styled(Layout.Header)`
-  /* @media screen and (min-width: 901px) {
-    display: none;
-} */
-
   height: 70px !important;
   box-shadow: 0 0 4px 4px rgba(0, 0, 0, 0.08) !important;
   background: ${THEME.white};
   line-height: 0;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+`;
+
+export const ContentLayout = styled(Layout)`
+  /* Offset for the fixed-position sidebar so content does NOT overlap */
+  margin-left: ${(props) => (props.$collapsed ? '80px' : '280px')};
+  min-height: 100vh;
+  transition: margin-left 0.2s ease-in-out;
+
+  @media (max-width: 900px) {
+    margin-left: 0;
+  }
 `;
 
 export const BodyContent = styled(Layout.Content)`
-  height: 80vh;
+  min-height: calc(100vh - 70px);
   overflow-y: auto;
   & .ant-menu-item-icon {
     font-size: 20px !important;

@@ -57,14 +57,15 @@ const dangerButtonStyles = css`
   color:${THEME.danger_2};
   background-color: ${THEME.primary};
   border-color:${THEME.danger_2};
-  box-shadow: 0 6px 14px rgba(6, 95, 70, 0.25);
+  /* box-shadow: 4px 4px 20px 0px rgba(110, 110, 107, 0.25); */
+  box-shadow: 6px 6px 20px 0px rgba(97, 0, 0, 0.25);
   &:hover {
-    color:#065F46;
+    color:#990000;
     background-color: ${THEME.danger_2};
     border-color: ${THEME.primary};
   }
   &:focus {
-    box-shadow:0 0 0 .2rem rgba(6, 95, 70, .35)
+    box-shadow:0 0 0 .2rem rgba(220,53,69,.5)
   }
 `
 const secondaryButtonStyles = css`
@@ -161,8 +162,8 @@ const yellowButtonStyles = css`
 `
 
 const successButtonStyles = css`
-  color:#065F46;
-  border-color:#065F46;
+  color:#990000;
+  border-color:#990000;
   /* box-shadow: 4px 4px 20px 0px rgba(110, 110, 107, 0.25); */
   box-shadow: 6px 6px 20px 0px rgba(97, 0, 0, 0.25);
   &:hover {
@@ -171,7 +172,7 @@ const successButtonStyles = css`
     border-color: ${THEME.primary};
   }
   &:focus {
-    box-shadow:#065F46
+    box-shadow:#990000
   }
 `
 

@@ -21,14 +21,14 @@ const StyledItem = styled(Item)`
 const AntdUploadStyle = styled(AntdUpload)`
   .ant-btn-default {
     /* background: rgba(243, 188, 46, 0.25) !important; */
-    border-color: #065F46;
+    border-color: #990000;
     width: 100%;
     border-width: 2px;
     border-radius: 8px;
   }
   .ant-btn-default:not(:disabled):not(.ant-btn-disabled):hover {
     color: ${THEME.black};
-    border-color: #065F46;
+    border-color: #990000;
   }
 
   &.ant-upload-wrapper .ant-upload-select {

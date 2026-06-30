@@ -12,27 +12,25 @@ const FragmentStyle = styled.div`
   }
 `;
 const StyledLogo = styled.div`
-  color: #065F46;
+  color: #900;
 `;
 const StyledButton = styled(Button)`
   display: flex;
   width: 95%;
-  border-radius: 8px;
-  background: #065F46;
-  box-shadow: 0 8px 20px rgba(6, 95, 70, 0.25);
+  border-radius: 5px;
+  background: #900;
+  box-shadow: 4px 4px 20px 0px rgba(153, 0, 0, 0.25);
   align-items: center;
   text-align: center;
   justify-content: center;
   padding: 20px !important;
   margin-top: 30px;
-  border: none;
 
   & p {
     color: white;
-    margin: 0;
-  }
-  &:hover {
-    background: #064E3B !important;
+    :hover{
+       background: #900;
+    }
   }
 `;
 const SignInForm = ({ handleSignIn, isLoading }) => {

@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useState } from 'react'
-import { BodyContent, HeaderNav, LogoutBottom, MainLayout, MenuBottom, SideMenuLayout, TopHeader } from '@layout/Partials/Style'
+import { BodyContent, ContentLayout, HeaderNav, LogoutBottom, MainLayout, MenuBottom, SideMenuLayout, TopHeader } from '@layout/Partials/Style'
 import { Drawer, Layout } from 'antd'
 import { Button } from '@components/form'
 import { SideMenu } from '@layout/Partials/SideMenu'
@@ -118,7 +118,7 @@ const DashboardLayout = ({ children }) => {
                         </Flex>
                     </LogoutBottom>
                 </Drawer>
-                <Layout>
+                <ContentLayout $collapsed={collapsed}>
                     <TopHeader
                     >
 
@@ -131,7 +131,7 @@ const DashboardLayout = ({ children }) => {
                         }}>
                         {children}
                     </BodyContent>
-                </Layout>
+                </ContentLayout>
             </Layout>
             <CustomModal isVisible={isModalOpen} handleOk={handleOk} handleCancel={handleCancel}
                 width={600} modalTitle={modalTitle} modalContent={modalContent} />

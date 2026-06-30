@@ -231,7 +231,7 @@ const CustomAddSelect = ({
           <FaPlusCircle
             style={{
               // fontSize: "20px", 
-              color: "#065F46",
+              color: "#990000",
               width:"25px",
               height:"20px",
               marginTop: "6",
