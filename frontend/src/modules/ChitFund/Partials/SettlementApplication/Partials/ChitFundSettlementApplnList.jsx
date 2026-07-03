@@ -121,6 +121,23 @@ const ChitFundSettlementApplicationList = () => {
             dataIndex: 'invester_name'
         },
         {
+            title: 'Share Count',
+            dataIndex: 'share_count',
+            render: (v) => v ?? 0,
+        },
+        {
+            title: 'Share Amount',
+            dataIndex: 'share_amount',
+            render: (v) => `₹ ${Number(v || 0).toFixed(2)}`,
+        },
+        {
+            title: 'Total Amount',
+            dataIndex: 'total_amount',
+            render: (v) => (
+                <b style={{ color: '#0F5132' }}>₹ {Number(v || 0).toFixed(2)}</b>
+            ),
+        },
+        {
             title: 'Action',
             render: (text, record, index) => {
                 return (
@@ -188,6 +205,21 @@ const ChitFundSettlementApplicationList = () => {
         {
             title: 'Investor Name',
             dataIndex: 'invester_name'
+        },
+        {
+            title: 'Share Count',
+            dataIndex: 'share_count',
+            render: (v) => v ?? 0,
+        },
+        {
+            title: 'Share Amount',
+            dataIndex: 'share_amount',
+            render: (v) => `₹ ${Number(v || 0).toFixed(2)}`,
+        },
+        {
+            title: 'Total Amount',
+            dataIndex: 'total_amount',
+            render: (v) => `₹ ${Number(v || 0).toFixed(2)}`,
         },
     ]
 

@@ -138,9 +138,35 @@ class ChitFundsDetailsSerializer(serializers.ModelSerializer):
 class ChitFundsettleAplicationSerializer(serializers.ModelSerializer):
     id=serializers.IntegerField(required=False)
     action = serializers.BooleanField(default=True)
+    # Derived fields pulled from the linked investor so the settlement
+    # application list can show Share Amount and Total Amount directly.
+    investment_amt = serializers.SerializerMethodField()
+    share_amount = serializers.SerializerMethodField()
+    total_amount = serializers.SerializerMethodField()
+    share_count = serializers.SerializerMethodField()
+
     class Meta:
         model =ChitFundsettleAplication
         fields = '__all__'
+
+    def get_investment_amt(self, obj):
+        inv = getattr(obj, 'investers', None)
+        return float(getattr(inv, 'investment_amt', 0) or 0)
+
+    def get_share_amount(self, obj):
+        inv = getattr(obj, 'investers', None)
+        # collected_share_amount = live accumulated share; falls back to share_amount if 0
+        collected = float(getattr(inv, 'collected_share_amount', 0) or 0)
+        if collected == 0:
+            collected = float(getattr(inv, 'share_amount', 0) or 0)
+        return collected
+
+    def get_total_amount(self, obj):
+        return self.get_investment_amt(obj) + self.get_share_amount(obj)
+
+    def get_share_count(self, obj):
+        inv = getattr(obj, 'investers', None)
+        return int(getattr(inv, 'share_count', 0) or 0)
         
     def validate_settlement_date(self, settlement_date):
         if settlement_date and settlement_date < timezone.now().date():
