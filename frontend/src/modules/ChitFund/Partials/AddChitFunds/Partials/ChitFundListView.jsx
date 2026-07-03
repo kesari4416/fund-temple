@@ -303,7 +303,13 @@ const ChitFundListView = () => {
                                             <div className="info-row">
                                                 <h3 className="info-label">Share Amount  </h3>
                                                 <span>:</span>&nbsp;
-                                                <span>{find?.share_amount}</span>
+                                                <span>
+                                                  {Number(
+                                                    find?.collected_share_amount ??
+                                                      find?.share_amount ??
+                                                      0
+                                                  ).toFixed(2)}
+                                                </span>
                                             </div>
 
                                             <div className="info-row">
