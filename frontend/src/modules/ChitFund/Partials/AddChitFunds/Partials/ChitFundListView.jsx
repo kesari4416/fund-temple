@@ -312,11 +312,15 @@ const ChitFundListView = () => {
                                                 </span>
                                             </div>
 
-                                            <div className="info-row">
-                                                <h3 className="info-label">Final Settlement Amount  </h3>
-                                                <span>:</span>&nbsp;
-                                                <span>{find?.final_settlement_amount}</span>
-                                            </div>
+                                            {Number(find?.final_settlement_amount || 0) > 0 && (
+                                                <div className="info-row">
+                                                    <h3 className="info-label">Final Settlement Amount  </h3>
+                                                    <span>:</span>&nbsp;
+                                                    <span style={{ color: '#0F5132', fontWeight: 600 }}>
+                                                      ₹ {Number(find?.final_settlement_amount).toFixed(2)}
+                                                    </span>
+                                                </div>
+                                            )}
 
                                             <div className="info-row">
                                                 <h3 className="info-label">Retake Share Count  </h3>
