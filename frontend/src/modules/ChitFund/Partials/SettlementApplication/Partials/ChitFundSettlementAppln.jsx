@@ -76,7 +76,19 @@ export const ChitFundSettlementApplication = () => {
     }))
 
     useEffect(() => {
-        form.setFieldsValue({ investers: InvestorFind?.id, invester_name: InvestorFind?.invester_name })
+        form.setFieldsValue({
+            investers: InvestorFind?.id,
+            invester_name: InvestorFind?.invester_name,
+            display_investment_amt: Number(InvestorFind?.investment_amt || 0).toFixed(2),
+            display_share_count: InvestorFind?.share_count ?? 0,
+            display_share_amount: Number(
+                InvestorFind?.collected_share_amount ?? InvestorFind?.share_amount ?? 0
+            ).toFixed(2),
+            display_total_amount: (
+                Number(InvestorFind?.investment_amt || 0) +
+                Number(InvestorFind?.collected_share_amount ?? InvestorFind?.share_amount ?? 0)
+            ).toFixed(2),
+        })
     }, [InvestorFind, InvestorTriggerFind])
 
 
@@ -200,6 +212,39 @@ export const ChitFundSettlementApplication = () => {
                             ]}
                         />
                         <CustomInput name={'investers'} display={'none'} />
+                    </Col>
+
+                    <Col span={24} md={6}>
+                        <CustomInput
+                            label={'Invested Amount'}
+                            name={'display_investment_amt'}
+                            disabled
+                            data-testid="settlement-invested-amt"
+                        />
+                    </Col>
+                    <Col span={24} md={6}>
+                        <CustomInput
+                            label={'Share Count'}
+                            name={'display_share_count'}
+                            disabled
+                            data-testid="settlement-share-count"
+                        />
+                    </Col>
+                    <Col span={24} md={6}>
+                        <CustomInput
+                            label={'Share Amount'}
+                            name={'display_share_amount'}
+                            disabled
+                            data-testid="settlement-share-amount"
+                        />
+                    </Col>
+                    <Col span={24} md={6}>
+                        <CustomInput
+                            label={'Total Amount'}
+                            name={'display_total_amount'}
+                            disabled
+                            data-testid="settlement-total-amount"
+                        />
                     </Col>
 
                     <Col span={24} md={12}>
