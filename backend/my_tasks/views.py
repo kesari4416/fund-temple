@@ -409,15 +409,30 @@ def subscription_delete():
         for peoples in people_amount:
             logger.info(peoples)
 
-            peoples.penalty=True
-            logger.info("ffffffffff")
-            peoples.amount_balance = float(peoples.amount_balance) + float(peoples.penalty_amount)
-            peoples.total_bal_amt = float(peoples.total_bal_amt) + float(peoples.penalty_amount)
+            # Idempotency guard: only apply the penalty to the running
+            # balance ONCE.  Without this, every re-run of this task
+            # inflates amount_balance / total_bal_amt by penalty_amount.
+            already_applied = bool(peoples.penalty)
+            peoples.penalty = True
+            if not already_applied:
+                peoples.amount_balance = float(peoples.amount_balance) + float(peoples.penalty_amount)
+                peoples.total_bal_amt  = float(peoples.total_bal_amt)  + float(peoples.penalty_amount)
             peoples.save()
-            mem_report= TempleMemberReport.objects.filter(members=peoples.member)
+
+            # Ledger idempotency: if a "subscription Tariff Penalty" row
+            # for this member+tariff already exists, do NOT create another.
+            existing_ledger = TempleMemberReport.objects.filter(
+                members=peoples.member,
+                sub_tariff=tariff_check,
+                type_choice="subscription Tariff Penalty",
+            ).exists()
+            if existing_ledger:
+                continue
+
+            mem_report = TempleMemberReport.objects.filter(members=peoples.member)
             if mem_report:
-                mem_report_obj= TempleMemberReport.objects.filter(members=peoples.member).last()
-                bal1=float(mem_report_obj.balance_amt) + float(peoples.penalty_amount)
+                mem_report_obj = TempleMemberReport.objects.filter(members=peoples.member).last()
+                bal1 = float(mem_report_obj.balance_amt) + float(peoples.penalty_amount)
                 tem_report=TempleMemberReport.objects.create(management_profile=peoples.management_profile,members=peoples.member,sub_tariff=tariff_check,reportdate=datetime.date.today(),credit_amt=peoples.penalty_amount,balance_amt=bal1,type_choice="subscription Tariff Penalty",created_by=peoples.created_by)
             else:
                 tem_report=TempleMemberReport.objects.create(management_profile=peoples.management_profile,members=peoples.member,sub_tariff=tariff_check,reportdate=datetime.date.today(),credit_amt=peoples.penalty_amount,balance_amt=peoples.penalty_amount,type_choice="subscription Tariff Penalty",created_by=peoples.created_by)
@@ -441,11 +456,25 @@ def subscription_delete():
             logger.info(peoples_amount_festival)
             for peoples_festival in peoples_amount_festival:
                 logger.info(peoples_festival)
-                logger.info("vvvvvvvvvvv")            
-                peoples_festival.penalty=True
-                peoples_festival.amount_balance = float(peoples_festival.amount_balance) + float(peoples_festival.penalty_amount)
-                peoples_festival.total_bal_amt = float(peoples_festival.total_bal_amt) + float(peoples_festival.penalty_amount)
-                peoples_festival.save() 
+                logger.info("vvvvvvvvvvv")
+                # Idempotency guard: only add penalty to running balance ONCE.
+                already_applied = bool(peoples_festival.penalty)
+                peoples_festival.penalty = True
+                if not already_applied:
+                    peoples_festival.amount_balance = float(peoples_festival.amount_balance) + float(peoples_festival.penalty_amount)
+                    peoples_festival.total_bal_amt  = float(peoples_festival.total_bal_amt)  + float(peoples_festival.penalty_amount)
+                peoples_festival.save()
+
+                # Ledger idempotency: skip if a "Festival Penalty" row for
+                # this member+festival is already recorded.
+                existing_ledger = TempleMemberReport.objects.filter(
+                    members=peoples_festival.member,
+                    festivals=i,
+                    type_choice="Festival Penalty",
+                ).exists()
+                if existing_ledger:
+                    continue
+
                 mem_report= TempleMemberReport.objects.filter(members=peoples_festival.member)
                 if mem_report:
                     mem_report_obj= TempleMemberReport.objects.filter(members=peoples_festival.member).last()
@@ -467,10 +496,23 @@ def subscription_delete():
             for peoples_death in peoples_amount_death:
                 logger.info("summmmm")
                 logger.info(peoples_death)
-                peoples_death.penalty=True
-                peoples_death.amount_balance = float(peoples_death.amount_balance) + float(peoples_death.penalty_amount)
-                peoples_death.total_bal_amt = float(peoples_death.total_bal_amt) + float(peoples_death.penalty_amount)
+                # Idempotency guard: only add penalty to running balance ONCE.
+                already_applied = bool(peoples_death.penalty)
+                peoples_death.penalty = True
+                if not already_applied:
+                    peoples_death.amount_balance = float(peoples_death.amount_balance) + float(peoples_death.penalty_amount)
+                    peoples_death.total_bal_amt  = float(peoples_death.total_bal_amt)  + float(peoples_death.penalty_amount)
                 peoples_death.save()
+
+                # Ledger idempotency: one "Death Tariff Penalty" row per member+death record.
+                existing_ledger = TempleMemberReport.objects.filter(
+                    members=peoples_death.member,
+                    death_tariff=i,
+                    type_choice="Death Tariff Penalty",
+                ).exists()
+                if existing_ledger:
+                    continue
+
                 mem_report= TempleMemberReport.objects.filter(members=peoples_death.member)
                 if mem_report:
                     mem_report_obj= TempleMemberReport.objects.filter(members=peoples_death.member).last()

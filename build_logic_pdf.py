@@ -558,6 +558,10 @@ def build(out_path):
          "chit_fund/serializers.py and list view",
          "List showed only application no + investor name.",
          "Added derived Serializer Method Fields (share_count, share_amount, investment_amt, total_amount) pulled from the linked investor; added three new columns to the list &amp; print tables."),
+        ("Duplicate penalty rows on Balance Sheet ledger",
+         "my_tasks/views.py penalty scheduled task",
+         "For every re-run of the task, a new TempleMemberReport row was inserted for the same (member, tariff/festival/death). Also amount_balance and total_bal_amt on PeoplesAmountDetails were incremented by penalty_amount every run, inflating the running balance.",
+         "Added two idempotency guards: (a) only add penalty to running balances if penalty flag is not already True; (b) skip TempleMemberReport insert if a row with the same (member, tariff/festival/death, type_choice) already exists. Also added /app/backend/cleanup_penalty_duplicates.py to remove existing duplicates and recompute balance_amt column."),
     ]
 
     for i, (title, where, was, now) in enumerate(fixes, start=1):
