@@ -304,11 +304,22 @@ const ChitFundListView = () => {
                                                 <h3 className="info-label">Share Amount  </h3>
                                                 <span>:</span>&nbsp;
                                                 <span>
-                                                  {Number(
-                                                    find?.collected_share_amount ??
-                                                      find?.share_amount ??
-                                                      0
-                                                  ).toFixed(2)}
+                                                  {(() => {
+                                                    // If the investor is already settled
+                                                    // (application submitted -> action=false or
+                                                    // application_date is set), show the FROZEN
+                                                    // share_amount that was locked at settlement.
+                                                    // Otherwise show the LIVE collected_share_amount.
+                                                    const settled =
+                                                      find?.action === false ||
+                                                      !!find?.application_date;
+                                                    const value = settled
+                                                      ? find?.share_amount ?? 0
+                                                      : find?.collected_share_amount ??
+                                                        find?.share_amount ??
+                                                        0;
+                                                    return Number(value).toFixed(2);
+                                                  })()}
                                                 </span>
                                             </div>
 
