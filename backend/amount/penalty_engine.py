@@ -30,6 +30,32 @@ from amount.models import PeoplesAmountDetails
 # Fixed business rule provided by client
 PENALTY_PER_MONTH = Decimal("25.00")
 
+# Festival contributions use a compound percentage rule (10% per missed month)
+# instead of a flat monthly fee.
+# Formula:  penalty = base * ((1 + FESTIVAL_PENALTY_PCT) ** missed_months - 1)
+# Example (base = 300):  m=1 -> 30, m=2 -> 63, m=3 -> 99.3
+FESTIVAL_PENALTY_PCT = Decimal("0.10")
+
+
+def _penalty_for(p: PeoplesAmountDetails, months: int) -> Decimal:
+    """Return the correct cumulative penalty for a given amount row.
+
+    Festival contributions use 10 %-per-month compounding on the base
+    contribution amount; every other module uses the flat &#8377; 25 per
+    missed month rule.
+    """
+    if months <= 0:
+        return Decimal("0.00")
+
+    if p.festival_id and p.festival:
+        base = Decimal(str(p.amount or 0))
+        if base == 0:
+            return Decimal("0.00")
+        factor = (Decimal("1") + FESTIVAL_PENALTY_PCT) ** months
+        return (base * (factor - Decimal("1"))).quantize(Decimal("0.01"))
+
+    return (PENALTY_PER_MONTH * months).quantize(Decimal("0.01"))
+
 
 def missed_months(due_date: date, today: date | None = None) -> int:
     """Number of full calendar months passed AFTER the due date.
@@ -87,7 +113,7 @@ def recompute_for_amount(p: PeoplesAmountDetails, today: date | None = None) -> 
     months = missed_months(due, today) if due else 0
     result["missed_months"] = months
 
-    new_penalty = (PENALTY_PER_MONTH * months).quantize(Decimal("0.01"))
+    new_penalty = _penalty_for(p, months)
     already_paid_penalty = Decimal(p.penalty_amount or 0) - Decimal(p.penalty_balance or 0)
     if already_paid_penalty < 0:
         already_paid_penalty = Decimal("0")

@@ -172,6 +172,47 @@ def build(out_path):
         "elapsed since the due date, no grace period)",
         s,
     ))
+    story.append(p(
+        "&nbsp;&nbsp;&bull; Applies to <b>Subscription Tariff, Death Tariff "
+        "and Marriage Tariff.</b><br/>"
+        "&nbsp;&nbsp;&bull; <b>Festival</b> uses a different rule &mdash; see 1.1a below.",
+        s,
+    ))
+
+    story.append(h3("1.1a Festival penalty - 10% compound per month", s))
+    story.append(formula(
+        "Penalty  =  base_amount  &times;  ( (1 + 0.10)<sup>missed_months</sup> - 1 )",
+        s,
+    ))
+    story.append(p(
+        "The 10% compounds on the previously outstanding balance (base + "
+        "already accrued penalty). So for a &#8377; 300 festival:",
+        s,
+    ))
+    tbl_data2 = [
+        ["Missed months", "Cumulative penalty (&#8377;)"],
+        ["1", "30.00"],
+        ["2", "63.00"],
+        ["3", "99.30"],
+        ["6", "231.47"],
+        ["12", "641.53"],
+    ]
+    t2 = Table(tbl_data2, colWidths=[4 * cm, 6 * cm])
+    t2.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), PRIMARY),
+        ("TEXTCOLOR", (0, 0), (-1, 0), HexColor("#fff")),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("GRID", (0, 0), (-1, -1), 0.4, BORDER),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1),
+         [HexColor("#fff"), HexColor("#fafafa")]),
+        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    story.append(t2)
+    story.append(Spacer(1, 0.2 * cm))
 
     story.append(h2("1.2 How &quot;missed months&quot; is counted", s))
     story.append(p(
@@ -420,7 +461,20 @@ def build(out_path):
         "invester.share_amount            = collected_share_amount   # freeze the value\n"
         "invester.application_date        = settlement_date\n"
         "invester.action                  = False                     # locked, cannot be edited\n"
-        "invester.final_settlement_amount = investment_amt + share_amount",
+        "invester.final_settlement_amount = investment_amt + share_amount\n\n"
+        "# The investor's shares leave the profit-sharing pool:\n"
+        "chit_fund.investers_share_count -= invester.share_count\n"
+        "chit_fund.total_share_count     -= invester.share_count\n"
+        "chit_fund.outer_invest_amount   -= invester.investment_amt",
+        s,
+    ))
+    story.append(note(
+        "After settlement, ALL future profit distribution loops filter by "
+        "<font face='Courier'>action=True</font> so the settled investor "
+        "no longer receives share of new interest/penalty collections.  "
+        "The per-share value grows for the remaining shareholders because "
+        "the divisor <font face='Courier'>total_share_count</font> is now "
+        "smaller.",
         s,
     ))
     story.append(p(
@@ -562,6 +616,18 @@ def build(out_path):
          "my_tasks/views.py penalty scheduled task",
          "For every re-run of the task, a new TempleMemberReport row was inserted for the same (member, tariff/festival/death). Also amount_balance and total_bal_amt on PeoplesAmountDetails were incremented by penalty_amount every run, inflating the running balance.",
          "Added two idempotency guards: (a) only add penalty to running balances if penalty flag is not already True; (b) skip TempleMemberReport insert if a row with the same (member, tariff/festival/death, type_choice) already exists. Also added /app/backend/cleanup_penalty_duplicates.py to remove existing duplicates and recompute balance_amt column."),
+        ("Festival penalty was flat &#8377; 25/month instead of 10% compound",
+         "amount/penalty_engine.py",
+         "All four modules were using the same flat &#8377; 25 / missed month rule. Festival should be 10% compounding per month on the base contribution.",
+         "Added FESTIVAL_PENALTY_PCT=0.10 and a helper _penalty_for() that dispatches by module. Festival rows now use base * ((1.10)^months - 1); other modules stay on the &#8377; 25 flat rate."),
+        ("Chit Fund total_share_count did not shrink on investor settlement",
+         "chit_fund/views.py add_chit_fund_settlement_application_details",
+         "When one investor settled out of a chit, their shares stayed counted in total_share_count and investers_share_count. Future profit distribution kept dividing by the OLD total, so settled and remaining investors both got smaller-than-correct share.",
+         "On settlement submission the chit fund now reduces total_share_count, investers_share_count and outer_invest_amount by that investor's amounts. Verified: 141 -> 121 after a 20-share investor settled."),
+        ("Settled investors kept receiving profit share",
+         "collection/views.py profit distribution loops (line 652, 849)",
+         "invester_list = ChitFundInvesters.objects.filter(chitt_fund=...) - included settled investors too.",
+         "Now filters action=True so settled investors no longer accumulate collected_share_amount on new collections."),
     ]
 
     for i, (title, where, was, now) in enumerate(fixes, start=1):

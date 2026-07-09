@@ -734,6 +734,25 @@ def add_chit_fund_settlement_application_details(request):
                 invest_fund.save() 
                 invest_fund.final_settlement_amount =  (invest_fund.investment_amt) + (invest_fund.share_amount)
                 invest_fund.save()
+
+                # Once an investor settles out of the chit their shares
+                # leave the profit-sharing pool.  Reduce the running counts
+                # on the chit fund so future collections are split among
+                # the remaining shareholders only.
+                remaining_shares = int(inve_share_count or 0)
+                if remaining_shares > 0:
+                    total_fund_amount_details.investers_share_count = int(
+                        total_fund_amount_details.investers_share_count or 0
+                    ) - remaining_shares
+                    total_fund_amount_details.total_share_count = int(
+                        total_fund_amount_details.total_share_count or 0
+                    ) - remaining_shares
+                    # Also reduce the invested principal held in the pool
+                    total_fund_amount_details.outer_invest_amount = float(
+                        total_fund_amount_details.outer_invest_amount or 0
+                    ) - float(invest_fund.investment_amt or 0)
+                    total_fund_amount_details.save()
+
                 return Response(serializer876.data,status=status.HTTP_201_CREATED)
             else:
                 return Response(serializer876.errors,status=status.HTTP_400_BAD_REQUEST)

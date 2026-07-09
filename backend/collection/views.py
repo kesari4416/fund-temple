@@ -649,7 +649,7 @@ def add_collection_details(request):
                                 invester_sharing_profit_amount = float(temp_family.interst_amount) + float(
                                     temp_family.penalty_amount)
 
-                            invester_list = ChitFundInvesters.objects.filter(chitt_fund=chit_fund_get)
+                            invester_list = ChitFundInvesters.objects.filter(chitt_fund=chit_fund_get, action=True)
                             final_profit_amount1 = (float(invester_sharing_profit_amount) * float(
                                 chit_fund_get.set_profit_percent / 100))
                             final_profit_amount = round(final_profit_amount1, 2)
@@ -846,7 +846,7 @@ def add_collection_details(request):
                                             chit_fund_get.save()
 
                                     # addddddddddddddddeddd
-                                    invester_list = ChitFundInvesters.objects.filter(chitt_fund=chit_fund_get)
+                                    invester_list = ChitFundInvesters.objects.filter(chitt_fund=chit_fund_get, action=True)
                                     if ssss.interest.interest_category == "Installment Interest":
                                         final_profit_amount1 = (float(interest_amount_install_profit) * float(
                                             chit_fund_get.set_profit_percent / 100))
