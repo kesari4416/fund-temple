@@ -2327,15 +2327,15 @@ def get_select_member_collection(request):
         for mem in member:
 
             if data == "Subscription Tariff":
-                amount = PeoplesAmountDetails.objects.filter(member=mem, sub_tariff__action=True, penalty=False,
+                amount = PeoplesAmountDetails.objects.filter(member=mem, sub_tariff__action=True, paid=False,
                                                              management_profile=management)
                 for new_mem in amount:
-                    mem_obj = PeoplesAmountDetails.objects.get(id=new_mem.id, sub_tariff__action=True, penalty=False)
+                    mem_obj = PeoplesAmountDetails.objects.get(id=new_mem.id, sub_tariff__action=True, paid=False)
                     if mem_obj.sub_tariff != None and mem_obj.total_bal_amt > 0:
                         if mem not in mem_list:
                             mem_list.append(mem)
             elif data == "Festival":
-                amount = PeoplesAmountDetails.objects.filter(member=mem, festival_id=type, penalty=False,
+                amount = PeoplesAmountDetails.objects.filter(member=mem, festival_id=type, paid=False,
                                                              management_profile=management)
                 for new_mem in amount:
                     mem_obj = PeoplesAmountDetails.objects.get(id=new_mem.id)
@@ -2344,7 +2344,7 @@ def get_select_member_collection(request):
                             mem_list.append(mem)
 
             elif data == "Marriage":
-                amount = PeoplesAmountDetails.objects.filter(member=mem, management_profile=management)
+                amount = PeoplesAmountDetails.objects.filter(member=mem, management_profile=management, paid=False)
                 for new_mem in amount:
                     mem_obj = PeoplesAmountDetails.objects.get(id=new_mem.id)
                     if mem_obj.marriage != None:
@@ -2353,7 +2353,7 @@ def get_select_member_collection(request):
                             mem_list.append(mem)
 
             elif data == "Death Tariff":
-                amount = PeoplesAmountDetails.objects.filter(member=mem, death_id=type, penalty=False,
+                amount = PeoplesAmountDetails.objects.filter(member=mem, death_id=type, paid=False,
                                                              management_profile=management)
                 for new_mem in amount:
                     mem_obj = PeoplesAmountDetails.objects.get(id=new_mem.id)

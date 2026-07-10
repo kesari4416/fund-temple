@@ -628,6 +628,10 @@ def build(out_path):
          "collection/views.py profit distribution loops (line 652, 849)",
          "invester_list = ChitFundInvesters.objects.filter(chitt_fund=...) - included settled investors too.",
          "Now filters action=True so settled investors no longer accumulate collected_share_amount on new collections."),
+        ("Already-paid members showing in Choose Member dropdown",
+         "collection/views.py get_select_member_collection (line 2330)",
+         "The 'available members' query filtered by penalty=False instead of paid=False. `penalty` and `paid` are different boolean fields: penalty is whether a penalty row was auto-applied, paid is whether the collection is complete. So an already-paid member (paid=True) with no penalty (penalty=False) still appeared in the dropdown. Clicking them fired 'Collection Amount already added for this member'.",
+         "Changed the filter from penalty=False to paid=False for Subscription Tariff / Festival / Marriage / Death Tariff. Now only members with pending balance appear; already-paid members are hidden."),
     ]
 
     for i, (title, where, was, now) in enumerate(fixes, start=1):
