@@ -324,7 +324,7 @@ export const Collection = ({ trigger }) => {
   };
   //--------------- Handle Collcetion Category onChange Function-----------------
 
-  const handleCollectionType = (e, value) => {
+  const handleCollectionType = async (e, value) => {
     setCollectionType(e);
     setPersonType([]);
     setTransactionType([]);
@@ -384,25 +384,25 @@ export const Collection = ({ trigger }) => {
     const UserChoiceValues = {
       category: ChoiceType?.value,
     };
-    const TypeSelectTwo = {
-      category: ChoiceType?.value,
-      type: subsCategory[0]?.id ?? ""
-    };
-
-    const SubscriptionValues = {
-      category: ChoiceType?.value,
-      type: subsCategory[0]?.id,
-    };
     const MarriageValues = {
       category: ChoiceType?.value,
     };
 
-    if (
-      ChoiceType?.value === "Subscription Tariff"
-    ) {
-      HandleSelectMemberCollection(TypeSelectTwo);
+    // For Subscription Tariff: fetch the list of active tariffs FIRST,
+    // then use its newest entry as `type` for the "Choose Member" fetch.
+    // Previously we used a stale `subsCategory[0]?.id` which caused paid
+    // members to leak into the dropdown.
+    if (ChoiceType?.value === "Subscription Tariff") {
+      const tariffList = await HandleSelectType(UserChoiceValues);
+      const activeType = (Array.isArray(tariffList) && tariffList[0]?.id) || "";
+      await HandleSelectMemberCollection({
+        category: ChoiceType?.value,
+        type: activeType,
+      });
+      return;
     }
-    else if (ChoiceType?.value === "Marriage") {
+
+    if (ChoiceType?.value === "Marriage") {
       HandleMarriageCollect(MarriageValues)
     }
     else if (ChoiceType?.value === "Chit Interest") {
@@ -414,7 +414,7 @@ export const Collection = ({ trigger }) => {
     // }
 
     if (ChoiceType?.value === "Fund" || ChoiceType?.value === "Rent" || ChoiceType?.value === "Lease" || ChoiceType?.value === "Festival" ||
-      ChoiceType?.value === "Subscription Tariff" || ChoiceType?.value === "Death Tariff" || ChoiceType?.value === "Management Interest" || ChoiceType?.value === "Chit Interest" ||
+      ChoiceType?.value === "Death Tariff" || ChoiceType?.value === "Management Interest" || ChoiceType?.value === "Chit Interest" ||
       ChoiceType?.value === "Moveable Rent") {
       HandleSelectType(UserChoiceValues);
     }
@@ -422,26 +422,19 @@ export const Collection = ({ trigger }) => {
   };
   //--------------------------------------------------------
   const HandleSelectType = async (data) => {
-    await request
-      .post(APIURLS.SELECTED_TYPE_COLLECTIONS, data)
-      .then(function (response) {
-        // successHandler(response, {
-        //   notifyOnSuccess: true,
-        //   notifyOnFailed: true,
-        //   msg: "success",
-        //   type: "success",
-        // });
-        setGetdetailTotal(response.data);
-        setLeaseDetails(response.data)
-        setSubsCategory(response.data);
-        setDeathMember(response.data);
-        setFestivalData(response.data)
-        setMoveableRental(response.data)
-        return response.data;
-      })
-      .catch(function (error) {
-        return errorHandler(error);
-      });
+    try {
+      const response = await request.post(APIURLS.SELECTED_TYPE_COLLECTIONS, data);
+      setGetdetailTotal(response.data);
+      setLeaseDetails(response.data)
+      setSubsCategory(response.data);
+      setDeathMember(response.data);
+      setFestivalData(response.data)
+      setMoveableRental(response.data)
+      return response.data;
+    } catch (error) {
+      errorHandler(error);
+      return [];
+    }
   };
 
   const HandleSelectMemberCollection = async (data) => {

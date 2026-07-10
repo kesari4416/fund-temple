@@ -2322,14 +2322,27 @@ def get_select_member_collection(request):
 
         data = request.data['category']
         type = request.data['type']
+
+        # Guard: for Subscription Tariff the "Choose Member" dropdown MUST
+        # be scoped to a single active tariff.  If the caller omitted the
+        # `type` (empty string / null), fall back to the newest active tariff
+        # so we never return members whose current tariff was already paid
+        # but who still have residual unpaid rows for older tariffs.
+        if data == "Subscription Tariff" and not type:
+            latest_active = ADDSubscriptionTariffDetails.objects.filter(
+                action=True, management_profile=management,
+            ).order_by('-id').first()
+            if latest_active:
+                type = latest_active.id
+
         member = Member_Details.objects.filter(action=True)
         mem_list = []
         for mem in member:
 
             if data == "Subscription Tariff":
                 # Filter by the SPECIFIC sub_tariff id the user selected
-                # (`type` in the payload).  Fallback to any active tariff
-                # if the caller didn't pass one (legacy behaviour).
+                # (`type` in the payload).  The block above guarantees `type`
+                # is always populated for Subscription Tariff.
                 sub_filter = {"sub_tariff__action": True, "paid": False}
                 if type:
                     sub_filter["sub_tariff_id"] = type
