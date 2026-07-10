@@ -89,6 +89,13 @@ Business rule clarified with the user:
 - [x] Table styling refresh: green-tinted headers, zebra striping, hover row, larger row padding
 - [x] Sign-in page: soft mint-cream background with green/gold radial gradients, emerald button
 
+## What's been implemented (2026-02-10)
+- [x] **Collection "Choose Member" dropdown bug fixed** — paid members no longer appear
+  - **Backend** `collection/views.py` `get_select_member_collection` (~L2321-2360): added fallback so when `category="Subscription Tariff"` and `type` is empty/falsy, the query resolves to the latest active `ADDSubscriptionTariffDetails` (order_by('-id')). Guarantees the filter always scopes to a single tariff and never leaks members from other tariffs.
+  - **Frontend** `Collection.jsx` `handleCollectionType`: made async and, for Subscription Tariff, now awaits `HandleSelectType` before calling `HandleSelectMemberCollection`. Uses the freshly returned `tariffList[0].id` (previously used stale `subsCategory[0]?.id`, which was empty on first entry).
+  - Verified: `testing_agent_v3_fork` iteration 3 — 6/6 backend pytest cases + full E2E pass. Paying member 7 for sub_tariff 14 correctly removes them from the reopened dropdown (102 → 101 members).
+  - Regression counts confirmed: Festival id=1 → 48, Death Tariff id=42 → 105, Subscription Tariff id=14 → 102, latest-active fallback → 106.
+
 ## Backlog / Future
 - P1: Add a daily scheduled job (django-apscheduler is already installed)
   that calls `recompute_all()` automatically at midnight, so penalties
