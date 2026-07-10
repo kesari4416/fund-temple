@@ -386,7 +386,7 @@ export const Collection = ({ trigger }) => {
     };
     const TypeSelectTwo = {
       category: ChoiceType?.value,
-      type: ""
+      type: subsCategory[0]?.id ?? ""
     };
 
     const SubscriptionValues = {

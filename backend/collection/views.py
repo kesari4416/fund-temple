@@ -2327,11 +2327,18 @@ def get_select_member_collection(request):
         for mem in member:
 
             if data == "Subscription Tariff":
-                amount = PeoplesAmountDetails.objects.filter(member=mem, sub_tariff__action=True, paid=False,
-                                                             management_profile=management)
+                # Filter by the SPECIFIC sub_tariff id the user selected
+                # (`type` in the payload).  Fallback to any active tariff
+                # if the caller didn't pass one (legacy behaviour).
+                sub_filter = {"sub_tariff__action": True, "paid": False}
+                if type:
+                    sub_filter["sub_tariff_id"] = type
+                amount = PeoplesAmountDetails.objects.filter(
+                    member=mem, management_profile=management, **sub_filter,
+                )
                 for new_mem in amount:
-                    mem_obj = PeoplesAmountDetails.objects.get(id=new_mem.id, sub_tariff__action=True, paid=False)
-                    if mem_obj.sub_tariff != None and mem_obj.total_bal_amt > 0:
+                    mem_obj = PeoplesAmountDetails.objects.get(id=new_mem.id)
+                    if mem_obj.sub_tariff is not None and mem_obj.total_bal_amt > 0:
                         if mem not in mem_list:
                             mem_list.append(mem)
             elif data == "Festival":

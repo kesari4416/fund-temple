@@ -629,9 +629,9 @@ def build(out_path):
          "invester_list = ChitFundInvesters.objects.filter(chitt_fund=...) - included settled investors too.",
          "Now filters action=True so settled investors no longer accumulate collected_share_amount on new collections."),
         ("Already-paid members showing in Choose Member dropdown",
-         "collection/views.py get_select_member_collection (line 2330)",
-         "The 'available members' query filtered by penalty=False instead of paid=False. `penalty` and `paid` are different boolean fields: penalty is whether a penalty row was auto-applied, paid is whether the collection is complete. So an already-paid member (paid=True) with no penalty (penalty=False) still appeared in the dropdown. Clicking them fired 'Collection Amount already added for this member'.",
-         "Changed the filter from penalty=False to paid=False for Subscription Tariff / Festival / Marriage / Death Tariff. Now only members with pending balance appear; already-paid members are hidden."),
+         "collection/views.py get_select_member_collection (line 2330) and Collection.jsx line 389",
+         "TWO bugs combining: (a) the front-end was sending `type: ''` (empty) for Subscription Tariff, so the backend had no specific tariff id to filter by. (b) The backend query filtered by penalty=False (a completely different flag from paid) AND only matched sub_tariff__action=True instead of the specific tariff selected. Result: members who paid Jul-2026 but had an open Aug-2026 balance appeared in the Choose Member dropdown for Jul-2026, and clicking them fired 'Collection Amount already added for this member'.",
+         "(a) Front-end now sends type = subsCategory[0]?.id (the active tariff id). (b) Backend now uses paid=False AND filters by sub_tariff_id=type when a specific tariff id is provided, so the dropdown lists only members who haven't yet paid THAT tariff."),
     ]
 
     for i, (title, where, was, now) in enumerate(fixes, start=1):
