@@ -736,17 +736,83 @@ def add_chit_fund_settlement_application_details(request):
                 invest_fund.save()
 
                 # Once an investor settles out of the chit their shares
-                # leave the profit-sharing pool.  Reduce the running counts
-                # on the chit fund so future collections are split among
-                # the remaining shareholders only.
-                remaining_shares = int(inve_share_count or 0)
-                if remaining_shares > 0:
-                    total_fund_amount_details.investers_share_count = int(
-                        total_fund_amount_details.investers_share_count or 0
-                    ) - remaining_shares
-                    total_fund_amount_details.total_share_count = int(
-                        total_fund_amount_details.total_share_count or 0
-                    ) - remaining_shares
+                # leave the profit-sharing pool.  We *redistribute* those
+                # shares proportionally to the remaining shareholders —
+                # both the Management (its baseline share, e.g. 1) and the
+                # remaining active investors — so that Management continues
+                # to receive its fair slice of future profit collections.
+                exit_shares = int(inve_share_count or 0)
+                if exit_shares > 0:
+                    mgmt_shares = int(total_fund_amount_details.management_share_count or 0)
+                    remaining_invs = list(
+                        ChitFundInvesters.objects.filter(
+                            chitt_fund=total_fund_amount_details,
+                            settled=False,
+                            action=True,
+                        ).exclude(id=invest_fund.id)
+                    )
+                    remaining_total = sum(int(i.share_count or 0) for i in remaining_invs)
+                    denom = mgmt_shares + remaining_total
+
+                    if denom > 0:
+                        # Proportional integer split using largest-remainder method
+                        allocations = []  # list of (obj, floor_bonus, remainder)
+
+                        mgmt_raw = exit_shares * mgmt_shares / denom
+                        mgmt_floor = int(mgmt_raw)
+                        allocations.append(("mgmt", None, mgmt_floor, mgmt_raw - mgmt_floor))
+
+                        for inv in remaining_invs:
+                            inv_share = int(inv.share_count or 0)
+                            raw = exit_shares * inv_share / denom
+                            floor_b = int(raw)
+                            allocations.append(("inv", inv, floor_b, raw - floor_b))
+
+                        distributed = sum(a[2] for a in allocations)
+                        leftover = exit_shares - distributed
+                        # Hand out the +1 remainders to those with the largest
+                        # fractional part (Management wins ties by design —
+                        # it appears first in the list).
+                        ordered = sorted(
+                            range(len(allocations)), key=lambda k: -allocations[k][3]
+                        )
+                        for k in ordered[:leftover]:
+                            kind, obj, fb, rem = allocations[k]
+                            allocations[k] = (kind, obj, fb + 1, rem)
+
+                        # Apply bonuses
+                        mgmt_bonus = 0
+                        investor_bonus_total = 0
+                        for kind, obj, bonus, _ in allocations:
+                            if bonus <= 0:
+                                continue
+                            if kind == "mgmt":
+                                mgmt_bonus += bonus
+                            else:
+                                obj.share_count = int(obj.share_count or 0) + bonus
+                                obj.save()
+                                investor_bonus_total += bonus
+
+                        total_fund_amount_details.management_share_count = mgmt_shares + mgmt_bonus
+                        # Investors lose the exiting shares but gain their proportional bonus
+                        total_fund_amount_details.investers_share_count = (
+                            int(total_fund_amount_details.investers_share_count or 0)
+                            - exit_shares
+                            + investor_bonus_total
+                        )
+                    else:
+                        # No remaining pool to share with (edge case) — just
+                        # reduce the investor count and leave management alone.
+                        total_fund_amount_details.investers_share_count = (
+                            int(total_fund_amount_details.investers_share_count or 0)
+                            - exit_shares
+                        )
+
+                    # Keep total_share_count consistent with its two components
+                    total_fund_amount_details.total_share_count = (
+                        int(total_fund_amount_details.management_share_count or 0)
+                        + int(total_fund_amount_details.investers_share_count or 0)
+                    )
                     # Also reduce the invested principal held in the pool
                     total_fund_amount_details.outer_invest_amount = float(
                         total_fund_amount_details.outer_invest_amount or 0
@@ -940,14 +1006,17 @@ def add_chit_fund_settlement(request):
                 funding=ChitFundInvesters.objects.filter(id=temp_family.investers_id).first()               
                 intake=ChitFundsDetails.objects.filter(id=temp_family.chitt_fund_id).first()
                 intake.invest_retake += funding.investment_amt
-                intake.outer_invest_amount -= funding.investment_amt
+                # NOTE: outer_invest_amount reduction is done at the settlement-application step.
+                # Do NOT subtract it again here.
                 intake.profit_retake+=funding.share_amount
                 intake.profit_amount-=funding.share_amount
                 rj_cal=funding.investment_amt+funding.share_amount
                 intake.cash_inhand_amount-= rj_cal
+                # NOTE: share_count reduction & redistribution to (Management + remaining investors)
+                # is performed at the settlement-application step
+                # (see add_chit_fund_settlement_application_details).  Do NOT reduce again here or
+                # counts will drop below zero on the second call.
                 intake.retake_investers_share_count+=funding.share_count
-                intake.investers_share_count-=funding.share_count
-                intake.total_share_count-=funding.share_count
                 intake.save()
                 funding.settled=True
                 funding.settlement_date=datetime.date.today()
