@@ -153,7 +153,7 @@ export const adminItems = (collapsed) => {
           getItem('Collection', 'collection', <FaWpforms />),
           getItem('Collection History', 'CollectionUserList', <HiOutlineClipboardDocumentList />),
         ]),
-        getItem('Balance Sheet', 'balanceSheetAll', <MdOutlineCommentBank />),
+        getItem('Temple Balance Sheet', 'balanceSheetAll', <MdOutlineCommentBank />),
         getItem('Bank Transaction', 'bank_transaction', <FaWpforms />),
         getItem('Report', 'all_reports', <TbReportSearch />),
       ], 'group'),

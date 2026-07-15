@@ -369,7 +369,7 @@ const BalanceSheet = () => {
       <CustomCardView>
         <CustomRow space={[12, 12]}>
           <Col span={24} md={8}>
-            <CustomPageTitle Heading={"Balance Sheet"} />
+            <CustomPageTitle Heading={"Temple Balance Sheet"} />
           </Col>
           <Col span={24} md={16}>
             <Button.Secondary text={"Print"} icon={<IoPrint />}
@@ -434,7 +434,7 @@ const BalanceSheet = () => {
         <PrintHolder ref={componentRef}>
           <PrintShowData className="PrintShowDatadd">
             <CommonManagePrintName />
-            <h3 style={{ textAlign: 'center' }}>Balance Sheet</h3><br />
+            <h3 style={{ textAlign: 'center' }}>Temple Balance Sheet</h3><br />
             <Flex spacebetween={true} aligncenter={true}>
               <div>
                 <h5><span>Date Type</span> : {dataSource?.name === 'custom_date_range' ? 'Custom Date Range' : 'Custom Date'}</h5>
