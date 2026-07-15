@@ -71,27 +71,30 @@ const ChitFundListView = () => {
     const [menberDetalView, setMenberDetalView] = useState({});
     const [findIds, setFindIds] = useState({});
 
-    // Demand Share Amount = (Management Invested Amount + Outer Invest Amount + Profit Amount)
-    //                       / (Investers Share Count + Management Share Count)
-    // Recomputes automatically whenever `findIds` (loaded chit fund details) changes — so any share
-    // increase/decrease or invest/profit update reflected on the record instantly updates this value.
+    // Demand Share Amount = (Management Invested Amount + Outer Invest Amount + Profit Amount) / Investers Share Count
+    // The "Investers Share Count" shown in the view already includes the management share, so this
+    // divisor lines up with what the user sees.
     const demandShareAmount = useMemo(() => {
         const mgmtInvested = Number(findIds?.management_amt || 0);
         const outerInvest = Number(findIds?.outer_invest_amount || 0);
         const profitAmount = Number(findIds?.profit_amount || 0);
         const investerShares = Number(findIds?.investers_share_count || 0);
-        const mgmtShares = Number(findIds?.management_share_count || 0);
-        const totalShares = investerShares + mgmtShares;
-        if (!totalShares) return 0;
-        const value = (mgmtInvested + outerInvest + profitAmount) / totalShares;
+        if (!investerShares) return 0;
+        const value = (mgmtInvested + outerInvest + profitAmount) / investerShares;
         return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
     }, [
         findIds?.management_amt,
         findIds?.outer_invest_amount,
         findIds?.profit_amount,
         findIds?.investers_share_count,
-        findIds?.management_share_count,
     ]);
+
+    // Displayed "Investers Share Count" = actual investers + management share (as per user requirement).
+    const investersShareCountDisplay = useMemo(() => {
+        const investers = Number(findIds?.investers_share_count || 0);
+        const mgmt = Number(findIds?.management_share_count || 0);
+        return investers + mgmt;
+    }, [findIds?.investers_share_count, findIds?.management_share_count]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     // ======  Modal Title and Content ========
@@ -233,7 +236,7 @@ const ChitFundListView = () => {
                             <div className="info-row">
                                 <h3 className="info-label">Investers Share Count </h3>
                                 <span>:</span>&nbsp;
-                                <span>{findIds?.investers_share_count}</span>
+                                <span data-testid="investers-share-count-value">{investersShareCountDisplay}</span>
                             </div>
                             <div className="info-row" data-testid="demand-share-amount-row">
                                 <h3 className="info-label">Demand Share Amount </h3>
