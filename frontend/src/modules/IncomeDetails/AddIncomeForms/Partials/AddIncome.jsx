@@ -297,6 +297,11 @@ export const AddIncomeForm = ({
     value: inn?.id,
   }));
 
+  const incomeSubcategoryOptions = [
+    { label: "Chit Fund Income", value: "Chit Fund Income" },
+    { label: "Temple Income", value: "Temple Income" },
+  ];
+
   const onReset = () => {
     form.resetFields();
   };
@@ -548,6 +553,22 @@ export const AddIncomeForm = ({
               <CustomPageTitle Heading={"Add Income"} />
             )}
           </Col>
+          <Col span={24} md={12}>
+            <CustomSelect
+              label={"Subcategory"}
+              name={"income_subcategory"}
+              options={incomeSubcategoryOptions}
+              placeholder={"Choose Subcategory"}
+              rules={[
+                {
+                  required: true,
+                  message: "Please Select a Subcategory !",
+                },
+              ]}
+              data-testid={"income-subcategory-select"}
+            />
+          </Col>
+          <Col span={24} md={12}></Col>
           <Col span={24} md={12}>
             <CustomAddSelect
               label={"Income Category"}

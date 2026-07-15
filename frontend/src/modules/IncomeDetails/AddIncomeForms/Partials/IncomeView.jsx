@@ -45,6 +45,13 @@ export const IncomeViews = ({ record }) => {
               <h3 style={{ paddingLeft: '5px' }}>{record?.date}</h3>
             </Col>
             <Col span={12} md={12} style={{ display: 'flex', justifyContent: 'space-between', }}>
+              <h2 style={{ fontWeight: 'normal' }}>Subcategory</h2>
+            </Col>
+            <Col span={2} md={1}><h3>:</h3></Col>
+            <Col span={10} md={10}>
+              <h3 style={{ paddingLeft: '5px', fontWeight: 'normal' }}>{record?.income_subcategory}</h3>
+            </Col>
+            <Col span={12} md={12} style={{ display: 'flex', justifyContent: 'space-between', }}>
               <h2 style={{ fontWeight: 'normal' }}>Income Category</h2>
             </Col>
             <Col span={2} md={1}><h3>:</h3></Col>

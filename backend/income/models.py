@@ -41,6 +41,11 @@ BANK_TYPE_CHOICES = (
  
 )
 
+INCOME_SUBCATEGORY_CHOICES = (
+    ('Chit Fund Income', 'Chit Fund Income'),
+    ('Temple Income', 'Temple Income'),
+)
+
 class ADDIncomeCategory(models.Model):
     management_profile=models.ForeignKey(ManagementDetails,on_delete=models.CASCADE,null=True,blank=True,related_name='ManagementDetails_income_category_LINK')
     category_name = models.CharField(max_length=255,null=True)
@@ -61,6 +66,7 @@ class ADDIncomeNames(models.Model):
 
 
 class ADDIncomeDetails(models.Model):
+    income_subcategory=models.CharField(max_length=255,choices=INCOME_SUBCATEGORY_CHOICES,null=True,blank=True)
     category=models.ForeignKey(ADDIncomeCategory,on_delete=models.CASCADE,null=True,blank=True,related_name='ADDincomeCategory_income_LINK')
     income=models.ForeignKey(ADDIncomeNames,on_delete=models.CASCADE,null=True,blank=True,related_name='ADDincomename_income_LINK')
     category_name = models.CharField(max_length=255,null=True)

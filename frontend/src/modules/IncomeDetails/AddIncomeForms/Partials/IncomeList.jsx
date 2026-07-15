@@ -160,6 +160,11 @@ const IncomeList = () => {
       render: (value, item, index) => index + 1,
     },
     {
+      title: "Subcategory",
+      dataIndex: "income_subcategory",
+      width: 160,
+    },
+    {
       title: "Date",
       dataIndex: "date",
     },
@@ -238,6 +243,10 @@ const IncomeList = () => {
     {
       title: "SI No",
       render: (value, item, index) => index + 1,
+    },
+    {
+      title: "Subcategory",
+      dataIndex: "income_subcategory",
     },
     {
       title: "Date",

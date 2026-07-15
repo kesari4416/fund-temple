@@ -3348,27 +3348,27 @@ def balancesheet_view(request):
                     # calculating_bank_opening=all_incomes_bank_amount - all_expenses_bank_amount
                     # calculating_cash_opening=all_incomes_cash_amount - all_expenses_cash_amount + opening_balance_check_amounts                
                 
-                all_incomes_check=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition").exclude(incomes=None).aggregate(Sum('amount')).get('amount__sum')
+                all_incomes_check=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition").exclude(incomes=None).exclude(incomes__income_subcategory="Chit Fund Income").aggregate(Sum('amount')).get('amount__sum')
                 if all_incomes_check==None:
                     all_incomes_check=0
-                all_income_details=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition").exclude(incomes=None)
+                all_income_details=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition").exclude(incomes=None).exclude(incomes__income_subcategory="Chit Fund Income")
                 if all_income_details:                    
                    
                         # income_checks=ADDIncomeDetails.objects.filter(id=i.incomes_id,management_profile=management).first()
                     out2=[]
-                    all_festival_cash_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",banks=None).exclude(incomes=None).aggregate(Sum('amount')).get('amount__sum')
+                    all_festival_cash_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",banks=None).exclude(incomes=None).exclude(incomes__income_subcategory="Chit Fund Income").aggregate(Sum('amount')).get('amount__sum')
                     if all_festival_cash_amount==None:
                         all_festival_cash_amount=0
-                    all__festival_bank_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition").exclude(incomes=None).exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
+                    all__festival_bank_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition").exclude(incomes=None).exclude(incomes__income_subcategory="Chit Fund Income").exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
                     if all__festival_bank_amount==None:
                         all__festival_bank_amount=0
-                    category_check_expense=ADDIncomeDetails.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).values("category_id").distinct()
+                    category_check_expense=ADDIncomeDetails.objects.exclude(income_subcategory="Chit Fund Income").filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).values("category_id").distinct()
                     print(category_check_expense)
                     print("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
                     for i in category_check_expense:
                         print(i['category_id'])
-                        category_check_expense_details=ADDIncomeDetails.objects.filter(category=i['category_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date)
-                        category_check_expense_total_amount=ADDIncomeDetails.objects.filter(category=i['category_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).aggregate(Sum('income_amt')).get('income_amt__sum')
+                        category_check_expense_details=ADDIncomeDetails.objects.exclude(income_subcategory="Chit Fund Income").filter(category=i['category_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date)
+                        category_check_expense_total_amount=ADDIncomeDetails.objects.exclude(income_subcategory="Chit Fund Income").filter(category=i['category_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).aggregate(Sum('income_amt')).get('income_amt__sum')
                         category_name=ADDIncomeCategory.objects.filter(id=i['category_id']).first().category_name
                         category_id=ADDIncomeCategory.objects.filter(id=i['category_id']).first()
 
@@ -4715,25 +4715,25 @@ def balancesheet_view(request):
                     # calculating_cash_opening=all_incomes_cash_amount - all_expenses_cash_amount + opening_balance_check_amounts             
 
                 
-                all_incomes_check=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Addition").exclude(incomes=None).aggregate(Sum('amount')).get('amount__sum')
+                all_incomes_check=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Addition").exclude(incomes=None).exclude(incomes__income_subcategory="Chit Fund Income").aggregate(Sum('amount')).get('amount__sum')
                 if all_incomes_check==None:
                     all_incomes_check=0
-                all_income_details=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Addition").exclude(incomes=None)
+                all_income_details=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Addition").exclude(incomes=None).exclude(incomes__income_subcategory="Chit Fund Income")
                 if all_income_details:
                     out2=[]
-                    all_festival_cash_amount=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Addition",banks=None).exclude(incomes=None).aggregate(Sum('amount')).get('amount__sum')
+                    all_festival_cash_amount=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Addition",banks=None).exclude(incomes=None).exclude(incomes__income_subcategory="Chit Fund Income").aggregate(Sum('amount')).get('amount__sum')
                     if all_festival_cash_amount==None:
                         all_festival_cash_amount=0
-                    all__festival_bank_amount=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Addition").exclude(incomes=None).exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
+                    all__festival_bank_amount=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Addition").exclude(incomes=None).exclude(incomes__income_subcategory="Chit Fund Income").exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
                     if all__festival_bank_amount==None:
                         all__festival_bank_amount=0
-                    category_check_expense=ADDIncomeDetails.objects.filter(management_profile=management,created_at__date=start_date).values("category_id").distinct()
+                    category_check_expense=ADDIncomeDetails.objects.exclude(income_subcategory="Chit Fund Income").filter(management_profile=management,created_at__date=start_date).values("category_id").distinct()
                     print(category_check_expense)
                     print("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
                     for i in category_check_expense:
                         print(i['category_id'])
-                        category_check_expense_details=ADDIncomeDetails.objects.filter(category=i['category_id'],management_profile=management,created_at__date=start_date)
-                        category_check_expense_total_amount=ADDIncomeDetails.objects.filter(category=i['category_id'],management_profile=management,created_at__date=start_date).aggregate(Sum('income_amt')).get('income_amt__sum')
+                        category_check_expense_details=ADDIncomeDetails.objects.exclude(income_subcategory="Chit Fund Income").filter(category=i['category_id'],management_profile=management,created_at__date=start_date)
+                        category_check_expense_total_amount=ADDIncomeDetails.objects.exclude(income_subcategory="Chit Fund Income").filter(category=i['category_id'],management_profile=management,created_at__date=start_date).aggregate(Sum('income_amt')).get('income_amt__sum')
                         category_name=ADDIncomeCategory.objects.filter(id=i['category_id']).first().category_name
                         category_id=ADDIncomeCategory.objects.filter(id=i['category_id']).first()
                         out1=[]
@@ -6240,16 +6240,42 @@ def balancesheet_chitfundview(request):
                         'details': chit_expense_details,
                     }
 
+                # ---- Chit Fund Incomes (date range branch) ----
+                chit_income_qs = ADDIncomeDetails.objects.filter(
+                    management_profile=management,
+                    created_at__date__gte=start_date,
+                    created_at__date__lte=end_date,
+                    income_subcategory="Chit Fund Income",
+                )
+                chit_income_total = Decimal(str(chit_income_qs.aggregate(Sum('income_amt')).get('income_amt__sum') or 0))
+                chit_income_details = []
+                for inc in chit_income_qs:
+                    chit_income_details.append({
+                        'id': inc.id,
+                        'category_name': inc.category_name,
+                        'income_name': inc.income_name,
+                        'amount': inc.income_amt,
+                        'date': inc.created_at,
+                        'payment_mode': inc.payment_mode,
+                        'transaction_type': inc.transaction_type,
+                        'bank_name': inc.bank_name,
+                    })
+                if chit_income_total:
+                    dic['Chit_Fund_Income'] = {
+                        'total_amount': chit_income_total,
+                        'details': chit_income_details,
+                    }
+
                 dict={}
                 dict['Credit']=dic
                 dict['Debit']=dic1
-                dict['total_credit_amount']=check_invest_amount  + chit_fund_interest_collection_amount + total_in_opening_balance - total_out_opening_balance
+                dict['total_credit_amount']=check_invest_amount  + chit_fund_interest_collection_amount + total_in_opening_balance - total_out_opening_balance + chit_income_total
                 dict['total_debit_amount']=chit_fund_interest_given_amount + chit_fund_profit_distribution_amount + chit_expense_total
                 dict['name']="custom_date_range"
                 dict['start_date']=start_date
                 dict['end_date']=end_date
 
-                net = check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - chit_fund_interest_given_amount - chit_fund_profit_distribution_amount - total_out_opening_balance - chit_expense_total
+                net = check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - chit_fund_interest_given_amount - chit_fund_profit_distribution_amount - total_out_opening_balance - chit_expense_total + chit_income_total
                 if net > 0:
                     dict['balance_amount']=net
                     dict['balance_type']="Credit"
@@ -6451,16 +6477,41 @@ def balancesheet_chitfundview(request):
                         'details': chit_expense_details,
                     }
 
+                # ---- Chit Fund Incomes (custom_date branch) ----
+                chit_income_qs = ADDIncomeDetails.objects.filter(
+                    management_profile=management,
+                    created_at__date=start_date,
+                    income_subcategory="Chit Fund Income",
+                )
+                chit_income_total = Decimal(str(chit_income_qs.aggregate(Sum('income_amt')).get('income_amt__sum') or 0))
+                chit_income_details = []
+                for inc in chit_income_qs:
+                    chit_income_details.append({
+                        'id': inc.id,
+                        'category_name': inc.category_name,
+                        'income_name': inc.income_name,
+                        'amount': inc.income_amt,
+                        'date': inc.created_at,
+                        'payment_mode': inc.payment_mode,
+                        'transaction_type': inc.transaction_type,
+                        'bank_name': inc.bank_name,
+                    })
+                if chit_income_total:
+                    dic['Chit_Fund_Income'] = {
+                        'total_amount': chit_income_total,
+                        'details': chit_income_details,
+                    }
+
                 dict={}
                 dict['Credit']=dic
                 dict['Debit']=dic1
-                dict['total_credit_amount']=check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - total_out_opening_balance
+                dict['total_credit_amount']=check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - total_out_opening_balance + chit_income_total
                 dict['total_debit_amount']=chit_fund_interest_given_amount + chit_fund_profit_distribution_amount + chit_expense_total
                 dict['name']="custom_date"
                 dict['start_date']=start_date
                 # dict['end_date']=end_date
 
-                net = check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - chit_fund_interest_given_amount - chit_fund_profit_distribution_amount - total_out_opening_balance - chit_expense_total
+                net = check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - chit_fund_interest_given_amount - chit_fund_profit_distribution_amount - total_out_opening_balance - chit_expense_total + chit_income_total
                 if net > 0:
                     dict['balance_amount']=net
                     dict['balance_type']="Credit"
