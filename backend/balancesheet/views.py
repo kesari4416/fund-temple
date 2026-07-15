@@ -98,7 +98,7 @@ def collection_page_fund_view(request,pk):
 #                 income_check_open_bal=ADDIncomeDetails.objects.filter(management_profile=management,created_at__date__lt=start_date).aggregate(Sum('income_amt')).get('income_amt__sum') 
 #                 if income_check_open_bal==None:
 #                        income_check_open_bal=0
-#                 expense_checks_open_bal=ADDExpenseDetails.objects.filter(management_profile=management,created_at__date__lt=start_date).aggregate(Sum('expense_amt')).get('expense_amt__sum')  
+#                 expense_checks_open_bal=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(management_profile=management,created_at__date__lt=start_date).aggregate(Sum('expense_amt')).get('expense_amt__sum')  
 #                 if expense_checks_open_bal==None:
 #                        expense_checks_open_bal=0
 #                 collection_open_all=CollectionDetails.objects.filter(management_profile=management,moveablerent=None,created_at__date__lt=start_date,moveable_asset_payment="Received").aggregate(Sum('amount')).get('amount__sum') 
@@ -185,10 +185,10 @@ def collection_page_fund_view(request,pk):
 #                     income=income1
 #                 else:
 #                     income=0           
-#                 expense_check=ADDExpenseDetails.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date)
+#                 expense_check=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date)
 #                 if expense_check:
-#                     expense_checks=ADDExpenseDetails.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date)
-#                     expense_checks_amount=ADDExpenseDetails.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).aggregate(Sum("expense_amt")).get("expense_amt__sum")
+#                     expense_checks=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date)
+#                     expense_checks_amount=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).aggregate(Sum("expense_amt")).get("expense_amt__sum")
                     
 #                     out2=[]
 #                     expense1=0
@@ -655,7 +655,7 @@ def collection_page_fund_view(request,pk):
 #                 income_check_open_bal=ADDIncomeDetails.objects.filter(management_profile=management,created_at__date__lt=start_date).aggregate(Sum('income_amt')).get('income_amt__sum')    
 #                 if income_check_open_bal==None:
 #                        income_check_open_bal=0
-#                 expense_checks_open_bal=ADDExpenseDetails.objects.filter(management_profile=management,created_at__date__lt=start_date).aggregate(Sum('expense_amt')).get('expense_amt__sum')  
+#                 expense_checks_open_bal=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(management_profile=management,created_at__date__lt=start_date).aggregate(Sum('expense_amt')).get('expense_amt__sum')  
 #                 if expense_checks_open_bal==None:
 #                        expense_checks_open_bal=0
 #                 collection_open_all=CollectionDetails.objects.filter(management_profile=management,moveablerent=None,moveable_asset_payment="Received",created_at__date__lt=start_date).aggregate(Sum('amount')).get('amount__sum') 
@@ -713,10 +713,10 @@ def collection_page_fund_view(request,pk):
 #                     income=income1
 #                 else:
 #                     income=0           
-#                 expense_check=ADDExpenseDetails.objects.filter(management_profile=management,created_at__date=start_date)
+#                 expense_check=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(management_profile=management,created_at__date=start_date)
 #                 if expense_check:
-#                     expense_checks=ADDExpenseDetails.objects.filter(management_profile=management,created_at__date=start_date)
-#                     expense_checks_amount=ADDExpenseDetails.objects.filter(management_profile=management,created_at__date=start_date).aggregate(Sum("expense_amt")).get("expense_amt__sum")
+#                     expense_checks=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(management_profile=management,created_at__date=start_date)
+#                     expense_checks_amount=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(management_profile=management,created_at__date=start_date).aggregate(Sum("expense_amt")).get("expense_amt__sum")
                     
 #                     out2=[]
 #                     expense1=0
@@ -1435,7 +1435,7 @@ def collection_page_fund_view(request,pk):
 #                 print(all_expense_details)
 #                 if all_expense_details:
 #                     out2=[]
-#                     category_check_expense=ADDExpenseDetails.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).values("category_id").distinct()
+#                     category_check_expense=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).values("category_id").distinct()
 #                     print(category_check_expense)
 #                     all_expense_bank_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Reduction").exclude(expenses=None).exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
 #                     if all_expense_bank_amount==None:
@@ -1446,8 +1446,8 @@ def collection_page_fund_view(request,pk):
 #                     print("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
 #                     for i in category_check_expense:
 #                         print(i['category_id'])
-#                         category_check_expense_details=ADDExpenseDetails.objects.filter(category=i['category_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date)
-#                         category_check_expense_total_amount=ADDExpenseDetails.objects.filter(category=i['category_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).aggregate(Sum('expense_amt')).get('expense_amt__sum')
+#                         category_check_expense_details=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(category=i['category_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date)
+#                         category_check_expense_total_amount=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(category=i['category_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).aggregate(Sum('expense_amt')).get('expense_amt__sum')
 #                         category_name=ADDExpenseCategory.objects.filter(id=i['category_id']).first().category_name
 #                         category_id=ADDExpenseCategory.objects.filter(id=i['category_id']).first()
 #                         out1=[]
@@ -2325,13 +2325,13 @@ def collection_page_fund_view(request,pk):
 #                     all__festival_bank_amount=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Reduction").exclude(expenses=None).exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
 #                     if all__festival_bank_amount==None:
 #                         all__festival_bank_amount=0
-#                     category_check_expense=ADDExpenseDetails.objects.filter(management_profile=management,created_at__date=start_date).values("category_id").distinct()
+#                     category_check_expense=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(management_profile=management,created_at__date=start_date).values("category_id").distinct()
 #                     print(category_check_expense)
 #                     print("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
 #                     for i in category_check_expense:
 #                         print(i['category_id'])
-#                         category_check_expense_details=ADDExpenseDetails.objects.filter(category=i['category_id'],management_profile=management,created_at__date=start_date)
-#                         category_check_expense_total_amount=ADDExpenseDetails.objects.filter(category=i['category_id'],management_profile=management,created_at__date=start_date).aggregate(Sum('expense_amt')).get('expense_amt__sum')
+#                         category_check_expense_details=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(category=i['category_id'],management_profile=management,created_at__date=start_date)
+#                         category_check_expense_total_amount=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(category=i['category_id'],management_profile=management,created_at__date=start_date).aggregate(Sum('expense_amt')).get('expense_amt__sum')
 #                         category_name=ADDExpenseCategory.objects.filter(id=i['category_id']).first().category_name
 #                         category_id=ADDExpenseCategory.objects.filter(id=i['category_id']).first()
 
@@ -3404,27 +3404,27 @@ def balancesheet_view(request):
 
                     dic['income']=dicttttt 
 
-                all_expense_check=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Reduction").exclude(expenses=None).aggregate(Sum('amount')).get('amount__sum')
+                all_expense_check=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Reduction").exclude(expenses=None).exclude(expenses__expense_subcategory="Chit Fund Expense").aggregate(Sum('amount')).get('amount__sum')
                 if all_expense_check==None:
                     all_expense_check=0
-                all_expense_details=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Reduction").exclude(expenses=None)
+                all_expense_details=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Reduction").exclude(expenses=None).exclude(expenses__expense_subcategory="Chit Fund Expense")
                 print("ttttttttttttttttttt")
                 print(all_expense_details)
                 if all_expense_details:
                     out2=[]
-                    category_check_expense=ADDExpenseDetails.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).values("category_id").distinct()
+                    category_check_expense=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).values("category_id").distinct()
                     print(category_check_expense)
-                    all_expense_bank_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Reduction").exclude(expenses=None).exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
+                    all_expense_bank_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Reduction").exclude(expenses=None).exclude(expenses__expense_subcategory="Chit Fund Expense").exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
                     if all_expense_bank_amount==None:
                         all_expense_bank_amount=0
-                    all_expense_cash_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Reduction",banks=None).exclude(expenses=None).aggregate(Sum('amount')).get('amount__sum')
+                    all_expense_cash_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Reduction",banks=None).exclude(expenses=None).exclude(expenses__expense_subcategory="Chit Fund Expense").aggregate(Sum('amount')).get('amount__sum')
                     if all_expense_cash_amount==None:
                         all_expense_cash_amount=0
                     print("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
                     for i in category_check_expense:
                         print(i['category_id'])
-                        category_check_expense_details=ADDExpenseDetails.objects.filter(category=i['category_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date)
-                        category_check_expense_total_amount=ADDExpenseDetails.objects.filter(category=i['category_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).aggregate(Sum('expense_amt')).get('expense_amt__sum')
+                        category_check_expense_details=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(category=i['category_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date)
+                        category_check_expense_total_amount=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(category=i['category_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).aggregate(Sum('expense_amt')).get('expense_amt__sum')
                         category_name=ADDExpenseCategory.objects.filter(id=i['category_id']).first().category_name
                         category_id=ADDExpenseCategory.objects.filter(id=i['category_id']).first()
                         out1=[]
@@ -4761,28 +4761,28 @@ def balancesheet_view(request):
                     dicttttt['bank_amount']=all__festival_bank_amount
                     dic['income']  =dicttttt               
 
-                all_expense_check=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Reduction").exclude(expenses=None).aggregate(Sum('amount')).get('amount__sum')
+                all_expense_check=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Reduction").exclude(expenses=None).exclude(expenses__expense_subcategory="Chit Fund Expense").aggregate(Sum('amount')).get('amount__sum')
                 if all_expense_check==None:
                     all_expense_check=0
-                all_expense_details=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Reduction").exclude(expenses=None)
+                all_expense_details=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Reduction").exclude(expenses=None).exclude(expenses__expense_subcategory="Chit Fund Expense")
                 print("ttttttttttttttttttt")
                 print("sssssssssssssssssssssssssssssssssss")
                 print(all_expense_details)
                 if all_expense_details:
                     out2=[]
-                    all_festival_cash_amount=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Reduction",banks=None).exclude(expenses=None).aggregate(Sum('amount')).get('amount__sum')
+                    all_festival_cash_amount=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Reduction",banks=None).exclude(expenses=None).exclude(expenses__expense_subcategory="Chit Fund Expense").aggregate(Sum('amount')).get('amount__sum')
                     if all_festival_cash_amount==None:
                         all_festival_cash_amount=0
-                    all__festival_bank_amount=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Reduction").exclude(expenses=None).exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
+                    all__festival_bank_amount=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Reduction").exclude(expenses=None).exclude(expenses__expense_subcategory="Chit Fund Expense").exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
                     if all__festival_bank_amount==None:
                         all__festival_bank_amount=0
-                    category_check_expense=ADDExpenseDetails.objects.filter(management_profile=management,created_at__date=start_date).values("category_id").distinct()
+                    category_check_expense=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(management_profile=management,created_at__date=start_date).values("category_id").distinct()
                     print(category_check_expense)
                     print("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
                     for i in category_check_expense:
                         print(i['category_id'])
-                        category_check_expense_details=ADDExpenseDetails.objects.filter(category=i['category_id'],management_profile=management,created_at__date=start_date)
-                        category_check_expense_total_amount=ADDExpenseDetails.objects.filter(category=i['category_id'],management_profile=management,created_at__date=start_date).aggregate(Sum('expense_amt')).get('expense_amt__sum')
+                        category_check_expense_details=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(category=i['category_id'],management_profile=management,created_at__date=start_date)
+                        category_check_expense_total_amount=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(category=i['category_id'],management_profile=management,created_at__date=start_date).aggregate(Sum('expense_amt')).get('expense_amt__sum')
                         category_name=ADDExpenseCategory.objects.filter(id=i['category_id']).first().category_name
                         category_id=ADDExpenseCategory.objects.filter(id=i['category_id']).first()
                         out1=[]
@@ -6212,23 +6212,52 @@ def balancesheet_chitfundview(request):
                 print(check_invest_amount)
                 print(total_in_opening_balance - total_out_opening_balance)
                 print(chit_fund_interest_collection_amount)
+
+                # ---- Chit Fund Expenses (date range branch) ----
+                chit_expense_qs = ADDExpenseDetails.objects.filter(
+                    management_profile=management,
+                    date__gte=start_date,
+                    date__lte=end_date,
+                    expense_subcategory="Chit Fund Expense",
+                )
+                from decimal import Decimal
+                chit_expense_total = Decimal(str(chit_expense_qs.aggregate(Sum('expense_amt')).get('expense_amt__sum') or 0))
+                chit_expense_details = []
+                for exp in chit_expense_qs:
+                    chit_expense_details.append({
+                        'id': exp.id,
+                        'category_name': exp.category_name,
+                        'expense_name': exp.expense_name,
+                        'amount': exp.expense_amt,
+                        'date': exp.date,
+                        'payment_mode': exp.payment_mode,
+                        'transaction_type': exp.transaction_type,
+                        'bank_name': exp.bank_name,
+                    })
+                if chit_expense_total:
+                    dic1['Chit_Fund_Expense'] = {
+                        'total_amount': chit_expense_total,
+                        'details': chit_expense_details,
+                    }
+
                 dict={}
                 dict['Credit']=dic
                 dict['Debit']=dic1
                 dict['total_credit_amount']=check_invest_amount  + chit_fund_interest_collection_amount + total_in_opening_balance - total_out_opening_balance
-                dict['total_debit_amount']=chit_fund_interest_given_amount + chit_fund_profit_distribution_amount 
+                dict['total_debit_amount']=chit_fund_interest_given_amount + chit_fund_profit_distribution_amount + chit_expense_total
                 dict['name']="custom_date_range"
                 dict['start_date']=start_date
                 dict['end_date']=end_date
 
-                if check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - chit_fund_interest_given_amount - chit_fund_profit_distribution_amount -total_out_opening_balance >0:
-                    dict['balance_amount']=check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - chit_fund_interest_given_amount - chit_fund_profit_distribution_amount - total_out_opening_balance
+                net = check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - chit_fund_interest_given_amount - chit_fund_profit_distribution_amount - total_out_opening_balance - chit_expense_total
+                if net > 0:
+                    dict['balance_amount']=net
                     dict['balance_type']="Credit"
-                elif check_invest_amount + chit_fund_interest_collection_amount - chit_fund_interest_given_amount + total_in_opening_balance - chit_fund_profit_distribution_amount - total_out_opening_balance==0:
+                elif net == 0:
                     dict['balance_amount']=0
                     dict['balance_type']=""
                 else:
-                    dict['balance_amount']=abs(check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - chit_fund_interest_given_amount - chit_fund_profit_distribution_amount- total_out_opening_balance)
+                    dict['balance_amount']=abs(net)
                     dict['balance_type']="Debit"
 
                 print(dict)
@@ -6395,23 +6424,51 @@ def balancesheet_chitfundview(request):
                 print(check_invest_amount)
                 print(chit_fund_interest_collection_amount)
                 # print(d)
+
+                # ---- Chit Fund Expenses (custom_date branch) ----
+                chit_expense_qs = ADDExpenseDetails.objects.filter(
+                    management_profile=management,
+                    date=start_date,
+                    expense_subcategory="Chit Fund Expense",
+                )
+                from decimal import Decimal
+                chit_expense_total = Decimal(str(chit_expense_qs.aggregate(Sum('expense_amt')).get('expense_amt__sum') or 0))
+                chit_expense_details = []
+                for exp in chit_expense_qs:
+                    chit_expense_details.append({
+                        'id': exp.id,
+                        'category_name': exp.category_name,
+                        'expense_name': exp.expense_name,
+                        'amount': exp.expense_amt,
+                        'date': exp.date,
+                        'payment_mode': exp.payment_mode,
+                        'transaction_type': exp.transaction_type,
+                        'bank_name': exp.bank_name,
+                    })
+                if chit_expense_total:
+                    dic1['Chit_Fund_Expense'] = {
+                        'total_amount': chit_expense_total,
+                        'details': chit_expense_details,
+                    }
+
                 dict={}
                 dict['Credit']=dic
                 dict['Debit']=dic1
                 dict['total_credit_amount']=check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - total_out_opening_balance
-                dict['total_debit_amount']=chit_fund_interest_given_amount + chit_fund_profit_distribution_amount 
+                dict['total_debit_amount']=chit_fund_interest_given_amount + chit_fund_profit_distribution_amount + chit_expense_total
                 dict['name']="custom_date"
                 dict['start_date']=start_date
                 # dict['end_date']=end_date
 
-                if check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - chit_fund_interest_given_amount - chit_fund_profit_distribution_amount - total_out_opening_balance>0:
-                    dict['balance_amount']=check_invest_amount + total_in_opening_balance + chit_fund_interest_collection_amount - chit_fund_interest_given_amount - chit_fund_profit_distribution_amount -total_out_opening_balance
+                net = check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - chit_fund_interest_given_amount - chit_fund_profit_distribution_amount - total_out_opening_balance - chit_expense_total
+                if net > 0:
+                    dict['balance_amount']=net
                     dict['balance_type']="Credit"
-                elif check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - chit_fund_interest_given_amount - chit_fund_profit_distribution_amount - total_out_opening_balance==0:
+                elif net == 0:
                     dict['balance_amount']=0
                     dict['balance_type']=""
-                else:                    
-                    dict['balance_amount']=abs(check_invest_amount + chit_fund_interest_collection_amount + total_in_opening_balance - chit_fund_interest_given_amount - chit_fund_profit_distribution_amount - total_out_opening_balance)
+                else:
+                    dict['balance_amount']=abs(net)
                     dict['balance_type']="Debit"
                 print(dict)
                 return Response(dict,status=status.HTTP_201_CREATED) 
