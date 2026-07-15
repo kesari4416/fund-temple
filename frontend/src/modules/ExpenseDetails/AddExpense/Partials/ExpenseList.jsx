@@ -198,6 +198,11 @@ const ExpenseList = () => {
       render: (value, item, index) => index + 1,
     },
     {
+      title: "Subcategory",
+      dataIndex: "expense_subcategory",
+      width: 160,
+    },
+    {
       title: "Expense Category",
       dataIndex: "category_name",
       filteredValue: searchTexts ? [searchTexts] : null,
@@ -278,6 +283,10 @@ const ExpenseList = () => {
     {
       title: "SI No",
       render: (value, item, index) => index + 1,
+    },
+    {
+      title: "Subcategory",
+      dataIndex: "expense_subcategory",
     },
     {
       title: "Expense Category",

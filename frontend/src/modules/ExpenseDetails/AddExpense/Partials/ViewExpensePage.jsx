@@ -29,6 +29,7 @@ const ViewExpensePage = ({ ViewRecord }) => {
                 <CustomRow >
                     <Col span={24} md={12}>
 
+                        <h4>Subcategory: <span>{ViewRecord?.expense_subcategory}</span></h4>
                         <h4>Category Name: <span>{ViewRecord?.category_name}</span></h4>
                         <h4>Date: <span>{ViewRecord?.date}</span></h4>
                         <h4>Expense Name: <span>{ViewRecord?.expense_name}</span></h4>

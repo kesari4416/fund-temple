@@ -9,6 +9,11 @@ EXPENSE_FROM_TYPE_CHOICES = (
 
 )
 
+EXPENSE_SUBCATEGORY_CHOICES = (
+    ('Chit Fund Expense', 'Chit Fund Expense'),
+    ('Temple Expense', 'Temple Expense'),
+)
+
 PAYMENT_MODE_TYPE_CHOICES = (
     ('Online','Online'),
     ('Offline','Offline'),
@@ -44,6 +49,7 @@ class ADDExpenseNames(models.Model):
 
 class ADDExpenseDetails(models.Model):
     management_profile=models.ForeignKey(ManagementDetails,on_delete=models.CASCADE,null=True,blank=True,related_name='ManagementDetails_EXPENSE_LINK')
+    expense_subcategory=models.CharField(max_length=255,choices=EXPENSE_SUBCATEGORY_CHOICES,null=True,blank=True)
     category=models.ForeignKey(ADDExpenseCategory,on_delete=models.CASCADE,null=True,blank=True,related_name='ADDExpenseCategory_EXPENSE_LINK')
     category_name = models.CharField(max_length=255,null=True)
     expense_from=models.CharField(max_length=255,choices=EXPENSE_FROM_TYPE_CHOICES,null=True,blank=True)

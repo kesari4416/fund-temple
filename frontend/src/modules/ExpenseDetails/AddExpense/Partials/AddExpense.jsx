@@ -209,6 +209,11 @@ export const AddExpenseForm = ({
     },
   ];
 
+  const expenseSubcategoryOptions = [
+    { label: "Chit Fund Expense", value: "Chit Fund Expense" },
+    { label: "Temple Expense", value: "Temple Expense" },
+  ];
+
   const RadioOptionsPaymentMode = [
     {
       label: "Online",
@@ -449,6 +454,22 @@ export const AddExpenseForm = ({
               <CustomPageTitle Heading={"Add Expense"} />
             )}
           </Col>
+          <Col span={24} md={12}>
+            <CustomSelect
+              label={"Subcategory"}
+              name={"expense_subcategory"}
+              options={expenseSubcategoryOptions}
+              placeholder={"Choose Subcategory"}
+              rules={[
+                {
+                  required: true,
+                  message: "Please Select a Subcategory !",
+                },
+              ]}
+              data-testid={"expense-subcategory-select"}
+            />
+          </Col>
+          <Col span={24} md={12}></Col>
           <Col span={24} md={12}>
             <CustomAddSelect
               label={"Expense Category"}
