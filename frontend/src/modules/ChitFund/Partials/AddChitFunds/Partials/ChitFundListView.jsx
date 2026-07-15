@@ -72,8 +72,8 @@ const ChitFundListView = () => {
     const [findIds, setFindIds] = useState({});
 
     // Demand Share Amount = (Management Invested Amount + Outer Invest Amount + Profit Amount) / Investers Share Count
-    // The "Investers Share Count" shown in the view already includes the management share, so this
-    // divisor lines up with what the user sees.
+    // Investers Share Count as stored on the record already includes the management share, so this
+    // divisor lines up with the value displayed to the user.
     const demandShareAmount = useMemo(() => {
         const mgmtInvested = Number(findIds?.management_amt || 0);
         const outerInvest = Number(findIds?.outer_invest_amount || 0);
@@ -88,13 +88,6 @@ const ChitFundListView = () => {
         findIds?.profit_amount,
         findIds?.investers_share_count,
     ]);
-
-    // Displayed "Investers Share Count" = actual investers + management share (as per user requirement).
-    const investersShareCountDisplay = useMemo(() => {
-        const investers = Number(findIds?.investers_share_count || 0);
-        const mgmt = Number(findIds?.management_share_count || 0);
-        return investers + mgmt;
-    }, [findIds?.investers_share_count, findIds?.management_share_count]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     // ======  Modal Title and Content ========
@@ -236,7 +229,7 @@ const ChitFundListView = () => {
                             <div className="info-row">
                                 <h3 className="info-label">Investers Share Count </h3>
                                 <span>:</span>&nbsp;
-                                <span data-testid="investers-share-count-value">{investersShareCountDisplay}</span>
+                                <span data-testid="investers-share-count-value">{findIds?.investers_share_count}</span>
                             </div>
                             <div className="info-row" data-testid="demand-share-amount-row">
                                 <h3 className="info-label">Demand Share Amount </h3>
