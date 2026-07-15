@@ -71,22 +71,29 @@ const ChitFundListView = () => {
     const [menberDetalView, setMenberDetalView] = useState({});
     const [findIds, setFindIds] = useState({});
 
+    // Effective share count used in the display and in the Demand Share Amount formula.
+    // It includes the Management share (typically 1) alongside the investor shares — per business
+    // rule the management holds a share in the pool.
+    const effectiveInvestersShareCount = useMemo(() => {
+        const investers = Number(findIds?.investers_share_count || 0);
+        const mgmt = Number(findIds?.management_share_count || 0);
+        return investers + mgmt;
+    }, [findIds?.investers_share_count, findIds?.management_share_count]);
+
     // Demand Share Amount = (Management Invested Amount + Outer Invest Amount + Profit Amount) / Investers Share Count
-    // Investers Share Count as stored on the record already includes the management share, so this
-    // divisor lines up with the value displayed to the user.
+    // Using the same effective share count that is displayed to the user, so the two match.
     const demandShareAmount = useMemo(() => {
         const mgmtInvested = Number(findIds?.management_amt || 0);
         const outerInvest = Number(findIds?.outer_invest_amount || 0);
         const profitAmount = Number(findIds?.profit_amount || 0);
-        const investerShares = Number(findIds?.investers_share_count || 0);
-        if (!investerShares) return 0;
-        const value = (mgmtInvested + outerInvest + profitAmount) / investerShares;
+        if (!effectiveInvestersShareCount) return 0;
+        const value = (mgmtInvested + outerInvest + profitAmount) / effectiveInvestersShareCount;
         return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
     }, [
         findIds?.management_amt,
         findIds?.outer_invest_amount,
         findIds?.profit_amount,
-        findIds?.investers_share_count,
+        effectiveInvestersShareCount,
     ]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -229,7 +236,7 @@ const ChitFundListView = () => {
                             <div className="info-row">
                                 <h3 className="info-label">Investers Share Count </h3>
                                 <span>:</span>&nbsp;
-                                <span data-testid="investers-share-count-value">{findIds?.investers_share_count}</span>
+                                <span data-testid="investers-share-count-value">{effectiveInvestersShareCount}</span>
                             </div>
                             <div className="info-row" data-testid="demand-share-amount-row">
                                 <h3 className="info-label">Demand Share Amount </h3>
