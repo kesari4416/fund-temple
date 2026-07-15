@@ -117,6 +117,7 @@ const CustomSelect = ({
       }
     >
       <AntdSelectStyle
+        {...rest}
         value={value}
         onChange={onChange}
         defaultValue={defaultValue}

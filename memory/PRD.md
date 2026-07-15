@@ -91,10 +91,20 @@ Business rule clarified with the user:
 
 ## What's been implemented (2026-02-10)
 - [x] **Collection "Choose Member" dropdown bug fixed** — paid members no longer appear
-  - **Backend** `collection/views.py` `get_select_member_collection` (~L2321-2360): added fallback so when `category="Subscription Tariff"` and `type` is empty/falsy, the query resolves to the latest active `ADDSubscriptionTariffDetails` (order_by('-id')). Guarantees the filter always scopes to a single tariff and never leaks members from other tariffs.
-  - **Frontend** `Collection.jsx` `handleCollectionType`: made async and, for Subscription Tariff, now awaits `HandleSelectType` before calling `HandleSelectMemberCollection`. Uses the freshly returned `tariffList[0].id` (previously used stale `subsCategory[0]?.id`, which was empty on first entry).
-  - Verified: `testing_agent_v3_fork` iteration 3 — 6/6 backend pytest cases + full E2E pass. Paying member 7 for sub_tariff 14 correctly removes them from the reopened dropdown (102 → 101 members).
-  - Regression counts confirmed: Festival id=1 → 48, Death Tariff id=42 → 105, Subscription Tariff id=14 → 102, latest-active fallback → 106.
+  - Backend `collection/views.py` `get_select_member_collection`: fallback to newest active tariff when `type` is empty
+  - Frontend `Collection.jsx` `handleCollectionType`: async, awaits `HandleSelectType` and uses fresh tariff id
+- [x] **Chit Fund settlement redistribution** — exiting shares now split between Management + remaining investors
+  - `chit_fund/views.py` `add_chit_fund_settlement_application_details`: largest-remainder proportional redistribution across mgmt + remaining active investors; `total_share_count = mgmt + investors` invariant preserved
+  - Removed the double share_count/outer_invest_amount reduction previously done again in `add_chit_fund_settlement`
+- [x] **Home Balance Sheet renamed** to "Temple Balance Sheet" (sidebar + page title + print header)
+- [x] **Expense Subcategory** — Add Expense form now has a required "Subcategory" select with two options: `Chit Fund Expense`, `Temple Expense`
+  - Backend: new `expense_subcategory` CharField on `ADDExpenseDetails` (migration 0002 applied)
+  - Frontend: field added to Add Expense form, column added to Expense List (screen + print), row added to View Expense
+  - CustomSelect now forwards `...rest` (data-testid, aria-*) to underlying AntdSelectStyle
+- [x] **Balance sheet routing by subcategory** — expenses now split by subcategory
+  - Temple Balance Sheet (`balancesheet_view`): all expense queries chained with `.exclude(expense_subcategory="Chit Fund Expense")` (legacy NULL rows preserved via ORM join semantics)
+  - Chit Fund Balance Sheet (`balancesheet_chitfundview`): new `Chit_Fund_Expense` aggregation block on both `custom_date_range` and `custom_date` branches; adds to `total_debit_amount`
+- [x] Regression pytest suite `/app/backend/tests/` — 24 tests, all passing
 
 ## Backlog / Future
 - P1: Add a daily scheduled job (django-apscheduler is already installed)
