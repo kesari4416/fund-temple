@@ -6243,8 +6243,8 @@ def balancesheet_chitfundview(request):
                 # ---- Chit Fund Incomes (date range branch) ----
                 chit_income_qs = ADDIncomeDetails.objects.filter(
                     management_profile=management,
-                    created_at__date__gte=start_date,
-                    created_at__date__lte=end_date,
+                    date__gte=start_date,
+                    date__lte=end_date,
                     income_subcategory="Chit Fund Income",
                 )
                 chit_income_total = Decimal(str(chit_income_qs.aggregate(Sum('income_amt')).get('income_amt__sum') or 0))
@@ -6255,7 +6255,7 @@ def balancesheet_chitfundview(request):
                         'category_name': inc.category_name,
                         'income_name': inc.income_name,
                         'amount': inc.income_amt,
-                        'date': inc.created_at,
+                        'date': inc.date,
                         'payment_mode': inc.payment_mode,
                         'transaction_type': inc.transaction_type,
                         'bank_name': inc.bank_name,
@@ -6480,7 +6480,7 @@ def balancesheet_chitfundview(request):
                 # ---- Chit Fund Incomes (custom_date branch) ----
                 chit_income_qs = ADDIncomeDetails.objects.filter(
                     management_profile=management,
-                    created_at__date=start_date,
+                    date=start_date,
                     income_subcategory="Chit Fund Income",
                 )
                 chit_income_total = Decimal(str(chit_income_qs.aggregate(Sum('income_amt')).get('income_amt__sum') or 0))
@@ -6491,7 +6491,7 @@ def balancesheet_chitfundview(request):
                         'category_name': inc.category_name,
                         'income_name': inc.income_name,
                         'amount': inc.income_amt,
-                        'date': inc.created_at,
+                        'date': inc.date,
                         'payment_mode': inc.payment_mode,
                         'transaction_type': inc.transaction_type,
                         'bank_name': inc.bank_name,

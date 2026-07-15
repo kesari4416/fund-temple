@@ -104,7 +104,13 @@ Business rule clarified with the user:
 - [x] **Balance sheet routing by subcategory** — expenses now split by subcategory
   - Temple Balance Sheet (`balancesheet_view`): all expense queries chained with `.exclude(expense_subcategory="Chit Fund Expense")` (legacy NULL rows preserved via ORM join semantics)
   - Chit Fund Balance Sheet (`balancesheet_chitfundview`): new `Chit_Fund_Expense` aggregation block on both `custom_date_range` and `custom_date` branches; adds to `total_debit_amount`
-- [x] Regression pytest suite `/app/backend/tests/` — 24 tests, all passing
+- [x] **Income Subcategory** — Add Income form now has a required "Subcategory" select with two options: `Chit Fund Income`, `Temple Income`
+  - Backend: new `income_subcategory` CharField on `ADDIncomeDetails` (migration `income/0002` applied)
+  - Frontend: field added to Add Income form, column added to Income List (screen + print), row added to Income View
+- [x] **Balance sheet routing for income** — matches the expense pattern
+  - Temple Balance Sheet: `ADDIncomeDetails.objects.filter(...).exclude(income_subcategory="Chit Fund Income")` (6 places); `Report...exclude(incomes=None).exclude(incomes__income_subcategory="Chit Fund Income")` (8 places)
+  - Chit Fund Balance Sheet: new `Chit_Fund_Income` aggregation on both date branches. Filters by `date` field (aligned with expense) for consistency; adds to `total_credit_amount` and net balance.
+- [x] Regression pytest suite `/app/backend/tests/` — 32+ tests across expense/income/collection/penalty/chit-fund settlement, all passing individually
 
 ## Backlog / Future
 - P1: Add a daily scheduled job (django-apscheduler is already installed)
