@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect, useState } from 'react'
+import React, { Fragment, useEffect, useMemo, useState } from 'react'
 import { CustomCardView, CustomModal, CustomRow, Flex } from '@components/others';
 import { CustomPageTitle } from '@components/others/CustomPageTitle';
 import { Card, Col, Collapse, Form, Tooltip } from 'antd';
@@ -70,6 +70,24 @@ const ChitFundListView = () => {
 
     const [menberDetalView, setMenberDetalView] = useState({});
     const [findIds, setFindIds] = useState({});
+
+    // Demand Share Amount = (Management Invested Amount + Outer Invest Amount + Profit Amount) / Investers Share Count
+    // Recomputes automatically whenever `findIds` (loaded chit fund details) changes — so any share
+    // increase/decrease or invest/profit update reflected on the record instantly updates this value.
+    const demandShareAmount = useMemo(() => {
+        const mgmtInvested = Number(findIds?.management_amt || 0);
+        const outerInvest = Number(findIds?.outer_invest_amount || 0);
+        const profitAmount = Number(findIds?.profit_amount || 0);
+        const investerShares = Number(findIds?.investers_share_count || 0);
+        if (!investerShares) return 0;
+        const value = (mgmtInvested + outerInvest + profitAmount) / investerShares;
+        return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
+    }, [
+        findIds?.management_amt,
+        findIds?.outer_invest_amount,
+        findIds?.profit_amount,
+        findIds?.investers_share_count,
+    ]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     // ======  Modal Title and Content ========
@@ -212,6 +230,11 @@ const ChitFundListView = () => {
                                 <h3 className="info-label">Investers Share Count </h3>
                                 <span>:</span>&nbsp;
                                 <span>{findIds?.investers_share_count}</span>
+                            </div>
+                            <div className="info-row" data-testid="demand-share-amount-row">
+                                <h3 className="info-label">Demand Share Amount </h3>
+                                <span>:</span>&nbsp;
+                                <span data-testid="demand-share-amount-value">{demandShareAmount}</span>
                             </div>
                             <div className="info-row">
                                 <h3 className="info-label">Invest Retake Amount </h3>
