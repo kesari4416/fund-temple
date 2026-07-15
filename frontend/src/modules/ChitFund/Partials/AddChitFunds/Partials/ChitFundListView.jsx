@@ -71,7 +71,8 @@ const ChitFundListView = () => {
     const [menberDetalView, setMenberDetalView] = useState({});
     const [findIds, setFindIds] = useState({});
 
-    // Demand Share Amount = (Management Invested Amount + Outer Invest Amount + Profit Amount) / Investers Share Count
+    // Demand Share Amount = (Management Invested Amount + Outer Invest Amount + Profit Amount)
+    //                       / (Investers Share Count + Management Share Count)
     // Recomputes automatically whenever `findIds` (loaded chit fund details) changes — so any share
     // increase/decrease or invest/profit update reflected on the record instantly updates this value.
     const demandShareAmount = useMemo(() => {
@@ -79,14 +80,17 @@ const ChitFundListView = () => {
         const outerInvest = Number(findIds?.outer_invest_amount || 0);
         const profitAmount = Number(findIds?.profit_amount || 0);
         const investerShares = Number(findIds?.investers_share_count || 0);
-        if (!investerShares) return 0;
-        const value = (mgmtInvested + outerInvest + profitAmount) / investerShares;
+        const mgmtShares = Number(findIds?.management_share_count || 0);
+        const totalShares = investerShares + mgmtShares;
+        if (!totalShares) return 0;
+        const value = (mgmtInvested + outerInvest + profitAmount) / totalShares;
         return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
     }, [
         findIds?.management_amt,
         findIds?.outer_invest_amount,
         findIds?.profit_amount,
         findIds?.investers_share_count,
+        findIds?.management_share_count,
     ]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
