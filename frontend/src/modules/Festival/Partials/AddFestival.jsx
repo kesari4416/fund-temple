@@ -74,16 +74,6 @@ export const AddFestival = ({
       start_date: dayjs(startdate, dateFormat),
       end_date: dayjs(enddate, dateFormat),
     });
-    //------------- Penalty-----------------------
-
-    if(updatefestivallist?.penalty_amt > 100){
-      form.setFieldsValue({choice:"Amount"})
-      setDisablePenalty(true)
-    }
-    else{
-      setDisablePenalty(false)
-    }
-    //--------------
   };
   const festivalDate = (fedate) => {
     setDate(fedate);
@@ -107,15 +97,10 @@ export const AddFestival = ({
     setpenalty(data);
   };
   //---------- --- Handle Penalty onChange---------
-
-  const handlePenalty = (value) => {
-    // Percentage mode is capped at 100%; the form rule enforces this on submit.
-    // We just keep the "Amount" input enabled/disabled based on the current choice.
-    if (penalty === "Percentage" && Number(value) > 100) {
-      setDisablePenalty(false);
-    } else {
-      setDisablePenalty(false);
-    }
+  // Kept as a no-op onChange handler; the antd form rule validator enforces
+  // the 100% cap on submit.  (Any legacy state toggling is now dead.)
+  const handlePenalty = () => {
+    setDisablePenalty(false);
   }
 //-------------------
   const AddFestival = async (data) => {
