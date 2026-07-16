@@ -109,12 +109,12 @@ export const AddFestival = ({
   //---------- --- Handle Penalty onChange---------
 
   const handlePenalty = (value) => {
-    if(value > 100){
-      form.setFieldsValue({choice:"Amount"})
-      setDisablePenalty(true)
-    }
-    else{
-      setDisablePenalty(false)
+    // Percentage mode is capped at 100%; the form rule enforces this on submit.
+    // We just keep the "Amount" input enabled/disabled based on the current choice.
+    if (penalty === "Percentage" && Number(value) > 100) {
+      setDisablePenalty(false);
+    } else {
+      setDisablePenalty(false);
     }
   }
 //-------------------
@@ -315,6 +315,21 @@ export const AddFestival = ({
                 {
                   required: true,
                   message: "Please Enter a Penalty!",
+                },
+                {
+                  validator: (_, value) => {
+                    if (
+                      penalty === "Percentage" &&
+                      value !== undefined &&
+                      value !== null &&
+                      Number(value) > 100
+                    ) {
+                      return Promise.reject(
+                        new Error("Penalty percentage cannot exceed 100%")
+                      );
+                    }
+                    return Promise.resolve();
+                  },
                 },
               ]}
             />

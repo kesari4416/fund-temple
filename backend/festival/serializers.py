@@ -84,6 +84,19 @@ class ADDFestivalDetailsSerializer(serializers.ModelSerializer):
         if end_date <= start_date:
                 print("hnnnnnnnnnnn")
                 raise serializers.ValidationError("End date cannot be less than or equal to start date.")
+
+        # Guard: Percentage-mode penalty cannot exceed 100 %.
+        choice = data.get("choice")
+        if choice is None and self.instance is not None:
+            choice = self.instance.choice
+        penalty_amt = data.get("penalty_amt")
+        if penalty_amt is None and self.instance is not None:
+            penalty_amt = self.instance.penalty_amt
+        if choice == "Percentage" and penalty_amt is not None and float(penalty_amt) > 100:
+            raise serializers.ValidationError({
+                "penalty_amt": "Penalty percentage cannot exceed 100%.",
+            })
+
         return data
     
     def create(self, validated_data):
