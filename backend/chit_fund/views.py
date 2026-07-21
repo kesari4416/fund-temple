@@ -1705,3 +1705,102 @@ def chit_fund_investers_register_list(request):
         # investerss=User.objects.filter(management_profile=management,chit_fund__isnull=True,chit_fund_investor__isnull=True)
         serializer = RejinUserSerializer78(investerss,many=True)
         return Response(serializer.data,status=status.HTTP_200_OK)
+
+
+
+# ---------------------------------------------------------------------------
+# Recompute / repair endpoint
+# ---------------------------------------------------------------------------
+# Rebuilds `cash_inhand_amount` for a chit fund from the audit trail so
+# operators can heal historical drift (e.g. an early bug that
+# double-subtracted at settlement).  Idempotent — safe to call any number
+# of times.  Pass `?dry_run=1` (or JSON body {"dry_run": true}) to get the
+# recomputed value without mutating the record.
+#
+# Formula:
+#   cash_inhand = management_amt (initial mgmt capital — no report row
+#                                  is created for it at fund creation)
+#               + Σ amount   where income_choice in {Investment, Interest,
+#                                                    Profit, Principal Pay,
+#                                                    Addition}
+#               - Σ amount   where income_choice in {Distribution, Reduction,
+#                                                    Principal Given}
+# ---------------------------------------------------------------------------
+from reports.models import ChitFundInterestOverallReport as _CFReport  # noqa: E402
+from decimal import Decimal as _Decimal  # noqa: E402
+
+
+CASH_CREDIT_CHOICES = (
+    'Investment',    # investor joined
+    'Interest',      # interest collected
+    'Profit',        # profit collected
+    'Principal Pay', # loan repayment
+    'Addition',      # miscellaneous credit
+)
+CASH_DEBIT_CHOICES = (
+    'Distribution',    # profit paid out to investors / management
+    'Reduction',       # miscellaneous debit
+    'Principal Given', # loan disbursed
+)
+
+
+@api_view(['GET', 'POST'])
+def recompute_cash_inhand(request, pk):
+    rejin = token_checking(request)
+    if not rejin:
+        return Response({"message": "No User Found"}, status=status.HTTP_401_UNAUTHORIZED)
+    if not rejin.is_active:
+        return Response({"message": "Not Authorized Please Contact Admin"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    fund = ChitFundsDetails.objects.filter(id=pk).first()
+    if not fund:
+        return Response({"message": "Chit fund not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    dry_run_param = (
+        request.query_params.get('dry_run')
+        or (request.data.get('dry_run') if isinstance(request.data, dict) else None)
+    )
+    dry_run = str(dry_run_param).lower() in ('1', 'true', 'yes')
+
+    reports_qs = _CFReport.objects.filter(chitfund=fund)
+
+    credit_total = _Decimal('0')
+    debit_total = _Decimal('0')
+    credit_breakdown = {}
+    debit_breakdown = {}
+    for r in reports_qs:
+        amt = _Decimal(str(r.amount or 0))
+        if r.income_choice in CASH_CREDIT_CHOICES:
+            credit_total += amt
+            credit_breakdown[r.income_choice] = credit_breakdown.get(r.income_choice, _Decimal('0')) + amt
+        elif r.income_choice in CASH_DEBIT_CHOICES:
+            debit_total += amt
+            debit_breakdown[r.income_choice] = debit_breakdown.get(r.income_choice, _Decimal('0')) + amt
+        # unknown income_choice values are ignored — they do not affect cash
+
+    mgmt_amt = _Decimal(str(fund.management_amt or 0))
+    computed = mgmt_amt + credit_total - debit_total
+
+    stored = _Decimal(str(fund.cash_inhand_amount or 0))
+    delta = computed - stored
+
+    if not dry_run:
+        fund.cash_inhand_amount = computed
+        fund.save(update_fields=['cash_inhand_amount', 'updated_at'] if hasattr(fund, 'updated_at') else ['cash_inhand_amount'])
+
+    return Response({
+        "chit_fund_id": fund.id,
+        "chit_name": fund.chit_name,
+        "stored_cash_inhand": str(stored),
+        "recomputed_cash_inhand": str(computed),
+        "delta_applied": str(_Decimal('0') if dry_run else delta),
+        "dry_run": dry_run,
+        "components": {
+            "management_amt": str(mgmt_amt),
+            "credit_total": str(credit_total),
+            "debit_total": str(debit_total),
+            "credit_breakdown": {k: str(v) for k, v in credit_breakdown.items()},
+            "debit_breakdown": {k: str(v) for k, v in debit_breakdown.items()},
+            "report_row_count": reports_qs.count(),
+        },
+    }, status=status.HTTP_200_OK)

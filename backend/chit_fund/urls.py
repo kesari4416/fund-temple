@@ -36,6 +36,7 @@ urlpatterns = [
     
     path('chit_fund_investers_register_list/', views.chit_fund_investers_register_list,name='chit_fund_investers_register_list'),
     path('management_treasure_get/', views.management_treasure_get,name='management_treasure_get'),
+    path('recompute_cash_inhand/<int:pk>/', views.recompute_cash_inhand,name='recompute_cash_inhand'),
 
 
 ]
