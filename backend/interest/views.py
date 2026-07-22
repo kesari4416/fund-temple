@@ -180,7 +180,7 @@ def add_interest_given_details(request):
                 # records created in earlier years.  We now run whenever the
                 # interest_date is at least one full month in the past.
                 from dateutil.relativedelta import relativedelta as _rdelta
-                if date_object + _rdelta(months=1) <= datetime.date.today():
+                if date_object.date() + _rdelta(months=1) <= datetime.date.today():
                    
                     inter_check=PeopleInterestDetails.objects.filter(id=temp_family.id).first()
                     inter_bal = PeopleInterestBalanceSheet.objects.get(interest_id=inter_check.id)
