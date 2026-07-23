@@ -344,20 +344,12 @@ const ChitFundListView = () => {
                                     <span>:</span>&nbsp;
                                     <span>{findIds?.retake_management_share_count ?? 0}</span>
                                   </div>
-                                  <div className="info-row">
-                                    <h3 className="info-label">Application Date </h3>
-                                    <span>:</span>&nbsp;
-                                    <span data-testid="member-0-application-date">
-                                      {findIds?.starting_date || '-'}
-                                    </span>
-                                  </div>
-                                  <div className="info-row">
-                                    <h3 className="info-label">Settlement Date  </h3>
-                                    <span>:</span>&nbsp;
-                                    <span data-testid="member-0-settlement-date">
-                                      {computeSettlementDate(findIds?.starting_date)}
-                                    </span>
-                                  </div>
+                                  {/*
+                                    Application Date & Settlement Date are
+                                    intentionally omitted for Member 0 –
+                                    Management does not file a settlement
+                                    application, so these fields do not apply.
+                                  */}
                                 </Totalstyle>
                               </Col>
                             </CustomRow>
