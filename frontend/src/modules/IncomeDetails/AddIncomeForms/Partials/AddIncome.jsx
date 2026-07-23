@@ -67,6 +67,13 @@ export const AddIncomeForm = ({
   const [selectedBankDetails, setSelectedBankDetails] = useState([]);
 
   const [paymentMode, setPaymentMode] = useState(null);
+  // Watched Subcategory value – Income Category dropdown is shown ONLY when
+  // Subcategory = "Temple Income". For "Chit Fund Income" the category
+  // stays hidden per business rule.
+  const [incomeSubcategory, setIncomeSubcategory] = useState(
+    updateIncome?.income_subcategory || null
+  );
+  const showIncomeCategory = incomeSubcategory === "Temple Income";
 
   // ======  Modal Open ========
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -423,6 +430,7 @@ export const AddIncomeForm = ({
     setSangamList(updateIncome?.sangam);
     setTransactionDate(updateIncome?.transaction_date);
     setIncomeDate(updateIncome?.date);
+    setIncomeSubcategory(updateIncome?.income_subcategory || null);
     form.setFieldsValue({
       date: dayjs(Dated),
       transaction_date: dayjs(TransactionDate, dateFormat),
@@ -559,6 +567,12 @@ export const AddIncomeForm = ({
               name={"income_subcategory"}
               options={incomeSubcategoryOptions}
               placeholder={"Choose Subcategory"}
+              onChange={(val) => {
+                setIncomeSubcategory(val);
+                if (val !== "Temple Income") {
+                  form.setFieldsValue({ category: undefined, category_name: undefined });
+                }
+              }}
               rules={[
                 {
                   required: true,
@@ -570,12 +584,32 @@ export const AddIncomeForm = ({
           </Col>
           <Col span={24} md={12}></Col>
           {/*
-            Income Category field has been removed per business requirement.
-            Categorisation now happens exclusively via `income_subcategory`
-            (Chit Fund Income / Temple Income) selected above.
+            Income Category is shown ONLY when Subcategory = "Temple Income".
+            For Chit Fund Income we skip categorisation entirely (business rule).
           */}
-          <CustomInput name={"category"} display={"none"} />
-          <CustomInput name={"category_name"} display={'none'} />
+          {showIncomeCategory ? (
+            <Col span={24} md={12}>
+              <CustomAddSelect
+                label={"Income Category"}
+                name={"category"}
+                options={IncomeCategoryOptions}
+                onChange={handleIncomeCategory}
+                onButtonClick={AddIncomeCategory}
+                rules={[
+                  {
+                    required: true,
+                    message: "Please Select a Income Category !",
+                  },
+                ]}
+              />
+              <CustomInput name={"category_name"} display={'none'} />
+            </Col>
+          ) : (
+            <>
+              <CustomInput name={"category"} display={"none"} />
+              <CustomInput name={"category_name"} display={'none'} />
+            </>
+          )}
 
           <Col span={24} md={12}>
             <CustomAddSelect

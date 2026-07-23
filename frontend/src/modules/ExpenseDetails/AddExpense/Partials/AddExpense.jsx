@@ -69,6 +69,13 @@ export const AddExpenseForm = ({
   );
   const [TransactionData, setTransactionData] = useState({});
   const [expenseLoading, setExpenseLoading] = useState(false);
+  // Watched value of the Subcategory selector – Expense Category only shows
+  // when the user picks "Temple Expense". For "Chit Fund Expense" the
+  // category field stays hidden per business rule.
+  const [expenseSubcategory, setExpenseSubcategory] = useState(
+    UpdateRecord?.expense_subcategory || null
+  );
+  const showExpenseCategory = expenseSubcategory === "Temple Expense";
   // ======  Modal Open ========
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -99,6 +106,7 @@ export const AddExpenseForm = ({
       });
       setExpenseDate(expenseDate);
       setTransactionDate(TODateDOB);
+      setExpenseSubcategory(UpdateRecord?.expense_subcategory || null);
       form.setFieldsValue({expense_name:UpdateRecord?.expense_name})
     }
   }, [UpdateRecord, Expensetrigr]);
@@ -460,6 +468,14 @@ export const AddExpenseForm = ({
               name={"expense_subcategory"}
               options={expenseSubcategoryOptions}
               placeholder={"Choose Subcategory"}
+              onChange={(val) => {
+                setExpenseSubcategory(val);
+                // Reset Category when leaving the Temple subcategory so
+                // stale FK values do not linger on the payload.
+                if (val !== "Temple Expense") {
+                  form.setFieldsValue({ category: undefined, category_name: undefined });
+                }
+              }}
               rules={[
                 {
                   required: true,
@@ -471,12 +487,32 @@ export const AddExpenseForm = ({
           </Col>
           <Col span={24} md={12}></Col>
           {/*
-            Expense Category field has been removed per business requirement.
-            Categorisation now happens exclusively via `expense_subcategory`
-            (Chit Fund Expense / Temple Expense) selected above.
+            Expense Category is shown ONLY when Subcategory = "Temple Expense".
+            For Chit Fund Expense we skip categorisation entirely (business rule).
           */}
-          <CustomInput name={"category"} display={"none"} />
-          <CustomInput name={"category_name"} display={"none"} />
+          {showExpenseCategory ? (
+            <Col span={24} md={12}>
+              <CustomAddSelect
+                label={"Expense Category"}
+                name={"category"}
+                options={expensecategoryoptions}
+                onChange={handleExpenseCategory}
+                onButtonClick={AddExpenseCategory}
+                rules={[
+                  {
+                    required: true,
+                    message: "Please Select a Expense Category !",
+                  },
+                ]}
+              />
+              <CustomInput name={"category_name"} display={"none"} />
+            </Col>
+          ) : (
+            <>
+              <CustomInput name={"category"} display={"none"} />
+              <CustomInput name={"category_name"} display={"none"} />
+            </>
+          )}
 
           <Col span={24} md={12}>
             <CustomAddSelect
