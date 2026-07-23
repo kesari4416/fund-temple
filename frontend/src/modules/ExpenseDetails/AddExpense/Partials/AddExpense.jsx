@@ -470,22 +470,13 @@ export const AddExpenseForm = ({
             />
           </Col>
           <Col span={24} md={12}></Col>
-          <Col span={24} md={12}>
-            <CustomAddSelect
-              label={"Expense Category"}
-              name={"category"}
-              options={expensecategoryoptions}
-              onChange={handleExpenseCategory}
-              onButtonClick={AddExpenseCategory}
-              rules={[
-                {
-                  required: true,
-                  message: "Please Select a Expense Category !",
-                },
-              ]}
-            />
-            <CustomInput name={"category_name"} display={"none"} />
-          </Col>
+          {/*
+            Expense Category field has been removed per business requirement.
+            Categorisation now happens exclusively via `expense_subcategory`
+            (Chit Fund Expense / Temple Expense) selected above.
+          */}
+          <CustomInput name={"category"} display={"none"} />
+          <CustomInput name={"category_name"} display={"none"} />
 
           <Col span={24} md={12}>
             <CustomAddSelect

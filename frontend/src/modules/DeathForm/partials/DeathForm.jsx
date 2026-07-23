@@ -140,7 +140,9 @@ const DeathForm = ({ updatedeath, deathtrigger, closee }) => {
     form.setFieldsValue({ pen_amt_type: updatedeath?.death?.pen_amt_type });
     setTyeamt(updatedeath?.death?.pen_amt_type)
 
-    if (updatedeath?.death?.tariff_peanalty > 100) {
+    if (updatedeath?.death?.tariff_peanalty > 100 && updatedeath?.death?.pen_amt_type === "Percentage") {
+      // Legacy record still has an invalid >100% value. Fall back to Amount so
+      // the user can see the raw number but cannot re-save without correction.
       form.setFieldsValue({ pen_amt_type: "Amount" })
       setDisablePenalty(true)
     }
@@ -199,15 +201,13 @@ const DeathForm = ({ updatedeath, deathtrigger, closee }) => {
     setTyeamt(value);
   };
   //----------------- Handle Tariff Penalty Amt/Per--------------------
-  const handlePenaltyValue = (value) => {
-    if (value > 100) {
-      form.setFieldsValue({ pen_amt_type: "Amount" })
-      setDisablePenalty(true)
-    }
-    else {
-      setDisablePenalty(false)
-    }
-  }
+  // NOTE: Previously, entering >100 auto-switched the penalty type to "Amount".
+  // Per business rule, percentages are strictly capped at 100 %, so we no
+  // longer silently reinterpret the value. Instead the field validator (below)
+  // rejects the submission and keeps the user's chosen type intact.
+  const handlePenaltyValue = () => {
+    setDisablePenalty(false);
+  };
   //--------------------------------------
 
   const DeathFormDetail = async (data) => {
@@ -480,7 +480,24 @@ const DeathForm = ({ updatedeath, deathtrigger, closee }) => {
                 <CustomInputNumber
                   addonAfter={SelectSide}
                   label={"Tariff penalty"}
-                  name={"tariff_peanalty"} rules={[{ required: true, message: "Please enter a tariff penalty !" }]}
+                  name={"tariff_peanalty"} rules={[
+                    { required: true, message: "Please enter a tariff penalty !" },
+                    {
+                      validator: (_, value) => {
+                        if (
+                          tyeamt === "Percentage" &&
+                          value !== undefined &&
+                          value !== null &&
+                          Number(value) > 100
+                        ) {
+                          return Promise.reject(
+                            new Error("Tariff penalty percentage cannot exceed 100%")
+                          );
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
                   onChange={handlePenaltyValue}
                 />
               </Col>

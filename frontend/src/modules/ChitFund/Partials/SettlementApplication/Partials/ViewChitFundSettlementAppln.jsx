@@ -2,10 +2,21 @@ import { CustomRow } from '@components/others'
 import { CustomPageTitle } from '@components/others/CustomPageTitle';
 import { Col } from 'antd'
 import React from 'react'
+import dayjs from 'dayjs';
 import { TotalStyle } from '../../ChitProfitDistribution/Partials/ProfitDistributionView';
 
+// Business rule: The record's `settlement_date` field actually stores the
+// APPLICATION DATE (the day the investor filed the settlement request).
+// The real Settlement Date is calculated as Application Date + 60 days.
+const computeSettlementDate = (applicationDate) => {
+    if (!applicationDate) return '-';
+    const d = dayjs(applicationDate);
+    if (!d.isValid()) return '-';
+    return d.add(60, 'day').format('YYYY-MM-DD');
+};
 
 const ViewChitFundSettlementAppln = ({ settleRecord }) => {
+    const applicationDate = settleRecord?.settlement_date;
     return (
         <TotalStyle>
             <CustomPageTitle Heading={'View Settlement Application'} />
@@ -20,7 +31,14 @@ const ViewChitFundSettlementAppln = ({ settleRecord }) => {
                     <h1>Settlement Aplication No : <span>{settleRecord?.settlement_aplication_no}</span></h1>
                 </Col>
                 <Col span={24} md={12}>
-                    <h1>Settlement Date : <span>{settleRecord?.settlement_date}</span></h1>
+                    <h1 data-testid="settlement-view-application-date">
+                      Application Date : <span>{applicationDate || '-'}</span>
+                    </h1>
+                </Col>
+                <Col span={24} md={12}>
+                    <h1 data-testid="settlement-view-settlement-date">
+                      Settlement Date : <span>{computeSettlementDate(applicationDate)}</span>
+                    </h1>
                 </Col>
                 <Col span={24} md={12}>
                     <h1>Invested Amount : <span>₹ {Number(settleRecord?.investment_amt || 0).toFixed(2)}</span></h1>

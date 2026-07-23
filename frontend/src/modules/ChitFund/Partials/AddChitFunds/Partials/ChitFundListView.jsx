@@ -13,6 +13,16 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AllChitList, getChitFundList } from '@modules/ChitFund/ChitFundSlice';
 import { BondPaper } from './BondPaper';
 import { IoIosPaper } from 'react-icons/io';
+import dayjs from 'dayjs';
+
+// Business rule: Settlement Date = Application Date + 60 days.
+// Returns a formatted date string or '-' when no application_date is set.
+const computeSettlementDate = (applicationDate) => {
+    if (!applicationDate) return '-';
+    const d = dayjs(applicationDate);
+    if (!d.isValid()) return '-';
+    return d.add(60, 'day').format('YYYY-MM-DD');
+};
 
 const Totalstyle = styled.div`
  & h3 {
@@ -280,6 +290,79 @@ const ChitFundListView = () => {
                         </StyledHeading>
                     </Col>
                     <Col span={24} md={24}>
+                        {/*
+                          Member 0 – Management Share card.
+                          Renders BEFORE the investor list to represent the
+                          Management as the 0th "member" in the pool. This
+                          matches the business rule that management holds a
+                          share alongside outer investors.
+                        */}
+                        {findIds && (
+                          <div
+                            data-testid="member-0-card"
+                            style={{
+                              padding: '20px',
+                              border: '2px dashed #0F5132',
+                              margin: '10px',
+                              background: '#f6fff9',
+                            }}
+                          >
+                            <Flex spacebetween={true} aligncenter={true}>
+                              <h2 style={{ textDecoration: 'underline', color: '#0F5132' }}>
+                                Member 0 (Management)
+                              </h2>
+                            </Flex>
+                            <CustomRow>
+                              <Col span={24} md={12}>
+                                <Totalstyle>
+                                  <div className="info-row">
+                                    <h3 className="info-label">Name </h3>
+                                    <span>:</span>&nbsp;
+                                    <span data-testid="member-0-name">Management</span>
+                                  </div>
+                                  <div className="info-row">
+                                    <h3 className="info-label">Joining Date </h3>
+                                    <span>:</span>&nbsp;
+                                    <span>{findIds?.starting_date || '-'}</span>
+                                  </div>
+                                  <div className="info-row">
+                                    <h3 className="info-label">Invested Amt  </h3>
+                                    <span>:</span>&nbsp;
+                                    <span data-testid="member-0-invested-amt">
+                                      {Number(findIds?.management_amt || 0).toFixed(2)}
+                                    </span>
+                                  </div>
+                                  <div className="info-row">
+                                    <h3 className="info-label">Share Count  </h3>
+                                    <span>:</span>&nbsp;
+                                    <span data-testid="member-0-share-count">
+                                      {findIds?.management_share_count ?? 0}
+                                    </span>
+                                  </div>
+                                  <div className="info-row">
+                                    <h3 className="info-label">Retake Share Count  </h3>
+                                    <span>:</span>&nbsp;
+                                    <span>{findIds?.retake_management_share_count ?? 0}</span>
+                                  </div>
+                                  <div className="info-row">
+                                    <h3 className="info-label">Application Date </h3>
+                                    <span>:</span>&nbsp;
+                                    <span data-testid="member-0-application-date">
+                                      {findIds?.starting_date || '-'}
+                                    </span>
+                                  </div>
+                                  <div className="info-row">
+                                    <h3 className="info-label">Settlement Date  </h3>
+                                    <span>:</span>&nbsp;
+                                    <span data-testid="member-0-settlement-date">
+                                      {computeSettlementDate(findIds?.starting_date)}
+                                    </span>
+                                  </div>
+                                </Totalstyle>
+                              </Col>
+                            </CustomRow>
+                          </div>
+                        )}
                         {MemDetails?.map((find, index) => (
                             <div style={{ padding: '20px', border: '2px solid', margin: '10px' }}>
                                 <Flex spacebetween={true} aligncenter={true}>
@@ -372,12 +455,16 @@ const ChitFundListView = () => {
                                             <div className="info-row">
                                                 <h3 className="info-label">Application Date </h3>
                                                 <span>:</span>&nbsp;
-                                                <span>{find?.application_date}</span>
+                                                <span data-testid={`member-${index + 1}-application-date`}>
+                                                  {find?.application_date || '-'}
+                                                </span>
                                             </div>
                                             <div className="info-row">
                                                 <h3 className="info-label">Settlement Date  </h3>
                                                 <span>:</span>&nbsp;
-                                                <span>{find?.settlement_date}</span>
+                                                <span data-testid={`member-${index + 1}-settlement-date`}>
+                                                  {computeSettlementDate(find?.application_date)}
+                                                </span>
                                             </div>
                                         </Totalstyle>
                                     </Col>

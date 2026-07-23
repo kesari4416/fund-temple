@@ -78,11 +78,22 @@ const SetTax = () => {
 
                     <Col span={24} md={12}>
                         <CustomInputNumber label={'Penalty Percentage'} name={'penalty_percentage'} suffix={'%'}
+                            max={100}
                             rules={[
                                 {
                                     required: true,
                                     message: 'Please Enter Penalty Percent !',
-                                }
+                                },
+                                {
+                                    validator: (_, value) => {
+                                        if (value !== undefined && value !== null && Number(value) > 100) {
+                                            return Promise.reject(
+                                                new Error('Penalty percentage cannot exceed 100%')
+                                            );
+                                        }
+                                        return Promise.resolve();
+                                    },
+                                },
                             ]}
                         />
                     </Col>

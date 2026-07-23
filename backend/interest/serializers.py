@@ -50,6 +50,33 @@ class PeopleInterestDetailsSerializer(serializers.ModelSerializer):
 
                 if checking_date.year == current_date.year and checking_date.month == current_date.month - 1 or checking_date.year == current_date.year and checking_date.month == current_date.month:
                     print("ccccccccccccccccc")
+                    # ------------------------------------------------------------------
+                    # Percentage guard: hard-cap Fix Interest Rate and Penalty at 100 %
+                    # when the caller selected percentage mode.
+                    # ------------------------------------------------------------------
+                    rate_type = validated_data.get("interest_type_new")
+                    fix_rate = validated_data.get("fix_interest_rate_percent")
+                    if (
+                        rate_type == "percentage"
+                        and fix_rate is not None
+                        and float(fix_rate) > 100
+                    ):
+                        raise serializers.ValidationError({
+                            "fix_interest_rate_percent":
+                                "Fix Interest Rate percentage cannot exceed 100%.",
+                        })
+
+                    penalty_type = validated_data.get("penalty_type")
+                    penalty_amount = validated_data.get("penalty_amount")
+                    if (
+                        penalty_type == "percentage"
+                        and penalty_amount is not None
+                        and float(penalty_amount) > 100
+                    ):
+                        raise serializers.ValidationError({
+                            "penalty_amount":
+                                "Penalty percentage cannot exceed 100%.",
+                        })
                     return validated_data
                 else:
                     raise serializers.ValidationError("Interest can only be added with the interest date of current month and previous month.")

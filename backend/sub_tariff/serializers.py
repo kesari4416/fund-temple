@@ -54,6 +54,30 @@ class ADDSubscriptionTariffDetailseSerializer(serializers.ModelSerializer):
         if to_date <= from_date:
                 print("hnnnnnnnnnnn")
                 raise serializers.ValidationError("To date cannot be less than or equal to start date.")
+
+        # Percentage guard – Exception & Penalty must not exceed 100 % when
+        # their respective type flag is set to "Percentage".
+        exp_type = data.get("exp_amount_type") or (
+            getattr(self.instance, "exp_amount_type", None) if self.instance else None
+        )
+        exp_value = data.get("exp_amount")
+        if exp_value is None and self.instance is not None:
+            exp_value = getattr(self.instance, "exp_amount", None)
+        if exp_type == "Percentage" and exp_value is not None and float(exp_value) > 100:
+            raise serializers.ValidationError({
+                "exp_amount": "Exception percentage cannot exceed 100%.",
+            })
+
+        pen_type = data.get("penalty_amount_type") or (
+            getattr(self.instance, "penalty_amount_type", None) if self.instance else None
+        )
+        pen_value = data.get("penalty_amt")
+        if pen_value is None and self.instance is not None:
+            pen_value = getattr(self.instance, "penalty_amt", None)
+        if pen_type == "Percentage" and pen_value is not None and float(pen_value) > 100:
+            raise serializers.ValidationError({
+                "penalty_amt": "Penalty percentage cannot exceed 100%.",
+            })
         return data
     
     def validate_to_date(self, to_date):        

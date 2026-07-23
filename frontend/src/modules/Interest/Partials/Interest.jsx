@@ -1084,7 +1084,24 @@ export const Interest = ({ RecordData, ClosUpdaForm, manageTrigger }) => {
                             onChange={handleAmtCalculate} /><br /> */}
                         <CustomInputNumber addonAfter={SelectFixRate} label={'Fix Interest Rate'}
                             onChange={handleAmtCalculate}
-                            name={'fix_interest_rate_percent'} />
+                            name={'fix_interest_rate_percent'}
+                            rules={[
+                                {
+                                    validator: (_, value) => {
+                                        if (
+                                            rateType === 'percentage' &&
+                                            value !== undefined &&
+                                            value !== null &&
+                                            Number(value) > 100
+                                        ) {
+                                            return Promise.reject(
+                                                new Error('Fix Interest Rate percentage cannot exceed 100%')
+                                            );
+                                        }
+                                        return Promise.resolve();
+                                    },
+                                },
+                            ]} />
                     </Col>
 
                     <Col span={24} md={12}>
@@ -1100,6 +1117,21 @@ export const Interest = ({ RecordData, ClosUpdaForm, manageTrigger }) => {
                                     {
                                         required: true,
                                         message: 'This is Required Field!',
+                                    },
+                                    {
+                                        validator: (_, value) => {
+                                            if (
+                                                penalty === 'percentage' &&
+                                                value !== undefined &&
+                                                value !== null &&
+                                                Number(value) > 100
+                                            ) {
+                                                return Promise.reject(
+                                                    new Error('Penalty percentage cannot exceed 100%')
+                                                );
+                                            }
+                                            return Promise.resolve();
+                                        },
                                     },
                                 ]} />
                         </Col>}

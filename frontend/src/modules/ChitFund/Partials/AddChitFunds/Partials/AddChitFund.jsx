@@ -560,22 +560,40 @@ export const AddChitFund = ({ trigger, ChitFundRecord, chitTrigger, chitClose, F
           </Col>
           <Col span={24} md={12}>
             <CustomInputNumber label={'Set Profit'} name={'set_profit_percent'} suffix={'%'}
+              max={100}
               rules={[
                 {
                   required: true,
                   message: 'Please Enter a Set Profit !',
-                }
+                },
+                {
+                  validator: (_, value) => {
+                    if (value !== undefined && value !== null && Number(value) > 100) {
+                      return Promise.reject(new Error('Set Profit percentage cannot exceed 100%'));
+                    }
+                    return Promise.resolve();
+                  },
+                },
               ]}
             />
           </Col>
 
           <Col span={24} md={12}>
             <CustomInputNumber label={'Set Fund Interest'} name={'set_intrest_percent'} suffix={'%'}
+              max={100}
               rules={[
                 {
                   required: true,
                   message: 'Please Enter a Fund Interest !',
-                }
+                },
+                {
+                  validator: (_, value) => {
+                    if (value !== undefined && value !== null && Number(value) > 100) {
+                      return Promise.reject(new Error('Set Fund Interest percentage cannot exceed 100%'));
+                    }
+                    return Promise.resolve();
+                  },
+                },
               ]}
             />
           </Col>

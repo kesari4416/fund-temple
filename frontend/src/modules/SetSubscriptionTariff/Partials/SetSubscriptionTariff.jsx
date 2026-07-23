@@ -85,7 +85,10 @@ export const SetSubscriptionTariff = ({
 
    //--------------   Exception ----------------------------
 
-    if(updateSubscriptionTariff?.exp_amount > 100){
+    // Legacy records may already contain a value >100. In that case fall back
+    // to "Amount" mode so the user can view the raw number, but the strict
+    // Percentage cap (validator below) blocks any further save >100%.
+    if(updateSubscriptionTariff?.exp_amount > 100 && updateSubscriptionTariff?.exp_amount_type === "Percentage"){
       form.setFieldsValue({exp_amount_type:"Amount"})
       setDisableException(true)
     }
@@ -94,7 +97,7 @@ export const SetSubscriptionTariff = ({
     }
     //----------------- Penalty -------------------------------
 
-    if(updateSubscriptionTariff?.penalty_amt > 100){
+    if(updateSubscriptionTariff?.penalty_amt > 100 && updateSubscriptionTariff?.penalty_amount_type === "Percentage"){
       form.setFieldsValue({penalty_amount_type:"Amount"})
       setDisablePenalty(true)
     }
@@ -129,25 +132,16 @@ export const SetSubscriptionTariff = ({
 //----------------Handle Exception -------------
 
   const handleException =(value)=>{
-    if(value > 100){
-      form.setFieldsValue({exp_amount_type:"Amount"})
-      setDisableException(true)
-    }
-    else{
-      setDisableException(false)
-    }
-
+    // Strict cap: percentages must not exceed 100 %. The Ant Form
+    // validator (attached below in the JSX) rejects submission when the
+    // Percentage mode is used with value > 100. We no longer silently
+    // flip the type to "Amount".
+    setDisableException(false)
   }
   //----------------Handle Penalty -------------
 
   const handlePenalty = (value)=>{
-    if(value > 100){
-      form.setFieldsValue({penalty_amount_type:"Amount"})
-      setDisablePenalty(true)
-    }
-    else{
-      setDisablePenalty(false)
-    }
+    setDisablePenalty(false)
   }
 //--------------------------------------------------
 
@@ -333,14 +327,48 @@ export const SetSubscriptionTariff = ({
           <Col span={24} md={12}>
             <CustomInputNumber
               addonAfter={SelectSide} label={"Exception"}
-              name={"exp_amount"} rules={[{ required: true, message: "Required !" }]} 
+              name={"exp_amount"} rules={[
+                { required: true, message: "Required !" },
+                {
+                  validator: (_, value) => {
+                    if (
+                      tyeamt === "Percentage" &&
+                      value !== undefined &&
+                      value !== null &&
+                      Number(value) > 100
+                    ) {
+                      return Promise.reject(
+                        new Error("Exception percentage cannot exceed 100%")
+                      );
+                    }
+                    return Promise.resolve();
+                  },
+                },
+              ]}
               onChange={handleException}
               />
           </Col>
           <Col span={24} md={12}>
             <CustomInputNumber
               addonAfter={SelectSidetwo} label={"Penalty"}
-              name={"penalty_amt"} rules={[{ required: true, message: "Required !" }]} 
+              name={"penalty_amt"} rules={[
+                { required: true, message: "Required !" },
+                {
+                  validator: (_, value) => {
+                    if (
+                      penalty === "Percentage" &&
+                      value !== undefined &&
+                      value !== null &&
+                      Number(value) > 100
+                    ) {
+                      return Promise.reject(
+                        new Error("Penalty percentage cannot exceed 100%")
+                      );
+                    }
+                    return Promise.resolve();
+                  },
+                },
+              ]}
               onChange={handlePenalty} 
               />
           </Col>

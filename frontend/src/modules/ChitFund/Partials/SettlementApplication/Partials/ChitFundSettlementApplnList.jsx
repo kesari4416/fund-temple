@@ -94,6 +94,13 @@ const ChitFundSettlementApplicationList = () => {
     };
 
 
+    const computeSettlementDate = (applicationDate) => {
+        if (!applicationDate) return '-';
+        const d = dayjs(applicationDate);
+        if (!d.isValid()) return '-';
+        return d.add(60, 'day').format('YYYY-MM-DD');
+    };
+
     const TableColumn = [
         {
             title: "SI No",
@@ -104,8 +111,14 @@ const ChitFundSettlementApplicationList = () => {
             dataIndex: 'settlement_aplication_no'
         },
         {
-            title: 'Settlement Date',
+            title: 'Application Date',
             dataIndex: 'settlement_date'
+        },
+        {
+            title: 'Settlement Date',
+            dataIndex: 'settlement_date',
+            key: 'settlement_date_computed',
+            render: (v) => computeSettlementDate(v),
         },
         {
             title: 'Chit Fund Name',
@@ -195,8 +208,14 @@ const ChitFundSettlementApplicationList = () => {
             dataIndex: 'settlement_aplication_no'
         },
         {
-            title: 'Settlement Date',
+            title: 'Application Date',
             dataIndex: 'settlement_date'
+        },
+        {
+            title: 'Settlement Date',
+            dataIndex: 'settlement_date',
+            key: 'settlement_date_computed',
+            render: (v) => computeSettlementDate(v),
         },
         {
             title: 'Chit Fund Name',

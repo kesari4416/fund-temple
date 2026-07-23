@@ -72,6 +72,21 @@ class ChitFundsDetailsSerializer(serializers.ModelSerializer):
         model = ChitFundsDetails
         fields = ['id','management_share_count','fixed_chitfund_amount','chit_name','starting_date','management_amt','set_profit_percent','set_intrest_percent','chitt_fund'] 
 
+    def validate(self, data):
+        # Enforce hard 100 % cap for both Set Profit and Set Fund Interest.
+        for field_name, label in (
+            ("set_profit_percent", "Set Profit"),
+            ("set_intrest_percent", "Set Fund Interest"),
+        ):
+            value = data.get(field_name)
+            if value is None and self.instance is not None:
+                value = getattr(self.instance, field_name, None)
+            if value is not None and float(value) > 100:
+                raise serializers.ValidationError({
+                    field_name: f"{label} percentage cannot exceed 100%."
+                })
+        return data
+
     def create(self, validated_data):
         chitt_fund = validated_data.pop('chitt_fund')
         profile_instance = ChitFundsDetails.objects.create(chit_no=chit_fnd_no(),**validated_data)

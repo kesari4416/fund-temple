@@ -20,6 +20,21 @@ class DeathDetailsSerializer(serializers.ModelSerializer):
         model =DeathDetails
         fields = '__all__'
 
+    def validate(self, data):
+        # Percentage cap – tariff_peanalty must not exceed 100 % when
+        # pen_amt_type is "Percentage".
+        pen_type = data.get("pen_amt_type") or (
+            getattr(self.instance, "pen_amt_type", None) if self.instance else None
+        )
+        tariff = data.get("tariff_peanalty")
+        if tariff is None and self.instance is not None:
+            tariff = getattr(self.instance, "tariff_peanalty", None)
+        if pen_type == "Percentage" and tariff is not None and float(tariff) > 100:
+            raise serializers.ValidationError({
+                "tariff_peanalty": "Tariff penalty percentage cannot exceed 100%.",
+            })
+        return data
+
 
     def validate_penalty_apply_date(self, penalty_apply_date):
         if self.instance is None: 

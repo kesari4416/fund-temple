@@ -569,22 +569,13 @@ export const AddIncomeForm = ({
             />
           </Col>
           <Col span={24} md={12}></Col>
-          <Col span={24} md={12}>
-            <CustomAddSelect
-              label={"Income Category"}
-              name={"category"}
-              options={IncomeCategoryOptions}
-              onChange={handleIncomeCategory}
-              onButtonClick={AddIncomeCategory}
-              rules={[
-                {
-                  required: true,
-                  message: "Please Select a Income Category !",
-                },
-              ]}
-            />
-            <CustomInput name={"category_name"} display={'none'} />
-          </Col>
+          {/*
+            Income Category field has been removed per business requirement.
+            Categorisation now happens exclusively via `income_subcategory`
+            (Chit Fund Income / Temple Income) selected above.
+          */}
+          <CustomInput name={"category"} display={"none"} />
+          <CustomInput name={"category_name"} display={'none'} />
 
           <Col span={24} md={12}>
             <CustomAddSelect
