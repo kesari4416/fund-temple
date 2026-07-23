@@ -205,11 +205,6 @@ const ChitFundListView = () => {
                                 <span>{findIds?.management_retake}</span>
                             </div>
                             <div className="info-row">
-                                <h3 className="info-label">Retake mangement Share Count </h3>
-                                <span>:</span>&nbsp;
-                                <span>{findIds?.retake_management_share_count}</span>
-                            </div>
-                            <div className="info-row">
                                 <h3 className="info-label">Management Profit Precent </h3>
                                 <span>:</span>&nbsp;
                                 <span>{findIds?.set_profit_percent}</span>
@@ -234,11 +229,6 @@ const ChitFundListView = () => {
                                 <span>{findIds?.starting_date}</span>
                             </div>
                             <div className="info-row">
-                                <h3 className="info-label">Fixed Share Amount </h3>
-                                <span>:</span>&nbsp;
-                                <span>{findIds?.fixed_chitfund_amount}</span>
-                            </div>
-                            <div className="info-row">
                                 <h3 className="info-label">Outer Invest Amount </h3>
                                 <span>:</span>&nbsp;
                                 <span>{findIds?.outer_invest_amount}</span>
@@ -257,11 +247,6 @@ const ChitFundListView = () => {
                                 <h3 className="info-label">Invest Retake Amount </h3>
                                 <span>:</span>&nbsp;
                                 <span>{findIds?.invest_retake}</span>
-                            </div>
-                            <div className="info-row">
-                                <h3 className="info-label">Retake Invester Share Amount</h3>
-                                <span>:</span>&nbsp;
-                                <span>{findIds?.retake_investers_share_count}</span>
                             </div>
                             <div className="info-row">
                                 <h3 className="info-label">Interest Precent</h3>
