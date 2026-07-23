@@ -1,6 +1,7 @@
 import { NetWorkError } from "@router/components/NetWorkError"
 import PageNotFound from "@router/components/PageNotFound"
 import UserSignin from "@modules/Auth/Partials/UserSignin"
+import PublicMemberStatement from "@modules/PublicStatement/PublicMemberStatement"
 import AddAuthorities from "@modules/Management/Authorities/AddAuthorities/Partials/AddAuthorities"
 import AddSangamDetails from "@modules/Sangam/SangamDetails/Partials/AddSangamDetails"
 import { AddIncomeForm } from "@modules/IncomeDetails/AddIncomeForms/Partials/AddIncome"
@@ -84,6 +85,11 @@ export const anonymous = [
     {
         routePath: '/signin',
         Component: UserSignin,
+    },
+    {
+        // Public 1-year member statement, opened via WhatsApp link.
+        routePath: '/statement/:token',
+        Component: PublicMemberStatement,
     },
 
 

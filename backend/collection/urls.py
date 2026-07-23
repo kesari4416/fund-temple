@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import public_views
 
 urlpatterns = [
     path('add_collection_details/', views.add_collection_details,name='add_collection_details'),
@@ -45,6 +46,9 @@ urlpatterns = [
     path('chitname_withfiltering_category/', views.chitname_withfiltering_category,name='chitname_withfiltering_category'),
     path('interest_balance_collection/', views.interest_balance_collection,name='interest_balance_collection'),
 
+    # ---- Public (unauthenticated) 1-year member statement (WhatsApp link)
+    path('member_statement/token/<int:member_id>/', public_views.get_member_statement_token, name='get_member_statement_token'),
+    path('public/member_statement/<str:token>/', public_views.public_member_statement, name='public_member_statement'),
 
 
 ]

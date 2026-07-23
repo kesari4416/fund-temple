@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { AiFillPrinter } from "react-icons/ai";
+import { FaWhatsapp } from "react-icons/fa";
 import { useReactToPrint } from "react-to-print";
 import { useDispatch, useSelector } from "react-redux";
 import { getManagement, selectManagementDetails } from "@modules/Management/ManagementSlice";
@@ -7,6 +8,27 @@ import { PrintWrapper } from "@components/common/Styled";
 import { PrintHolder } from "@modules/Bill/Style";
 import { Button } from "@components/form";
 import { Flex } from "@components/others";
+import axios from "axios";
+
+// Collection categories that should NOT trigger the WhatsApp statement flow
+// (chit-fund investors are not "members" in the tariff sense — they have
+// their own settlement UX).
+const WHATSAPP_SKIP_CATEGORIES = new Set([
+  "Chit-fund",
+  "Chit Interest",
+  "Management Interest",
+]);
+
+const API_BASE =
+  import.meta.env?.VITE_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || "";
+
+const buildStatementLink = (token) => {
+  const origin =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : "";
+  return `${origin}/statement/${token}`;
+};
 
 const ViewCollectionPrint = ({ CollectionRecord }) => {
 
@@ -16,6 +38,7 @@ const ViewCollectionPrint = ({ CollectionRecord }) => {
   const [templeData, setTempleData] = useState([]);
   const [times, setTimes] = useState("");
   const [afterTime, setAfterTime] = useState("");
+  const [waLoading, setWaLoading] = useState(false);
   const AllManagementDetails = useSelector(selectManagementDetails);
 
   const date = new Date();
@@ -40,6 +63,42 @@ const ViewCollectionPrint = ({ CollectionRecord }) => {
   
   const TotalChitManagementAmt = amount + interestAmount + penaltyAmount;
 
+  const memberId = CollectionRecord?.member;
+  const rawMobile =
+    CollectionRecord?.mobile_number || CollectionRecord?.mobile_no || "";
+  const digits = String(rawMobile).replace(/\D/g, "");
+  // wa.me expects the number in international format WITHOUT the leading "+"
+  const waNumber = digits.length === 10 ? `91${digits}` : digits;
+  const canWhatsapp =
+    !!memberId &&
+    waNumber.length >= 10 &&
+    !WHATSAPP_SKIP_CATEGORIES.has(CollectionRecord?.collection_category);
+
+  const handleWhatsappShare = async () => {
+    if (!canWhatsapp || waLoading) return;
+    setWaLoading(true);
+    try {
+      const { data } = await axios.get(
+        `${API_BASE}/api/collection/member_statement/token/${memberId}/`
+      );
+      const link = buildStatementLink(data.token);
+      const templeName = templeData?.temple_name || "our Temple";
+      const paidAmt = (
+        CollectionRecord?.collection_category === "Chit Interest" ||
+        CollectionRecord?.collection_category === "Management Interest"
+      )
+        ? TotalChitManagementAmt
+        : (CollectionRecord?.amount || 0);
+      const msg = `Dear ${CollectionRecord?.member_name || "Member"}, thanks for your payment of \u20B9${paidAmt} on ${CollectionRecord?.pay_date}. View your 1-year account statement here: ${link} — ${templeName}`;
+      const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      alert("Could not generate the statement link. Please try again.");
+    } finally {
+      setWaLoading(false);
+    }
+  };
+
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
     onAfterPrint: () => {
@@ -55,7 +114,30 @@ const ViewCollectionPrint = ({ CollectionRecord }) => {
         <Button.Primary
           text={<AiFillPrinter style={{ fontSize: "30px" }} />}
           onClick={handlePrint}
+          data-testid="collection-print-btn"
         />
+        {canWhatsapp && (
+          <Button.Primary
+            text={
+              waLoading
+                ? "Sending..."
+                : (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <FaWhatsapp style={{ fontSize: "22px" }} />
+                    Share Statement
+                  </span>
+                )
+            }
+            onClick={handleWhatsappShare}
+            data-testid="collection-whatsapp-btn"
+          />
+        )}
       </Flex>
       <PrintWrapper>
         <PrintHolder ref={componentRef}>
