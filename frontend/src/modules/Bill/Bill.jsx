@@ -10,6 +10,7 @@ import {
 } from "../Management/ManagementSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { PrintHolder } from "./Style";
+import WhatsappStatementButton from "@modules/CollectionDetails/Partials/WhatsappStatementButton";
 
 const Bill = ({ CollectionRecord }) => {
 
@@ -60,6 +61,11 @@ const Bill = ({ CollectionRecord }) => {
         <Button.Primary
           text={<AiFillPrinter style={{ fontSize: "30px" }} />}
           onClick={handlePrint}
+          data-testid="bill-print-btn"
+        />
+        <WhatsappStatementButton
+          CollectionRecord={CollectionRecord}
+          templeName={templeData?.temple_name}
         />
       </Flex>
       <PrintWrapper>
