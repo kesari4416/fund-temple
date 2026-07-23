@@ -65,10 +65,20 @@ def _unsign_member_id(token: str):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def get_member_statement_token(request, member_id: int):
-    """Return a HMAC token for the given member. Requires normal auth."""
-    if not Member_Details.objects.filter(pk=member_id).exists():
+    """Return a HMAC token + the member's saved mobile number.
+
+    Frontend uses `mobile` to fall back when the Collection record itself
+    doesn't carry a phone number (older records / anonymous collections).
+    """
+    try:
+        member = Member_Details.objects.get(pk=member_id)
+    except Member_Details.DoesNotExist:
         return Response({"detail": "member not found"}, status=status.HTTP_404_NOT_FOUND)
-    return Response({"token": _sign_member_id(member_id)})
+    return Response({
+        "token": _sign_member_id(member_id),
+        "mobile": member.member_mobile_number,
+        "name": member.member_name,
+    })
 
 
 # ---------------------------------------------------------------------------

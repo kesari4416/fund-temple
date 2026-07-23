@@ -66,12 +66,13 @@ const ViewCollectionPrint = ({ CollectionRecord }) => {
   const memberId = CollectionRecord?.member;
   const rawMobile =
     CollectionRecord?.mobile_number || CollectionRecord?.mobile_no || "";
-  const digits = String(rawMobile).replace(/\D/g, "");
-  // wa.me expects the number in international format WITHOUT the leading "+"
-  const waNumber = digits.length === 10 ? `91${digits}` : digits;
+  // Only chit-fund investor categories are excluded from WhatsApp sharing –
+  // for regular member Collections (Festival, Subscription Tariff, Death,
+  // Marriage, …) we always show the button as long as we know which member
+  // it belongs to. If the record itself doesn't carry a mobile number, we
+  // fetch the member's saved mobile from the token endpoint.
   const canWhatsapp =
     !!memberId &&
-    waNumber.length >= 10 &&
     !WHATSAPP_SKIP_CATEGORIES.has(CollectionRecord?.collection_category);
 
   const handleWhatsappShare = async () => {
@@ -83,13 +84,25 @@ const ViewCollectionPrint = ({ CollectionRecord }) => {
       );
       const link = buildStatementLink(data.token);
       const templeName = templeData?.temple_name || "our Temple";
+
+      // Prefer the mobile stored on the collection record; fall back to the
+      // member's saved mobile from the token response.
+      const phone = String(rawMobile || data.mobile || "").replace(/\D/g, "");
+      const waNumber = phone.length === 10 ? `91${phone}` : phone;
+      if (waNumber.length < 10) {
+        alert(
+          "This member has no mobile number saved. Please update the member profile and try again."
+        );
+        return;
+      }
+
       const paidAmt = (
         CollectionRecord?.collection_category === "Chit Interest" ||
         CollectionRecord?.collection_category === "Management Interest"
       )
         ? TotalChitManagementAmt
         : (CollectionRecord?.amount || 0);
-      const msg = `Dear ${CollectionRecord?.member_name || "Member"}, thanks for your payment of \u20B9${paidAmt} on ${CollectionRecord?.pay_date}. View your 1-year account statement here: ${link} — ${templeName}`;
+      const msg = `Dear ${CollectionRecord?.member_name || data.name || "Member"}, thanks for your payment of \u20B9${paidAmt} on ${CollectionRecord?.pay_date}. View your 1-year account statement here: ${link} — ${templeName}`;
       const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
