@@ -569,9 +569,10 @@ export const AddIncomeForm = ({
               placeholder={"Choose Subcategory"}
               onChange={(val) => {
                 setIncomeSubcategory(val);
-                if (val !== "Temple Income") {
-                  form.setFieldsValue({ category: undefined, category_name: undefined });
-                }
+                // Always clear any previously-picked Income Category when the
+                // Subcategory changes — prevents stale FK / label carrying
+                // over between Temple and Chit Fund selections.
+                form.setFieldsValue({ category: undefined, category_name: undefined });
               }}
               rules={[
                 {

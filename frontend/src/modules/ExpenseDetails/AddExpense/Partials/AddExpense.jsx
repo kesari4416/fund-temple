@@ -470,11 +470,11 @@ export const AddExpenseForm = ({
               placeholder={"Choose Subcategory"}
               onChange={(val) => {
                 setExpenseSubcategory(val);
-                // Reset Category when leaving the Temple subcategory so
-                // stale FK values do not linger on the payload.
-                if (val !== "Temple Expense") {
-                  form.setFieldsValue({ category: undefined, category_name: undefined });
-                }
+                // Always clear any previously-picked Expense Category when the
+                // Subcategory changes — prevents stale FK / label carrying
+                // over between Temple and Chit Fund selections.
+                form.setFieldsValue({ category: undefined, category_name: undefined });
+                setSelectedCategory([]);
               }}
               rules={[
                 {
