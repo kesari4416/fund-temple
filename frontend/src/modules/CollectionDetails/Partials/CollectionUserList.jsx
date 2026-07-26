@@ -279,12 +279,15 @@ export const CollectionUserList = () => {
     {
       title: "Amount",
       render: (text) => {
-        const Amount = parseFloat(text?.amount);
-        const InterestAmt = parseFloat(text?.interst_amount);
+        const Amount = parseFloat(text?.amount) || 0;
+        const InterestAmt = parseFloat(text?.interst_amount) || 0;
 
-        const TotalAmount = Amount + InterestAmt || 0;
+        // Collection amounts must always be shown as positive – a negative
+        // value here is a data anomaly (e.g. from a reversal script) and
+        // showing a "-500" for a valid collection confuses operators.
+        const TotalAmount = Math.abs(Amount + InterestAmt);
         return (
-          <p style={{ color: 'green' }}>₹&nbsp;{TotalAmount}</p>
+          <p style={{ color: 'green' }} data-testid="collection-row-amount">₹&nbsp;{TotalAmount}</p>
         );
       }
     },

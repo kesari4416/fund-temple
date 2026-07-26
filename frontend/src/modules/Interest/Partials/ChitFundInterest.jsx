@@ -386,6 +386,29 @@ const ChitFundInterest = () => {
         </CustomRow>
 
         <Flex flexend={"right"} style={{ marginTop: "10px" }}>
+          <CustomPopconfirm
+            title="Apply overdue charges?"
+            description="Backfills missed monthly interest and 20th-of-month penalties for every unpaid chit-fund interest record. Idempotent."
+            confirm={async () => {
+              try {
+                const { data } = await request.post(
+                  APIURLS.APPLY_OVERDUE_INTEREST,
+                  {}
+                );
+                toast.success(
+                  `Applied — Interest: ₹${data?.data?.added_interest_total || 0}, Penalty: ₹${data?.data?.added_penalty_total || 0} across ${data?.data?.records_processed || 0} records.`
+                );
+                dispatch(getChitFundInterest());
+              } catch (e) {
+                errorHandler(e);
+              }
+            }}
+          >
+            <Button.Primary
+              text={"Apply Overdue Charges"}
+              data-testid="apply-overdue-chit-interest-btn"
+            />
+          </CustomPopconfirm>
           <a href="https://web.whatsapp.com/" target="blank">
             <Button.Primary text={"Share"} icon={<FaWhatsapp />} />
           </a>

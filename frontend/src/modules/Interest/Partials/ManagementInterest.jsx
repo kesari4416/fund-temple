@@ -106,6 +106,21 @@ const ManagementInterest = () => {
         dispatch(getManagementInterest())
     }
 
+    const handleApplyOverdue = async () => {
+        try {
+            const { data } = await request.post(
+                `${APIURLS.APPLY_OVERDUE_INTEREST || '/api/interest/apply_overdue_interest_and_penalty/'}`,
+                {}
+            );
+            toast.success(
+                `Applied overdue charges — Interest: ₹${data?.data?.added_interest_total || 0}, Penalty: ₹${data?.data?.added_penalty_total || 0} across ${data?.data?.records_processed || 0} records.`
+            );
+            dispatch(getManagementInterest());
+        } catch (e) {
+            errorHandler(e);
+        }
+    };
+
     const InterestEdit = (record) => {
         setManageTrigger(manageTrigger + 1)
         setModalTitle('')
@@ -391,6 +406,16 @@ const ManagementInterest = () => {
                 </CustomRow>
 
                 <Flex flexend={"right"} style={{ marginTop: "10px" }}>
+                    <CustomPopconfirm
+                        title="Apply overdue charges?"
+                        description="Backfills missed monthly interest and 20th-of-month penalties for every unpaid record. Idempotent."
+                        confirm={handleApplyOverdue}
+                    >
+                        <Button.Primary
+                            text={"Apply Overdue Charges"}
+                            data-testid="apply-overdue-interest-btn"
+                        />
+                    </CustomPopconfirm>
                     <a href="https://web.whatsapp.com/" target="blank">
                         <Button.Primary text={"Share"} icon={<FaWhatsapp />} />
                     </a>

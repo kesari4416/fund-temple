@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import overdue_views
 
 
 
@@ -26,6 +27,10 @@ urlpatterns = [
 
     path('interest_people_balance_get/', views.interest_people_balance_get,name='interest_people_balance_get'),
     path('interest_people_installmentinterest_balance_get/', views.interest_people_installmentinterest_balance_get,name='interest_people_installmentinterest_balance_get'),
+
+    # Backfill missed monthly interest + overdue penalty rows for every
+    # active interest record. Optional ?id=<pk> to run for a single record.
+    path('apply_overdue_interest_and_penalty/', overdue_views.apply_overdue_interest_and_penalty, name='apply_overdue_interest_and_penalty'),
 
 
 

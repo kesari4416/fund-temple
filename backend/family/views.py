@@ -1099,12 +1099,21 @@ def single_member_view(request,pk):
         else:
             t_m_pen_bal=0
             
-        getting_amt=PeoplesAmountDetails.objects.filter(member=mer,management_profile=management)
+        # Exclude dues whose parent festival has been marked as completed
+        # (action=False). Completed festivals must NOT appear as pending on
+        # the member's profile.
+        getting_amt=PeoplesAmountDetails.objects.filter(
+            member=mer,
+            management_profile=management,
+        ).exclude(festival__isnull=False, festival__action=False)
         serializer2 = PeoplesAmountDetailsSerializer(getting_amt,many=True)
         ser=PeoplesAmount123DetailsSerializer(getting_amt,many=True)
         # balance_sheet_total=PeoplesAmountDetails.objects.filter(member=mer,management_profile=management).aggregate(
         
-        total_amount_obj = PeoplesAmountDetails.objects.filter(member=mer,management_profile=management).aggregate(
+        total_amount_obj = PeoplesAmountDetails.objects.filter(
+            member=mer,
+            management_profile=management,
+        ).exclude(festival__isnull=False, festival__action=False).aggregate(
         total_amount=Sum('amount'),
         total_penalty_amount=Sum('penalty_amount'),
         total_amount_balance=Sum('amount_balance'),
