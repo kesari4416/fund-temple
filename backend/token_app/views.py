@@ -99,16 +99,27 @@ def generate_token(request):
     if request.method == "POST":
         try:
             token1 = request.data['refresh']
-            # Decode the expired token without verifying the signature
+            # Decode WITHOUT verifying signature/exp so we can read the iat.
             decoded_token = jwt.decode(token1, options={"verify_signature": False})
-            # Extract user ID from the decoded token
+            # ---- Absolute 1-hour session ---------------------------------
+            # The refresh endpoint must NOT let a client extend indefinitely.
+            # Reject if the original token was issued more than 60 minutes
+            # ago; the user must log in again.
+            iat_ts = decoded_token.get('iat')
+            if iat_ts:
+                issued_at = datetime.datetime.utcfromtimestamp(int(iat_ts))
+                if datetime.datetime.utcnow() - issued_at > datetime.timedelta(minutes=60):
+                    return Response(
+                        {'error': 'Session has exceeded the 1-hour limit. Please log in again.'},
+                        status=status.HTTP_401_UNAUTHORIZED,
+                    )
             user_id = decoded_token.get('id')
             # Fetch user from the database using the extracted user ID
             user = User.objects.filter(id=user_id).first()
             if user:
                 payload = {
                     "id": user.id,
-                    "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=1440),
+                    "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=60),
                     "iat": datetime.datetime.utcnow(),
                 }
                 # Generate a new token for the user

@@ -147,7 +147,7 @@ class LoginView(APIView):
             # 24 hours
             payload={
                 "id":user.id,
-                "exp":datetime.datetime.utcnow()+datetime.timedelta(minutes=1440),
+                "exp":datetime.datetime.utcnow()+datetime.timedelta(minutes=60),
                 "iat":datetime.datetime.utcnow(),
             }
             
@@ -652,7 +652,7 @@ class LoginView(APIView):
                 'role':user.user_role,
                 'permission':dict,
                 'superUsers':user.is_superuser,
-                "exp":datetime.datetime.utcnow()+datetime.timedelta(minutes=1440),
+                "exp":datetime.datetime.utcnow()+datetime.timedelta(minutes=60),
                 'username':user.name,
                 'email':user.email,
                 
