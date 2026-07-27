@@ -197,3 +197,77 @@ def apply_overdue_interest_and_penalty(request):
         "added_penalty_total": round(total_penalty, 2),
         "details": summary,
     })
+
+
+# ---------------------------------------------------------------------------
+# Recompute the balance sheet totals from the InterestPeopleReport audit
+# trail. Used to heal drift from rounding / edited collections / historical
+# manual edits reported by operators (e.g. TC_TEMPLE_INTEREST_001).
+# ---------------------------------------------------------------------------
+@api_view(["POST"])
+def recompute_interest_balance(request):
+    """
+    For each active interest record, re-derive:
+      * balance_amt         = Σ credits − Σ debits
+      * credit_amt          = Σ credits
+      * debit_amt           = Σ debits
+    from every ``InterestPeopleReport`` row belonging to it.
+
+    Pass ``?id=<pk>`` for a single record, ``?dry_run=1`` for a preview.
+    """
+    rejin = token_checking(request)
+    if not rejin:
+        return Response({"message": "No User Found"}, status=status.HTTP_401_UNAUTHORIZED)
+    if not rejin.is_active:
+        return Response({"message": "Not Authorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    single_id = request.query_params.get("id") or (
+        request.data.get("id") if isinstance(request.data, dict) else None
+    )
+    dry_run = str(
+        request.query_params.get("dry_run") or
+        (request.data.get("dry_run") if isinstance(request.data, dict) else "")
+    ).lower() in ("1", "true", "yes")
+
+    qs = PeopleInterestDetails.objects.filter(action=True)
+    if single_id:
+        qs = qs.filter(id=single_id)
+
+    fixed = []
+    for rec in qs:
+        try:
+            bal = PeopleInterestBalanceSheet.objects.get(interest_id=rec.id)
+        except PeopleInterestBalanceSheet.DoesNotExist:
+            continue
+
+        reports = InterestPeopleReport.objects.filter(interest=rec)
+        credit = float(sum(float(r.credit_amt or 0) for r in reports))
+        debit = float(sum(float(r.debit_amt or 0) for r in reports))
+        new_balance = round(credit - debit, 2)
+        drift = round(float(bal.balance_amt or 0) - new_balance, 2)
+
+        if abs(drift) < 0.01:
+            continue
+
+        fixed.append({
+            "interest_id": rec.id,
+            "old_balance": float(bal.balance_amt or 0),
+            "new_balance": new_balance,
+            "drift": drift,
+            "credit_sum": round(credit, 2),
+            "debit_sum": round(debit, 2),
+        })
+
+        if not dry_run:
+            bal.credit_amt = round(credit, 2)
+            bal.debit_amt = round(debit, 2)
+            bal.balance_amt = new_balance
+            bal.save()
+
+    return Response({
+        "dry_run": dry_run,
+        "records_scanned": qs.count(),
+        "records_needing_fix": len(fixed),
+        "total_drift_healed": round(sum(f["drift"] for f in fixed), 2),
+        "details": fixed[:200],  # cap payload size
+    })

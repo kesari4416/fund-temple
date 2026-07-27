@@ -180,6 +180,7 @@ const INTREST_EDIT_URL = 'interest/edit_interest_given_details'
 const MANAGEMENT_INTEREST_TABLE = 'interest/management_interest_details_table/'
 const MANAGEMENT_INTEREST_PROFILE_GET = 'interest/interest_profile'
 const APPLY_OVERDUE_INTEREST = 'interest/apply_overdue_interest_and_penalty/'
+const RECOMPUTE_INTEREST_BALANCE = 'interest/recompute_interest_balance/'
 
 // ==========  Interest page url end ============
 
@@ -540,6 +541,7 @@ export const APIURLS = {
     INTREST_EDIT_URL,
     MANAGEMENT_INTEREST_TABLE,
     APPLY_OVERDUE_INTEREST,
+    RECOMPUTE_INTEREST_BALANCE,
     MANAGEMENT_INTEREST_PROFILE_GET,
 
     ADD_CHIT_FUNT,             // Chit fund page

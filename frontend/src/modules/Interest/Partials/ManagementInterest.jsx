@@ -121,6 +121,21 @@ const ManagementInterest = () => {
         }
     };
 
+    const handleRecomputeBalance = async () => {
+        try {
+            const { data } = await request.post(
+                `${APIURLS.RECOMPUTE_INTEREST_BALANCE || '/api/interest/recompute_interest_balance/'}`,
+                {}
+            );
+            toast.success(
+                `Healed drift on ${data?.data?.records_needing_fix || 0} of ${data?.data?.records_scanned || 0} records (₹${data?.data?.total_drift_healed || 0}).`
+            );
+            dispatch(getManagementInterest());
+        } catch (e) {
+            errorHandler(e);
+        }
+    };
+
     const InterestEdit = (record) => {
         setManageTrigger(manageTrigger + 1)
         setModalTitle('')
@@ -406,6 +421,16 @@ const ManagementInterest = () => {
                 </CustomRow>
 
                 <Flex flexend={"right"} style={{ marginTop: "10px" }}>
+                    <CustomPopconfirm
+                        title="Recompute balance from audit trail?"
+                        description="Rebuilds every interest record's balance from InterestPeopleReport transactions to heal any drift. Idempotent."
+                        confirm={handleRecomputeBalance}
+                    >
+                        <Button.Secondary
+                            text={"Recompute Balances"}
+                            data-testid="recompute-mgmt-interest-balance-btn"
+                        />
+                    </CustomPopconfirm>
                     <CustomPopconfirm
                         title="Apply overdue charges?"
                         description="Backfills missed monthly interest and 20th-of-month penalties for every unpaid record. Idempotent."

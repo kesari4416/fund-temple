@@ -263,6 +263,16 @@ const ChitFundListView = () => {
                                 <span>:</span>&nbsp;
                                 <span>{findIds?.collected_principal_amount}</span>
                             </div>
+                            <div className="info-row" data-testid="chit-pending-to-collect-row">
+                                <h3 className="info-label">Pending Amount to Collect</h3>
+                                <span>:</span>&nbsp;
+                                <span style={{ color: '#b91c1c', fontWeight: 700 }} data-testid="chit-pending-to-collect-value">
+                                  ₹ {(
+                                    Number(findIds?.principal_given_amount || 0) -
+                                    Number(findIds?.collected_principal_amount || 0)
+                                  ).toFixed(2)}
+                                </span>
+                            </div>
                             <CardFooterStyle>
                                 <h3 className="info-label-footer">Cash In Hand Amount&nbsp; :&nbsp;&nbsp;<span style={{color:'green'}}>₹&nbsp;{findIds?.cash_inhand_amount}</span> </h3>
                             </CardFooterStyle>

@@ -622,9 +622,9 @@ const Marriage = ({ closee, updatelist, marriagetrigger }) => {
           <Col span={24} md={12}>
             <Flex flexend={"right"}>
               <CustomDatePicker
+                label={"Date"}
                 name={"date"}
                 onChange={currentDate}
-                disabled={'true'}
               />
             </Flex>
           </Col>
