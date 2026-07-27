@@ -129,6 +129,23 @@ const PublicMemberStatement = () => {
           <span>Number of payments</span>
           <span data-testid="statement-total-count">{totals.count}</span>
         </Row>
+        {(totals.interest ?? 0) > 0 && (
+          <Row>
+            <span>Interest paid</span>
+            <span data-testid="statement-total-interest">{fmt(totals.interest)}</span>
+          </Row>
+        )}
+        {(totals.penalty ?? 0) > 0 && (
+          <Row>
+            <span>Penalty paid</span>
+            <span
+              data-testid="statement-total-penalty"
+              style={{ color: "#b91c1c", fontWeight: 700 }}
+            >
+              {fmt(totals.penalty)}
+            </span>
+          </Row>
+        )}
       </Card>
 
       <Card>
@@ -143,6 +160,7 @@ const PublicMemberStatement = () => {
               const isInterest =
                 c.category === "Management Interest" ||
                 c.category === "Chit Interest";
+              const hasPenalty = Number(c.penalty_amount || 0) > 0;
               return (
                 <Row key={c.id} data-testid={`statement-payment-${c.id}`}>
                   <div>
@@ -156,6 +174,14 @@ const PublicMemberStatement = () => {
                         P: {fmt(c.principal_amount)} · I:{" "}
                         {fmt(c.interest_amount)} · Pen:{" "}
                         {fmt(c.penalty_amount)}
+                      </Muted>
+                    )}
+                    {!isInterest && hasPenalty && (
+                      <Muted
+                        data-testid={`statement-payment-${c.id}-penalty`}
+                        style={{ color: "#b91c1c" }}
+                      >
+                        Penalty: {fmt(c.penalty_amount)}
                       </Muted>
                     )}
                   </div>

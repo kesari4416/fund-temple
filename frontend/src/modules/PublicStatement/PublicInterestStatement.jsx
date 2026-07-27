@@ -132,6 +132,33 @@ const PublicInterestStatement = () => {
             {totals.count}
           </span>
         </Row>
+        {(totals.principal ?? 0) > 0 && (
+          <Row>
+            <span>Principal paid</span>
+            <span data-testid="interest-statement-total-principal">
+              {fmt(totals.principal)}
+            </span>
+          </Row>
+        )}
+        {(totals.interest ?? 0) > 0 && (
+          <Row>
+            <span>Interest paid</span>
+            <span data-testid="interest-statement-total-interest">
+              {fmt(totals.interest)}
+            </span>
+          </Row>
+        )}
+        {(totals.penalty ?? 0) > 0 && (
+          <Row>
+            <span>Penalty paid</span>
+            <span
+              data-testid="interest-statement-total-penalty"
+              style={{ color: "#b91c1c", fontWeight: 700 }}
+            >
+              {fmt(totals.penalty)}
+            </span>
+          </Row>
+        )}
       </Card>
 
       {outstanding && (

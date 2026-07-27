@@ -11,9 +11,9 @@ const INTEREST_CATEGORIES = new Set(["Chit Interest", "Management Interest"]);
 const API_BASE =
   import.meta.env?.VITE_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || "";
 
-// Max rows to include in the WhatsApp text table (kept generous but bounded
-// so the wa.me URL stays under the ~8 KB URL limit imposed by most browsers).
-const MAX_TABLE_ROWS = 20;
+// No row cap — the customer sees the full 1-year ledger. Very large tables
+// may hit browser URL-length limits (~8 KB); if that ever happens the fetch
+// will still open WhatsApp, just truncated by the OS/browser.
 
 const buildMemberStatementLink = (token) => {
   const origin =
@@ -49,19 +49,17 @@ const buildTable = (rows, isInterest) => {
   if (!rows || rows.length === 0) {
     return "```\nNo payments recorded in the last 12 months.\n```";
   }
-  const shown = rows.slice(0, MAX_TABLE_ROWS);
-  const header = `${pad("Date", 10)} | ${pad("Category", 16)} | ${padRight("Amount", 10)} | ${padRight("Running", 10)}`;
+  const header = `${pad("Date", 10)} | ${pad("Category", 14)} | ${padRight("Amt", 9)} | ${padRight("Pen", 8)} | ${padRight("Running", 10)}`;
   const sep = "-".repeat(header.length);
-  const lines = shown.map((c) => {
+  const lines = rows.map((c) => {
     const cat = isInterest
       ? c.category === "Management Interest"
         ? "Mgmt Interest"
         : "Chit Interest"
       : c.category || "-";
-    return `${pad(c.date || "-", 10)} | ${pad(cat, 16)} | ${padRight(fmtAmt(c.amount), 10)} | ${padRight(fmtAmt(c.running_total), 10)}`;
+    return `${pad(c.date || "-", 10)} | ${pad(cat, 14)} | ${padRight(fmtAmt(c.amount), 9)} | ${padRight(fmtAmt(c.penalty_amount), 8)} | ${padRight(fmtAmt(c.running_total), 10)}`;
   });
-  const more = rows.length > MAX_TABLE_ROWS ? `\n… and ${rows.length - MAX_TABLE_ROWS} more` : "";
-  return "```\n" + header + "\n" + sep + "\n" + lines.join("\n") + more + "\n```";
+  return "```\n" + header + "\n" + sep + "\n" + lines.join("\n") + "\n```";
 };
 
 const buildMessage = ({
@@ -75,23 +73,30 @@ const buildMessage = ({
 }) => {
   const greeting = `Dear ${name}, thanks for your payment of \u20B9${paidAmt} on ${payDate}.`;
   const table = buildTable(statement?.collections || [], isInterest);
-  const totals = statement?.totals
-    ? `Total received (1 yr): \u20B9${fmtAmt(statement.totals.amount)} · ${statement.totals.count} payments`
+  const t = statement?.totals || {};
+  const totalsLine = t.amount !== undefined
+    ? `Total received (1 yr): \u20B9${fmtAmt(t.amount)} · ${t.count} payments`
     : "";
+  const breakdownParts = [];
+  if ((t.interest ?? 0) > 0) breakdownParts.push(`Interest \u20B9${fmtAmt(t.interest)}`);
+  if ((t.penalty ?? 0) > 0) breakdownParts.push(`Penalty \u20B9${fmtAmt(t.penalty)}`);
+  const breakdownLine = breakdownParts.length ? `(of which ${breakdownParts.join(" · ")})` : "";
+
   let outstanding = "";
   if (isInterest && statement?.outstanding) {
     const o = statement.outstanding;
     outstanding = `Outstanding: Principal \u20B9${fmtAmt(o.principal_balance)} · Penalty \u20B9${fmtAmt(o.penalty_balance_amt)} = \u20B9${fmtAmt(Number(o.balance_amt || 0) + Number(o.penalty_balance_amt || 0))}`;
   } else if (!isInterest && statement?.pending_dues && statement.pending_dues.Total !== undefined) {
-    const t = Number(statement.pending_dues.Total || 0);
-    if (t > 0) outstanding = `Pending dues: \u20B9${fmtAmt(t)}`;
+    const tot = Number(statement.pending_dues.Total || 0);
+    if (tot > 0) outstanding = `Pending dues: \u20B9${fmtAmt(tot)}`;
   }
   return [
     greeting,
     "",
     `*1-year statement*`,
     table,
-    totals,
+    totalsLine,
+    breakdownLine,
     outstanding,
     "",
     `Full details: ${link}`,

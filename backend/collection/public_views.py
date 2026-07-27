@@ -155,6 +155,8 @@ def public_member_statement(request, token: str):
     )
 
     running = 0.0
+    total_penalty = 0.0
+    total_interest = 0.0
     rows = []
     for c in reversed(list(collections)):  # oldest → newest for running total
         # For Management Interest / Chit Interest the operator often stores
@@ -165,8 +167,10 @@ def public_member_statement(request, token: str):
         interest_amt = float(c.interst_amount or 0)
         penalty_amt = float(c.penalty_amount or 0)
         is_interest_row = c.collection_category in ("Management Interest", "Chit Interest")
-        total_paid = principal + interest_amt + penalty_amt if is_interest_row else principal
+        total_paid = principal + interest_amt + penalty_amt if is_interest_row else principal + penalty_amt
         running += total_paid
+        total_penalty += penalty_amt
+        total_interest += interest_amt
         rows.append({
             "id": c.id,
             "date": c.pay_date.isoformat() if c.pay_date else None,
@@ -195,6 +199,8 @@ def public_member_statement(request, token: str):
         "totals": {
             "count": len(rows),
             "amount": round(running, 2),
+            "penalty": round(total_penalty, 2),
+            "interest": round(total_interest, 2),
         },
         "pending_dues": _serialize_pending(member),
     })
@@ -279,6 +285,9 @@ def public_interest_statement(request, token: str):
     )
 
     running = 0.0
+    total_penalty = 0.0
+    total_interest = 0.0
+    total_principal = 0.0
     rows = []
     for c in reversed(list(collections)):
         principal = float(c.amount or 0)
@@ -286,6 +295,9 @@ def public_interest_statement(request, token: str):
         penalty_amt = float(c.penalty_amount or 0)
         total_paid = principal + interest_amt + penalty_amt
         running += total_paid
+        total_penalty += penalty_amt
+        total_interest += interest_amt
+        total_principal += principal
         rows.append({
             "id": c.id,
             "date": c.pay_date.isoformat() if c.pay_date else None,
@@ -329,6 +341,9 @@ def public_interest_statement(request, token: str):
         "totals": {
             "count": len(rows),
             "amount": round(running, 2),
+            "principal": round(total_principal, 2),
+            "interest": round(total_interest, 2),
+            "penalty": round(total_penalty, 2),
         },
         "outstanding": outstanding,
     })
