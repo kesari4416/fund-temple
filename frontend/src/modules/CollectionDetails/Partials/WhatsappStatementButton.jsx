@@ -43,8 +43,30 @@ const padRight = (s, n) => {
 
 const fmtAmt = (n) => Number(n || 0).toFixed(2);
 
+// Build the accounting-style ledger table (Sl | Date | Particulars | Name |
+// Credit | Debit | Balance | Penalty) for the WhatsApp message body. This
+// matches the on-page table format the customer sees on the public page.
+const buildLedgerTable = (ledger) => {
+  if (!ledger || ledger.length === 0) {
+    return "```\nNo bill entries in the last 12 months.\n```";
+  }
+  const header =
+    `${pad("#", 3)}| ${pad("Date", 10)}| ${pad("Particulars", 14)}| ${pad("Name", 12)}| ${padRight("Credit", 8)}| ${padRight("Debit", 8)}| ${padRight("Balance", 9)}| ${pad("Pen", 3)}`;
+  const sep = "-".repeat(header.length);
+  const lines = ledger.map((r) => {
+    const dateShort = (r.date || "-").split("-").reverse().join("/");
+    return (
+      `${pad(String(r.sl_no), 3)}| ${pad(dateShort, 10)}| ${pad((r.particulars || "-").slice(0, 14), 14)}| ` +
+      `${pad((r.name || "-").slice(0, 12), 12)}| ${padRight(fmtAmt(r.credit), 8)}| ` +
+      `${padRight(fmtAmt(r.debit), 8)}| ${padRight(fmtAmt(r.balance), 9)}| ${pad(r.penalty || "-", 3)}`
+    );
+  });
+  return "```\n" + header + "\n" + sep + "\n" + lines.join("\n") + "\n```";
+};
+
 // Build a fixed-width text table (rendered as ```code block``` in WhatsApp so
-// columns stay aligned on the recipient's phone).
+// columns stay aligned on the recipient's phone). Used for INTEREST loans
+// where the ledger isn't per-bill; falls back to the payment history table.
 const buildTable = (rows, isInterest) => {
   if (!rows || rows.length === 0) {
     return "```\nNo payments recorded in the last 12 months.\n```";
@@ -72,10 +94,18 @@ const buildMessage = ({
   isInterest,
 }) => {
   const greeting = `Dear ${name}, thanks for your payment of \u20B9${paidAmt} on ${payDate}.`;
-  const table = buildTable(statement?.collections || [], isInterest);
+  // Member statement → per-bill ledger (Credit/Debit/Balance/Penalty).
+  // Interest loan statement → per-payment history.
+  const table = !isInterest && Array.isArray(statement?.ledger)
+    ? buildLedgerTable(statement.ledger)
+    : buildTable(statement?.collections || [], isInterest);
   const t = statement?.totals || {};
+  const lt = statement?.ledger_totals || {};
   const totalsLine = t.amount !== undefined
     ? `Total received (1 yr): \u20B9${fmtAmt(t.amount)} · ${t.count} payments`
+    : "";
+  const ledgerTotalsLine = !isInterest && statement?.ledger_totals
+    ? `Ledger totals: Credit \u20B9${fmtAmt(lt.credit)} · Debit \u20B9${fmtAmt(lt.debit)} · Balance \u20B9${fmtAmt(lt.balance)}`
     : "";
   const breakdownParts = [];
   if ((t.interest ?? 0) > 0) breakdownParts.push(`Interest \u20B9${fmtAmt(t.interest)}`);
@@ -93,8 +123,9 @@ const buildMessage = ({
   return [
     greeting,
     "",
-    `*1-year statement*`,
+    `*1-year balance sheet*`,
     table,
+    ledgerTotalsLine,
     totalsLine,
     breakdownLine,
     outstanding,

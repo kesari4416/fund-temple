@@ -27,7 +27,6 @@ from amount.models import PeoplesAmountDetails
 from interest.models import PeopleInterestDetails
 from balancesheet.models import PeopleInterestBalanceSheet
 
-
 # ---------------------------------------------------------------------------
 # HMAC token helpers (stateless, no DB migration required)
 # ---------------------------------------------------------------------------
@@ -123,6 +122,94 @@ def _serialize_pending(member):
     return per_category
 
 
+def _resolve_bill_meta(row):
+    """Return (date, source_name) for a PeoplesAmountDetails ledger row.
+
+    Uses the linked source object (festival / sub_tariff / marriage / death)
+    to find a display date and a specific "Name" (e.g. "Apr-2024" for a
+    subscription tariff month, "Ganesh Chaturthi" for a festival, or the
+    deceased person's name for a death tariff).
+    """
+    src_date = None
+    src_name = None
+    if row.sub_tariff:
+        st = row.sub_tariff
+        src_date = st.from_date or st.date
+        # e.g. "Apr-2024" from from_date; fall back to subscription_no.
+        if st.from_date:
+            src_name = st.from_date.strftime("%b-%Y")
+        else:
+            src_name = st.subscription_no or None
+    elif row.festival:
+        f = row.festival
+        src_date = f.date or f.start_date
+        src_name = f.festival_name
+    elif row.marriage:
+        m = row.marriage
+        src_date = getattr(m, "marriage_date", None) or getattr(m, "date", None)
+        src_name = (
+            getattr(m, "groom_name", None)
+            or getattr(m, "bride_name", None)
+            or getattr(m, "marriage_no", None)
+        )
+    elif row.death:
+        d = row.death
+        src_date = d.death_date or d.date
+        src_name = d.member_name or d.death_no
+    return src_date, src_name
+
+
+def _build_ledger(member, since):
+    """Build the accounting-style ledger rows for the member.
+
+    One row per PeoplesAmountDetails entry (bill raised) — matches the
+    Sl No / Date / Particulars / Name / Credit / Debit / Balance / Penalty
+    layout the operator uses on their existing statement print.
+    """
+    bills = (
+        PeoplesAmountDetails.objects
+        .filter(member=member)
+        .select_related("sub_tariff", "festival", "marriage", "death")
+        .order_by("created_at", "id")
+    )
+    ledger = []
+    total_credit = 0.0
+    total_debit = 0.0
+    total_balance = 0.0
+    sl = 0
+    for row in bills:
+        src_date, src_name = _resolve_bill_meta(row)
+        # Skip anything older than a year (based on the source date, falling
+        # back to created_at) so the statement stays "1 year".
+        date_ref = src_date or (row.created_at.date() if row.created_at else None)
+        if date_ref and date_ref < since:
+            continue
+        credit = float(row.amount or 0)
+        debit = float(row.total_paid_amt or 0)
+        balance = float(row.total_bal_amt or 0)
+        penalty_flag = bool(row.penalty) or float(row.penalty_amount or 0) > 0
+        sl += 1
+        total_credit += credit
+        total_debit += debit
+        total_balance += balance
+        ledger.append({
+            "sl_no": sl,
+            "date": date_ref.isoformat() if date_ref else None,
+            "particulars": row.name or "Other",
+            "name": src_name or "-",
+            "credit": round(credit, 2),
+            "debit": round(debit, 2),
+            "balance": round(balance, 2),
+            "penalty": "Yes" if penalty_flag else "No",
+        })
+    return ledger, {
+        "credit": round(total_credit, 2),
+        "debit": round(total_debit, 2),
+        "balance": round(total_balance, 2),
+        "count": len(ledger),
+    }
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def public_member_statement(request, token: str):
@@ -186,6 +273,8 @@ def public_member_statement(request, token: str):
     # reverse back so most-recent-first for display (running_total kept as-is)
     rows.reverse()
 
+    ledger, ledger_totals = _build_ledger(member, since)
+
     return Response({
         "member": {
             "id": member.id,
@@ -195,6 +284,8 @@ def public_member_statement(request, token: str):
             "member_no": member.member_no,
         },
         "period": {"from": since.isoformat(), "to": timezone.now().date().isoformat()},
+        "ledger": ledger,
+        "ledger_totals": ledger_totals,
         "collections": rows,
         "totals": {
             "count": len(rows),
