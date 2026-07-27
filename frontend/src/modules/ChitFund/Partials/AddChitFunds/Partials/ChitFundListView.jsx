@@ -13,6 +13,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AllChitList, getChitFundList } from '@modules/ChitFund/ChitFundSlice';
 import { BondPaper } from './BondPaper';
 import { IoIosPaper } from 'react-icons/io';
+import { CaretDownOutlined, CaretRightOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 // Business rule: Settlement Date = Application Date + 60 days.
@@ -111,6 +112,9 @@ const ChitFundListView = () => {
     const [modalTitle, setModalTitle] = useState("");
     const [modalContent, setModalContent] = useState(null);
 
+    // Pending members breakdown expander
+    const [showPendingBreakdown, setShowPendingBreakdown] = useState(false);
+
     // ----------  Form Reset UseState ---------
     const [modelwith, setModelwith] = useState(0);
 
@@ -154,6 +158,72 @@ const ChitFundListView = () => {
         const FindId = AllDetails?.find((ids) => ids?.id == id)
         setFindIds(FindId)
     }, [AllDetails]);
+
+    // Per-investor Share Amount (matches the value shown on each member card).
+    // For settled investors, use the FROZEN share_amount. Otherwise show LIVE
+    // collected_share_amount (falling back to share_amount).
+    const getMemberShareAmount = (m) => {
+        const settled = m?.action === false || !!m?.application_date;
+        const val = settled
+            ? m?.share_amount ?? 0
+            : (m?.collected_share_amount ?? m?.share_amount ?? 0);
+        return Number(val) || 0;
+    };
+
+    // Management Amount = Total Profit Amount − Σ (Share Amount of each investor member)
+    // "Each member" refers to Member 1..N (outer investors). Management (Member 0)
+    // is excluded because this figure represents what remains for management.
+    const managementAmount = useMemo(() => {
+        const profit = Number(findIds?.profit_amount || 0);
+        const totalInvestorShare = (MemDetails || []).reduce(
+            (sum, m) => sum + getMemberShareAmount(m),
+            0,
+        );
+        const value = profit - totalInvestorShare;
+        return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
+    }, [findIds?.profit_amount, MemDetails]);
+
+    // Pending members = investors whose per-member balance (share_amount − collected)
+    // is still > 0 AND who are not yet settled.
+    const pendingMembers = useMemo(() => {
+        const today = dayjs();
+        return (MemDetails || [])
+            .map((m) => {
+                const share = Number(m?.share_amount || 0);
+                const collected = Number(m?.collected_share_amount || 0);
+                const balance = Math.max(0, share - collected);
+                const startDate = m?.joining_date || findIds?.starting_date || null;
+                const endDate = m?.application_date
+                    ? computeSettlementDate(m.application_date)
+                    : null;
+                const daysFromStart = startDate && dayjs(startDate).isValid()
+                    ? today.diff(dayjs(startDate), 'day')
+                    : null;
+                const lastPaymentDate = m?.updated_at || null;
+                const daysFromLastPayment = collected > 0 && lastPaymentDate && dayjs(lastPaymentDate).isValid()
+                    ? today.diff(dayjs(lastPaymentDate), 'day')
+                    : null;
+                const settled = m?.action === false || !!m?.application_date;
+                return {
+                    id: m?.id,
+                    name: m?.invester_name,
+                    startDate,
+                    endDate,
+                    daysFromStart,
+                    daysFromLastPayment,
+                    shareAmount: share,
+                    collectedAmount: collected,
+                    balance,
+                    settled,
+                };
+            })
+            .filter((m) => !m.settled && m.balance > 0);
+    }, [MemDetails, findIds?.starting_date]);
+
+    const totalPendingBalanceFromMembers = useMemo(
+        () => pendingMembers.reduce((sum, m) => sum + m.balance, 0),
+        [pendingMembers],
+    );
 
     const handlebondClick = (values) => {
         setModelwith(900)
@@ -219,6 +289,15 @@ const ChitFundListView = () => {
                                 <span>:</span>&nbsp;
                                 <span>{findIds?.principal_given_amount}</span>
                             </div>
+                            <div className="info-row" data-testid="management-amount-row">
+                                <h3 className="info-label">Management Amount </h3>
+                                <span>:</span>&nbsp;
+                                <Tooltip title="Total Profit Amount − Σ Share Amount of each investor member">
+                                    <span style={{ fontWeight: 600, color: '#0F5132' }} data-testid="management-amount-value">
+                                        ₹ {managementAmount.toFixed(2)}
+                                    </span>
+                                </Tooltip>
+                            </div>
                         </Totalstyle>
                     </Col>
                     <Col span={24} md={12}>
@@ -272,7 +351,89 @@ const ChitFundListView = () => {
                                     Number(findIds?.collected_principal_amount || 0)
                                   ).toFixed(2)}
                                 </span>
+                                &nbsp;&nbsp;
+                                <Tooltip title={showPendingBreakdown ? 'Hide member breakdown' : 'View member breakdown'}>
+                                    <button
+                                        type="button"
+                                        data-testid="pending-breakdown-toggle"
+                                        onClick={() => setShowPendingBreakdown((v) => !v)}
+                                        style={{
+                                            border: '1px solid #b91c1c',
+                                            background: showPendingBreakdown ? '#b91c1c' : '#fff',
+                                            color: showPendingBreakdown ? '#fff' : '#b91c1c',
+                                            borderRadius: 4,
+                                            cursor: 'pointer',
+                                            padding: '2px 8px',
+                                            fontSize: 14,
+                                            lineHeight: 1,
+                                        }}
+                                        aria-label="Toggle pending breakdown"
+                                        aria-expanded={showPendingBreakdown}
+                                    >
+                                        {showPendingBreakdown ? <CaretDownOutlined /> : <CaretRightOutlined />}
+                                    </button>
+                                </Tooltip>
                             </div>
+                            {showPendingBreakdown && (
+                                <div
+                                    data-testid="pending-breakdown-panel"
+                                    style={{
+                                        border: '1px solid #fecaca',
+                                        background: '#fff5f5',
+                                        borderRadius: 6,
+                                        padding: '10px 12px',
+                                        margin: '4px 0 12px 0',
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                        <strong style={{ color: '#7f1d1d' }}>Pending members breakdown</strong>
+                                        <span data-testid="pending-breakdown-count" style={{ fontSize: 12, color: '#7f1d1d' }}>
+                                            {pendingMembers.length} pending · ₹ {totalPendingBalanceFromMembers.toFixed(2)}
+                                        </span>
+                                    </div>
+                                    {pendingMembers.length === 0 ? (
+                                        <div data-testid="pending-breakdown-empty" style={{ fontSize: 13, color: '#6b7280', padding: '6px 0' }}>
+                                            No members with pending balance.
+                                        </div>
+                                    ) : (
+                                        <div style={{ overflowX: 'auto' }}>
+                                            <table
+                                                data-testid="pending-breakdown-table"
+                                                style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}
+                                            >
+                                                <thead>
+                                                    <tr style={{ background: '#fee2e2', color: '#7f1d1d' }}>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left' }}>Member</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left' }}>Start Date</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left' }}>End Date</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'right' }}>Days (from start)</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'right' }}>Days (from last pay)</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'right' }}>Share Amt</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'right' }}>Collected</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'right' }}>Balance</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {pendingMembers.map((m) => (
+                                                        <tr key={m.id} data-testid={`pending-row-${m.id}`} style={{ borderBottom: '1px solid #fecaca' }}>
+                                                            <td style={{ padding: '6px 8px' }} data-testid={`pending-row-${m.id}-name`}>{m.name}</td>
+                                                            <td style={{ padding: '6px 8px' }}>{m.startDate || '-'}</td>
+                                                            <td style={{ padding: '6px 8px' }}>{m.endDate || '-'}</td>
+                                                            <td style={{ padding: '6px 8px', textAlign: 'right' }}>{m.daysFromStart ?? '-'}</td>
+                                                            <td style={{ padding: '6px 8px', textAlign: 'right' }}>{m.daysFromLastPayment ?? '-'}</td>
+                                                            <td style={{ padding: '6px 8px', textAlign: 'right' }}>₹ {m.shareAmount.toFixed(2)}</td>
+                                                            <td style={{ padding: '6px 8px', textAlign: 'right' }}>₹ {m.collectedAmount.toFixed(2)}</td>
+                                                            <td style={{ padding: '6px 8px', textAlign: 'right', color: '#b91c1c', fontWeight: 700 }} data-testid={`pending-row-${m.id}-balance`}>
+                                                                ₹ {m.balance.toFixed(2)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             <CardFooterStyle>
                                 <h3 className="info-label-footer">Cash In Hand Amount&nbsp; :&nbsp;&nbsp;<span style={{color:'green'}}>₹&nbsp;{findIds?.cash_inhand_amount}</span> </h3>
                             </CardFooterStyle>

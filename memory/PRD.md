@@ -127,16 +127,20 @@ Business rule clarified with the user:
 - [x] **Chit Fund List View — "Member 0" (Management share) card** rendered before the investor list with data-testids `member-0-card`, `member-0-name`, `member-0-invested-amt`, `member-0-share-count`, `member-0-application-date`, `member-0-settlement-date`.
 - [x] **Application Date + Settlement Date (Application Date + 60 days)** now shown on every member card in ChitFundListView (`data-testid=member-{n}-application-date` / `member-{n}-settlement-date`), on the View Settlement Application modal (`settlement-view-application-date` / `settlement-view-settlement-date`), and as two separate columns in the Settlement Application list & print table. Business rule implemented via shared `computeSettlementDate` helper (`dayjs(applicationDate).add(60, 'day').format('YYYY-MM-DD')`).
 
+## What's been implemented (2026-02 fork)
+- [x] **Chit Fund View — Management Amount row** added right below "Principal Given Amount" in `ChitFundListView.jsx`. Formula: `Total Profit Amount − Σ (per-investor Share Amount)`, where each member's share amount matches the value shown on their card (settled → frozen `share_amount`; live → `collected_share_amount ?? share_amount`). Reactive via `useMemo`. `data-testid="management-amount-value"`.
+- [x] **Chit Fund View — Pending Amount breakdown expander** added next to "Pending Amount to Collect". Toggle button (`data-testid="pending-breakdown-toggle"`) opens an inline panel (`pending-breakdown-panel`) with a per-member table showing: Member name, Start Date (joining_date), End Date (application_date + 60 days), Days from start, Days from last payment (updated_at proxy), Share Amount, Collected, Balance. Only members whose balance > 0 and not yet settled are listed. Empty-state row when no pending. Row keys: `pending-row-{id}`.
+- [x] **WhatsApp 1-hour auto-disappear** — user confirmed to keep current `wa.me` intent links (technically not supported for auto-expiring messages outside official WhatsApp Business API).
+
 ## Backlog / Future
-- P1: Add a daily scheduled job (django-apscheduler is already installed)
-  that calls `recompute_all()` automatically at midnight, so penalties
-  appear without anyone visiting the list page.
-- P1: Apply the same ₹25/missed-month rule inside Collection accept-payment
-  flow so the penalty charged at payment time is always the engine value.
-- P2: Per-tariff configurable penalty rate (instead of constant ₹25), if
-  needed later.
-- P2: WhatsApp / Print integrations on the Pending Penalty page (buttons
-  exist but not wired yet).
+- P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
+- P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.
+- P1: Add a daily scheduled job (django-apscheduler is already installed) that calls `recompute_all()` automatically at midnight.
+- P1: Apply the same ₹25/missed-month rule inside Collection accept-payment flow so the penalty charged at payment time is always the engine value.
+- P2: Refactor `/app/backend/collection/views.py` (4600+ lines) into services / thinner views.
+- P2: Per-tariff configurable penalty rate (instead of constant ₹25).
+- P2: WhatsApp / Print integrations on the Pending Penalty page.
+- P2: User EC2 login returning HTTP 204 — needs their Nginx/Django infra debugging.
 
 ## Test credentials
 See `/app/memory/test_credentials.md`.
