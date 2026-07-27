@@ -66,6 +66,7 @@ const Bill = ({ CollectionRecord }) => {
         <WhatsappStatementButton
           CollectionRecord={CollectionRecord}
           templeName={templeData?.temple_name}
+          autoTrigger
         />
       </Flex>
       <PrintWrapper>

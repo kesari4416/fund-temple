@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
 import axios from "axios";
 import { Button } from "@components/form";
@@ -10,6 +10,10 @@ const INTEREST_CATEGORIES = new Set(["Chit Interest", "Management Interest"]);
 
 const API_BASE =
   import.meta.env?.VITE_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || "";
+
+// Max rows to include in the WhatsApp text table (kept generous but bounded
+// so the wa.me URL stays under the ~8 KB URL limit imposed by most browsers).
+const MAX_TABLE_ROWS = 20;
 
 const buildMemberStatementLink = (token) => {
   const origin =
@@ -27,30 +31,101 @@ const buildInterestStatementLink = (token) => {
   return `${origin}/interest-statement/${token}`;
 };
 
+const pad = (s, n) => {
+  const t = String(s ?? "");
+  return t.length >= n ? t.slice(0, n) : t + " ".repeat(n - t.length);
+};
+
+const padRight = (s, n) => {
+  const t = String(s ?? "");
+  return t.length >= n ? t.slice(0, n) : " ".repeat(n - t.length) + t;
+};
+
+const fmtAmt = (n) => Number(n || 0).toFixed(2);
+
+// Build a fixed-width text table (rendered as ```code block``` in WhatsApp so
+// columns stay aligned on the recipient's phone).
+const buildTable = (rows, isInterest) => {
+  if (!rows || rows.length === 0) {
+    return "```\nNo payments recorded in the last 12 months.\n```";
+  }
+  const shown = rows.slice(0, MAX_TABLE_ROWS);
+  const header = `${pad("Date", 10)} | ${pad("Category", 16)} | ${padRight("Amount", 10)} | ${padRight("Running", 10)}`;
+  const sep = "-".repeat(header.length);
+  const lines = shown.map((c) => {
+    const cat = isInterest
+      ? c.category === "Management Interest"
+        ? "Mgmt Interest"
+        : "Chit Interest"
+      : c.category || "-";
+    return `${pad(c.date || "-", 10)} | ${pad(cat, 16)} | ${padRight(fmtAmt(c.amount), 10)} | ${padRight(fmtAmt(c.running_total), 10)}`;
+  });
+  const more = rows.length > MAX_TABLE_ROWS ? `\n… and ${rows.length - MAX_TABLE_ROWS} more` : "";
+  return "```\n" + header + "\n" + sep + "\n" + lines.join("\n") + more + "\n```";
+};
+
+const buildMessage = ({
+  name,
+  paidAmt,
+  payDate,
+  templeName,
+  link,
+  statement,
+  isInterest,
+}) => {
+  const greeting = `Dear ${name}, thanks for your payment of \u20B9${paidAmt} on ${payDate}.`;
+  const table = buildTable(statement?.collections || [], isInterest);
+  const totals = statement?.totals
+    ? `Total received (1 yr): \u20B9${fmtAmt(statement.totals.amount)} · ${statement.totals.count} payments`
+    : "";
+  let outstanding = "";
+  if (isInterest && statement?.outstanding) {
+    const o = statement.outstanding;
+    outstanding = `Outstanding: Principal \u20B9${fmtAmt(o.principal_balance)} · Penalty \u20B9${fmtAmt(o.penalty_balance_amt)} = \u20B9${fmtAmt(Number(o.balance_amt || 0) + Number(o.penalty_balance_amt || 0))}`;
+  } else if (!isInterest && statement?.pending_dues && statement.pending_dues.Total !== undefined) {
+    const t = Number(statement.pending_dues.Total || 0);
+    if (t > 0) outstanding = `Pending dues: \u20B9${fmtAmt(t)}`;
+  }
+  return [
+    greeting,
+    "",
+    `*1-year statement*`,
+    table,
+    totals,
+    outstanding,
+    "",
+    `Full details: ${link}`,
+    `— ${templeName || "our Temple"}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+};
+
 /**
  * "Share Statement" WhatsApp button.
  * - For regular collections: opens the per-Member 1-year statement.
- * - For Management Interest / Chit Interest: opens the per-loan statement
- *   (via the CollectionRecord.interest FK) — supports borrowers who are
- *   NOT Members (people_type = "Other").
- * - For Chit-fund settlement / investor rows we still skip (they have their
- *   own settlement UX).
+ * - For Management/Chit Interest: opens the per-loan statement.
+ * - Message body includes an aligned monospace ledger table (```code```
+ *   block) so the recipient sees the balance-sheet directly in chat.
+ *
+ * Props:
+ *   CollectionRecord – the just-saved collection row
+ *   templeName        – for the sign-off
+ *   autoTrigger       – when true, invokes send() automatically on mount
+ *                       (used by Bill after a new collection is added)
  */
-const WhatsappStatementButton = ({ CollectionRecord, templeName }) => {
+const WhatsappStatementButton = ({ CollectionRecord, templeName, autoTrigger = false }) => {
   const [loading, setLoading] = useState(false);
+  const firedRef = useRef(false);
 
   const category = CollectionRecord?.collection_category;
   const memberId = CollectionRecord?.member;
   const interestId = CollectionRecord?.interest;
-
-  // Chit-fund settlement rows are excluded (no per-payer statement).
-  if (category === "Chit-fund") return null;
-
   const isInterest = INTEREST_CATEGORIES.has(category);
-  // Interest rows must have an interest FK; everything else must have a
-  // member FK. If neither is present, the button cannot resolve a payer.
-  if (isInterest && !interestId) return null;
-  if (!isInterest && !memberId) return null;
+
+  const canSend =
+    category !== "Chit-fund" &&
+    ((isInterest && interestId) || (!isInterest && memberId));
 
   const rawMobile =
     CollectionRecord?.mobile_number || CollectionRecord?.mobile_no || "";
@@ -58,31 +133,38 @@ const WhatsappStatementButton = ({ CollectionRecord, templeName }) => {
   const amount = parseFloat(CollectionRecord?.amount) || 0;
   const interestAmount = parseFloat(CollectionRecord?.interst_amount) || 0;
   const penaltyAmount = parseFloat(CollectionRecord?.penalty_amount) || 0;
-  const paidAmt = isInterest
-    ? amount + interestAmount + penaltyAmount
-    : amount;
+  const paidAmt = isInterest ? amount + interestAmount + penaltyAmount : amount;
 
-  const handleClick = async () => {
-    if (loading) return;
+  const send = useCallback(async () => {
+    if (loading || !canSend) return;
     setLoading(true);
     try {
       let link;
       let fallbackName;
       let fallbackMobile;
+      let statement;
       if (isInterest) {
-        const { data } = await axios.get(
+        const { data: tokenResp } = await axios.get(
           `${API_BASE}/api/collection/interest_statement/token/${interestId}/`
         );
-        link = buildInterestStatementLink(data.token);
-        fallbackName = data.name;
-        fallbackMobile = data.mobile;
+        link = buildInterestStatementLink(tokenResp.token);
+        fallbackName = tokenResp.name;
+        fallbackMobile = tokenResp.mobile;
+        const { data: stmt } = await axios.get(
+          `${API_BASE}/api/collection/public/interest_statement/${tokenResp.token}/`
+        );
+        statement = stmt;
       } else {
-        const { data } = await axios.get(
+        const { data: tokenResp } = await axios.get(
           `${API_BASE}/api/collection/member_statement/token/${memberId}/`
         );
-        link = buildMemberStatementLink(data.token);
-        fallbackName = data.name;
-        fallbackMobile = data.mobile;
+        link = buildMemberStatementLink(tokenResp.token);
+        fallbackName = tokenResp.name;
+        fallbackMobile = tokenResp.mobile;
+        const { data: stmt } = await axios.get(
+          `${API_BASE}/api/collection/public/member_statement/${tokenResp.token}/`
+        );
+        statement = stmt;
       }
       const phone = String(rawMobile || fallbackMobile || "").replace(/\D/g, "");
       const waNumber = phone.length === 10 ? `91${phone}` : phone;
@@ -94,7 +176,15 @@ const WhatsappStatementButton = ({ CollectionRecord, templeName }) => {
       }
       const name =
         CollectionRecord?.member_name || fallbackName || "Customer";
-      const msg = `Dear ${name}, thanks for your payment of \u20B9${paidAmt} on ${CollectionRecord?.pay_date}. View your 1-year statement here: ${link} — ${templeName || "our Temple"}`;
+      const msg = buildMessage({
+        name,
+        paidAmt: fmtAmt(paidAmt),
+        payDate: CollectionRecord?.pay_date,
+        templeName,
+        link,
+        statement,
+        isInterest,
+      });
       const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
@@ -102,7 +192,30 @@ const WhatsappStatementButton = ({ CollectionRecord, templeName }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    loading,
+    canSend,
+    isInterest,
+    interestId,
+    memberId,
+    rawMobile,
+    CollectionRecord?.member_name,
+    CollectionRecord?.pay_date,
+    paidAmt,
+    templeName,
+  ]);
+
+  // Auto-trigger once when Bill mounts after a new collection is added.
+  useEffect(() => {
+    if (!autoTrigger || firedRef.current || !canSend) return;
+    firedRef.current = true;
+    const t = setTimeout(() => {
+      send();
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [autoTrigger, canSend]);
+
+  if (!canSend) return null;
 
   return (
     <Button.Primary
@@ -116,7 +229,7 @@ const WhatsappStatementButton = ({ CollectionRecord, templeName }) => {
           </span>
         )
       }
-      onClick={handleClick}
+      onClick={send}
       data-testid="collection-whatsapp-btn"
     />
   );

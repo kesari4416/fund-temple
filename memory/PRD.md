@@ -139,6 +139,8 @@ Business rule clarified with the user:
   - New frontend route `/interest-statement/:token` → `PublicInterestStatement.jsx` with `data-testid`s for name, totals, principal-balance, total-outstanding, payments list & rows.
   - `WhatsappStatementButton.jsx` fully rewritten: routes Management/Chit-Interest through the new interest endpoint (uses `CollectionRecord.interest`), non-interest through the existing member endpoint. Still skips pure `Chit-fund` settlement rows.
   - End-to-end verified via curl: `SELVAM TEA SHOP` (interest_id=209) → 6 payments · ₹80,000 collected · ₹20,000 outstanding.
+- [x] **WhatsApp message now embeds the 1-year balance sheet as a monospace table** (```code``` block so columns stay aligned in WhatsApp). Includes greeting + payment table (Date | Category | Amount | Running) capped at 20 rows with "…and N more" indicator, 1-year total, outstanding/pending, link to full page, and temple sign-off. Applies to both member and interest statements.
+- [x] **Auto-share on new collection add** — `Bill.jsx` now passes `autoTrigger` to `WhatsappStatementButton`; after adding any collection, the button fetches the statement and opens WhatsApp automatically (~1.2 s delay, single fire). Manual click still works from `ViewCollectionPrint` (no auto-trigger there).
 
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
