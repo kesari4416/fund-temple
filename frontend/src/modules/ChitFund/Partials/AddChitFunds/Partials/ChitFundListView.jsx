@@ -112,8 +112,11 @@ const ChitFundListView = () => {
     const [modalTitle, setModalTitle] = useState("");
     const [modalContent, setModalContent] = useState(null);
 
-    // Pending members breakdown expander
+    // Pending members breakdown expander (fetched from backend)
     const [showPendingBreakdown, setShowPendingBreakdown] = useState(false);
+    const [pendingData, setPendingData] = useState(null);
+    const [pendingLoading, setPendingLoading] = useState(false);
+    const [pendingError, setPendingError] = useState(null);
 
     // ----------  Form Reset UseState ---------
     const [modelwith, setModelwith] = useState(0);
@@ -184,46 +187,38 @@ const ChitFundListView = () => {
     }, [findIds?.profit_amount, MemDetails]);
 
     // Pending members = investors whose per-member balance (share_amount − collected)
-    // is still > 0 AND who are not yet settled.
-    const pendingMembers = useMemo(() => {
-        const today = dayjs();
-        return (MemDetails || [])
-            .map((m) => {
-                const share = Number(m?.share_amount || 0);
-                const collected = Number(m?.collected_share_amount || 0);
-                const balance = Math.max(0, share - collected);
-                const startDate = m?.joining_date || findIds?.starting_date || null;
-                const endDate = m?.application_date
-                    ? computeSettlementDate(m.application_date)
-                    : null;
-                const daysFromStart = startDate && dayjs(startDate).isValid()
-                    ? today.diff(dayjs(startDate), 'day')
-                    : null;
-                const lastPaymentDate = m?.updated_at || null;
-                const daysFromLastPayment = collected > 0 && lastPaymentDate && dayjs(lastPaymentDate).isValid()
-                    ? today.diff(dayjs(lastPaymentDate), 'day')
-                    : null;
-                const settled = m?.action === false || !!m?.application_date;
-                return {
-                    id: m?.id,
-                    name: m?.invester_name,
-                    startDate,
-                    endDate,
-                    daysFromStart,
-                    daysFromLastPayment,
-                    shareAmount: share,
-                    collectedAmount: collected,
-                    balance,
-                    settled,
-                };
-            })
-            .filter((m) => !m.settled && m.balance > 0);
-    }, [MemDetails, findIds?.starting_date]);
+    // is still > 0 AND who are not yet settled.  NOTE: kept for backward compat
+    // with any downstream consumers – the panel now uses `pendingData` from
+    // the /pending_borrowers/ endpoint below.
+    const pendingMembers = useMemo(() => [], []);
 
-    const totalPendingBalanceFromMembers = useMemo(
-        () => pendingMembers.reduce((sum, m) => sum + m.balance, 0),
-        [pendingMembers],
-    );
+    const totalPendingBalanceFromMembers = 0;
+
+    // Fetch pending Chit-Fund-Interest borrowers when the panel is opened.
+    // Cached on first successful load so re-toggling is instant.
+    useEffect(() => {
+        if (!showPendingBreakdown || pendingData || pendingLoading) return;
+        let cancelled = false;
+        setPendingLoading(true);
+        setPendingError(null);
+        request
+            .get(`chit_fund/pending_borrowers/${id}/`)
+            .then((resp) => {
+                if (!cancelled) setPendingData(resp.data);
+            })
+            .catch((err) => {
+                if (!cancelled)
+                    setPendingError(
+                        err?.response?.data?.detail || 'Failed to load pending borrowers'
+                    );
+            })
+            .finally(() => {
+                if (!cancelled) setPendingLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [showPendingBreakdown, id]);
 
     const handlebondClick = (values) => {
         setModelwith(900)
@@ -386,16 +381,29 @@ const ChitFundListView = () => {
                                     }}
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                        <strong style={{ color: '#7f1d1d' }}>Pending members breakdown</strong>
-                                        <span data-testid="pending-breakdown-count" style={{ fontSize: 12, color: '#7f1d1d' }}>
-                                            {pendingMembers.length} pending · ₹ {totalPendingBalanceFromMembers.toFixed(2)}
-                                        </span>
+                                        <strong style={{ color: '#7f1d1d' }}>Pending borrowers breakdown</strong>
+                                        {pendingData && (
+                                            <span data-testid="pending-breakdown-count" style={{ fontSize: 12, color: '#7f1d1d' }}>
+                                                {pendingData.count} pending · ₹ {Number(pendingData.total_pending_balance || 0).toFixed(2)}
+                                            </span>
+                                        )}
                                     </div>
-                                    {pendingMembers.length === 0 ? (
-                                        <div data-testid="pending-breakdown-empty" style={{ fontSize: 13, color: '#6b7280', padding: '6px 0' }}>
-                                            No members with pending balance.
+                                    {pendingLoading && (
+                                        <div data-testid="pending-breakdown-loading" style={{ fontSize: 13, color: '#6b7280', padding: '6px 0' }}>
+                                            Loading pending borrowers…
                                         </div>
-                                    ) : (
+                                    )}
+                                    {pendingError && (
+                                        <div data-testid="pending-breakdown-error" style={{ fontSize: 13, color: '#b91c1c', padding: '6px 0' }}>
+                                            {pendingError}
+                                        </div>
+                                    )}
+                                    {!pendingLoading && !pendingError && pendingData && pendingData.borrowers?.length === 0 && (
+                                        <div data-testid="pending-breakdown-empty" style={{ fontSize: 13, color: '#6b7280', padding: '6px 0' }}>
+                                            No borrowers with pending balance.
+                                        </div>
+                                    )}
+                                    {!pendingLoading && !pendingError && pendingData && pendingData.borrowers?.length > 0 && (
                                         <div style={{ overflowX: 'auto' }}>
                                             <table
                                                 data-testid="pending-breakdown-table"
@@ -403,28 +411,31 @@ const ChitFundListView = () => {
                                             >
                                                 <thead>
                                                     <tr style={{ background: '#fee2e2', color: '#7f1d1d' }}>
-                                                        <th style={{ padding: '6px 8px', textAlign: 'left' }}>Member</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'left' }}>Borrower</th>
                                                         <th style={{ padding: '6px 8px', textAlign: 'left' }}>Start Date</th>
                                                         <th style={{ padding: '6px 8px', textAlign: 'left' }}>End Date</th>
                                                         <th style={{ padding: '6px 8px', textAlign: 'right' }}>Days (from start)</th>
                                                         <th style={{ padding: '6px 8px', textAlign: 'right' }}>Days (from last pay)</th>
-                                                        <th style={{ padding: '6px 8px', textAlign: 'right' }}>Share Amt</th>
-                                                        <th style={{ padding: '6px 8px', textAlign: 'right' }}>Collected</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'right' }}>Principal</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'right' }}>Paid</th>
                                                         <th style={{ padding: '6px 8px', textAlign: 'right' }}>Balance</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {pendingMembers.map((m) => (
+                                                    {pendingData.borrowers.map((m) => (
                                                         <tr key={m.id} data-testid={`pending-row-${m.id}`} style={{ borderBottom: '1px solid #fecaca' }}>
-                                                            <td style={{ padding: '6px 8px' }} data-testid={`pending-row-${m.id}-name`}>{m.name}</td>
-                                                            <td style={{ padding: '6px 8px' }}>{m.startDate || '-'}</td>
-                                                            <td style={{ padding: '6px 8px' }}>{m.endDate || '-'}</td>
-                                                            <td style={{ padding: '6px 8px', textAlign: 'right' }}>{m.daysFromStart ?? '-'}</td>
-                                                            <td style={{ padding: '6px 8px', textAlign: 'right' }}>{m.daysFromLastPayment ?? '-'}</td>
-                                                            <td style={{ padding: '6px 8px', textAlign: 'right' }}>₹ {m.shareAmount.toFixed(2)}</td>
-                                                            <td style={{ padding: '6px 8px', textAlign: 'right' }}>₹ {m.collectedAmount.toFixed(2)}</td>
+                                                            <td style={{ padding: '6px 8px' }} data-testid={`pending-row-${m.id}-name`}>
+                                                                {m.name || '-'}
+                                                                {m.mobile ? <div style={{ fontSize: 11, color: '#6b7280' }}>{m.mobile}</div> : null}
+                                                            </td>
+                                                            <td style={{ padding: '6px 8px' }}>{m.start_date || '-'}</td>
+                                                            <td style={{ padding: '6px 8px' }}>{m.end_date || '-'}</td>
+                                                            <td style={{ padding: '6px 8px', textAlign: 'right' }}>{m.days_from_start ?? '-'}</td>
+                                                            <td style={{ padding: '6px 8px', textAlign: 'right' }}>{m.days_from_last_payment ?? '-'}</td>
+                                                            <td style={{ padding: '6px 8px', textAlign: 'right' }}>₹ {Number(m.principal_amt || 0).toFixed(2)}</td>
+                                                            <td style={{ padding: '6px 8px', textAlign: 'right' }}>₹ {Number(m.principal_paid || 0).toFixed(2)}</td>
                                                             <td style={{ padding: '6px 8px', textAlign: 'right', color: '#b91c1c', fontWeight: 700 }} data-testid={`pending-row-${m.id}-balance`}>
-                                                                ₹ {m.balance.toFixed(2)}
+                                                                ₹ {Number(m.balance_amt || 0).toFixed(2)}
                                                             </td>
                                                         </tr>
                                                     ))}
