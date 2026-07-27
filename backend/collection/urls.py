@@ -49,6 +49,9 @@ urlpatterns = [
     # ---- Public (unauthenticated) 1-year member statement (WhatsApp link)
     path('member_statement/token/<int:member_id>/', public_views.get_member_statement_token, name='get_member_statement_token'),
     path('public/member_statement/<str:token>/', public_views.public_member_statement, name='public_member_statement'),
+    # ---- Public 1-year interest-loan statement (for non-Member borrowers)
+    path('interest_statement/token/<int:interest_id>/', public_views.get_interest_statement_token, name='get_interest_statement_token'),
+    path('public/interest_statement/<str:token>/', public_views.public_interest_statement, name='public_interest_statement'),
 
 
 ]

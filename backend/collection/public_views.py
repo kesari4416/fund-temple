@@ -198,3 +198,137 @@ def public_member_statement(request, token: str):
         },
         "pending_dues": _serialize_pending(member),
     })
+
+
+# ---------------------------------------------------------------------------
+# Interest-loan statement (for Chit-Fund-Interest / Management-Interest
+# borrowers who are NOT Members, i.e. people_type = "Other").
+# ---------------------------------------------------------------------------
+_INTEREST_STATEMENT_SALT = "temple.interest_statement.v1"
+
+
+def _sign_interest_id(interest_id: int) -> str:
+    payload = json.dumps({"i": int(interest_id)}, separators=(",", ":")).encode("utf-8")
+    payload_b64 = base64.urlsafe_b64encode(payload).rstrip(b"=").decode("ascii")
+    key = (settings.SECRET_KEY + _INTEREST_STATEMENT_SALT).encode("utf-8")
+    digest = hmac.new(key, payload_b64.encode("ascii"), hashlib.sha256).digest()
+    sig = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+    return f"{payload_b64}{_TOKEN_SEPARATOR}{sig}"
+
+
+def _unsign_interest_id(token: str):
+    try:
+        payload_b64, sig = token.split(_TOKEN_SEPARATOR)
+    except ValueError:
+        return None
+    key = (settings.SECRET_KEY + _INTEREST_STATEMENT_SALT).encode("utf-8")
+    expected = base64.urlsafe_b64encode(
+        hmac.new(key, payload_b64.encode("ascii"), hashlib.sha256).digest()
+    ).rstrip(b"=").decode("ascii")
+    if not hmac.compare_digest(sig, expected):
+        return None
+    try:
+        padded = payload_b64 + "=" * (-len(payload_b64) % 4)
+        data = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+        return int(data.get("i"))
+    except (ValueError, TypeError, json.JSONDecodeError):
+        return None
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_interest_statement_token(request, interest_id: int):
+    """Issue a signed token for a Chit-Fund-Interest / Management-Interest loan.
+
+    The token grants read-only access to the loan's 1-year statement page.
+    """
+    try:
+        interest = PeopleInterestDetails.objects.get(pk=interest_id)
+    except PeopleInterestDetails.DoesNotExist:
+        return Response({"detail": "interest not found"}, status=status.HTTP_404_NOT_FOUND)
+    return Response({
+        "token": _sign_interest_id(interest_id),
+        "mobile": interest.people_mobile,
+        "name": interest.people_name,
+        "interest_type": interest.interest_type,
+    })
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def public_interest_statement(request, token: str):
+    """Public 1-year statement for a single interest loan.
+
+    Lists every collection on this interest (Management or Chit Fund) in the
+    last 12 months, plus the current outstanding balance.
+    """
+    interest_id = _unsign_interest_id(token)
+    if interest_id is None:
+        return Response({"detail": "invalid or expired link"}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        interest = PeopleInterestDetails.objects.get(pk=interest_id, action=True)
+    except PeopleInterestDetails.DoesNotExist:
+        return Response({"detail": "interest not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    since = timezone.now().date() - timedelta(days=365)
+    collections = (
+        CollectionDetails.objects
+        .filter(interest=interest, pay_date__gte=since, action=True)
+        .order_by("-pay_date", "-id")
+    )
+
+    running = 0.0
+    rows = []
+    for c in reversed(list(collections)):
+        principal = float(c.amount or 0)
+        interest_amt = float(c.interst_amount or 0)
+        penalty_amt = float(c.penalty_amount or 0)
+        total_paid = principal + interest_amt + penalty_amt
+        running += total_paid
+        rows.append({
+            "id": c.id,
+            "date": c.pay_date.isoformat() if c.pay_date else None,
+            "category": c.collection_category,
+            "amount": round(total_paid, 2),
+            "principal_amount": principal,
+            "interest_amount": interest_amt,
+            "penalty_amount": penalty_amt,
+            "payment_mode": c.payment_mode,
+            "collection_no": c.collaction_no,
+            "running_total": round(running, 2),
+        })
+    rows.reverse()
+
+    # Current outstanding on this interest (from the balance sheet row).
+    bal = PeopleInterestBalanceSheet.objects.filter(interest=interest).first()
+    outstanding = None
+    if bal:
+        outstanding = {
+            "principal_amt": float(bal.principal_amt or 0),
+            "principal_paid": float(bal.principal_paid or 0),
+            "principal_balance": float(bal.principal_balance or 0),
+            "penalty_balance_amt": float(bal.penalty_balance_amt or 0),
+            "balance_amt": float(bal.balance_amt or 0),
+            "paid": bool(bal.paid),
+        }
+
+    return Response({
+        "borrower": {
+            "id": interest.id,
+            "name": interest.people_name,
+            "mobile": interest.people_mobile,
+            "address": interest.people_address,
+            "interest_type": interest.interest_type,
+            "interest_category": interest.interest_category,
+            "chit_name": interest.chit_name,
+            "interest_date": interest.interest_date.isoformat() if interest.interest_date else None,
+        },
+        "period": {"from": since.isoformat(), "to": timezone.now().date().isoformat()},
+        "collections": rows,
+        "totals": {
+            "count": len(rows),
+            "amount": round(running, 2),
+        },
+        "outstanding": outstanding,
+    })
