@@ -411,9 +411,18 @@ def add_collection_details(request):
                             festival_get.principal_paid = float(festival_get.principal_paid) + float(temp_family.amount)
                             print(festival_get.principal_paid)
 
-                            festival_get.principal_balance = float(festival_get.principal_balance) - float(
-                                temp_family.amount)
-                            festival_get.balance_amt = float(festival_get.balance_amt) - float(temp_family.amount)
+                            # Clamp the running balances at 0 – a payment
+                            # that overshoots must NOT leave a negative on
+                            # the ledger (per operator business rule and
+                            # TC_TEMPLE_INTEREST_001).
+                            festival_get.principal_balance = max(
+                                0.0,
+                                float(festival_get.principal_balance) - float(temp_family.amount),
+                            )
+                            festival_get.balance_amt = max(
+                                0.0,
+                                float(festival_get.balance_amt) - float(temp_family.amount),
+                            )
                             festival_get.debit_amt = float(festival_get.debit_amt) + float(temp_family.amount)
                             festival_get.save()
                             # InterestPeopleReport.objects.create(management_profile=festival_get.management_profile,interest_id=festival_get.interest.id,reportdate=datetime.date(),debit_amt=temp_family.amount,balance_amt=festival_get.balance_amt,type_choice="Payment",created_by =rejin.id)
@@ -431,14 +440,22 @@ def add_collection_details(request):
 
                             festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + float(
                                 temp_family.interst_amount)
-                            festival_get.intrest_balance_amt = float(festival_get.intrest_balance_amt) - float(
-                                temp_family.interst_amount)
+                            festival_get.intrest_balance_amt = max(
+                                0.0,
+                                float(festival_get.intrest_balance_amt) - float(temp_family.interst_amount),
+                            )
                             festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) + float(
                                 temp_family.penalty_amount)
-                            festival_get.penalty_balance_amt = float(festival_get.penalty_balance_amt) - float(
-                                temp_family.penalty_amount)
-                            festival_get.balance_amt = float(festival_get.balance_amt) - float(
-                                temp_family.interst_amount) - float(temp_family.penalty_amount)
+                            festival_get.penalty_balance_amt = max(
+                                0.0,
+                                float(festival_get.penalty_balance_amt) - float(temp_family.penalty_amount),
+                            )
+                            festival_get.balance_amt = max(
+                                0.0,
+                                float(festival_get.balance_amt)
+                                - float(temp_family.interst_amount)
+                                - float(temp_family.penalty_amount),
+                            )
                             festival_get.debit_amt = float(festival_get.debit_amt) + float(
                                 temp_family.interst_amount) + float(temp_family.penalty_amount)
                             festival_get.save()
@@ -447,19 +464,29 @@ def add_collection_details(request):
                         elif temp_family.interest_field == True and temp_family.interest_principle == True:
 
                             festival_get.principal_paid = float(festival_get.principal_paid) + float(temp_family.amount)
-                            festival_get.principal_balance = float(festival_get.principal_balance) - float(
-                                temp_family.amount)
+                            festival_get.principal_balance = max(
+                                0.0,
+                                float(festival_get.principal_balance) - float(temp_family.amount),
+                            )
                             festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + float(
                                 temp_family.interst_amount)
-                            festival_get.intrest_balance_amt = float(festival_get.intrest_balance_amt) - float(
-                                temp_family.interst_amount)
+                            festival_get.intrest_balance_amt = max(
+                                0.0,
+                                float(festival_get.intrest_balance_amt) - float(temp_family.interst_amount),
+                            )
                             festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) + float(
                                 temp_family.penalty_amount)
-                            festival_get.penalty_balance_amt = float(festival_get.penalty_balance_amt) - float(
-                                temp_family.penalty_amount)
-                            festival_get.balance_amt = float(festival_get.balance_amt) - float(
-                                temp_family.interst_amount) - float(temp_family.penalty_amount) - float(
-                                temp_family.amount)
+                            festival_get.penalty_balance_amt = max(
+                                0.0,
+                                float(festival_get.penalty_balance_amt) - float(temp_family.penalty_amount),
+                            )
+                            festival_get.balance_amt = max(
+                                0.0,
+                                float(festival_get.balance_amt)
+                                - float(temp_family.interst_amount)
+                                - float(temp_family.penalty_amount)
+                                - float(temp_family.amount),
+                            )
                             festival_get.debit_amt = float(festival_get.debit_amt) + float(
                                 temp_family.interst_amount) + float(temp_family.penalty_amount) + float(
                                 temp_family.amount)
@@ -539,8 +566,12 @@ def add_collection_details(request):
                                                                               management_profile=management)
                         if temp_family.interest_principle == True and temp_family.interest_field == False:
                             festival_get.principal_paid = float(festival_get.principal_paid) + float(temp_family.amount)
-                            festival_get.principal_balance = float(festival_get.principal_balance) - float(
-                                temp_family.amount)
+                            # Clamp so payments overshooting the remaining
+                            # balance do NOT leave a negative on the ledger.
+                            festival_get.principal_balance = max(
+                                0.0,
+                                float(festival_get.principal_balance) - float(temp_family.amount),
+                            )
                             festival_get.save()
                             if interest_obj.interest_category == "Installment Interest":
                                 try:
@@ -554,26 +585,36 @@ def add_collection_details(request):
                         elif temp_family.interest_field == True and temp_family.interest_principle == False:
                             festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + float(
                                 temp_family.interst_amount)
-                            festival_get.intrest_balance_amt = float(festival_get.intrest_balance_amt) - float(
-                                temp_family.interst_amount)
+                            festival_get.intrest_balance_amt = max(
+                                0.0,
+                                float(festival_get.intrest_balance_amt) - float(temp_family.interst_amount),
+                            )
                             festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) + float(
                                 temp_family.penalty_amount)
-                            festival_get.penalty_balance_amt = float(festival_get.penalty_balance_amt) - float(
-                                temp_family.penalty_amount)
+                            festival_get.penalty_balance_amt = max(
+                                0.0,
+                                float(festival_get.penalty_balance_amt) - float(temp_family.penalty_amount),
+                            )
                             festival_get.save()
 
                         elif temp_family.interest_field == True and temp_family.interest_principle == True:
                             festival_get.principal_paid = float(festival_get.principal_paid) + float(temp_family.amount)
-                            festival_get.principal_balance = float(festival_get.principal_balance) - float(
-                                temp_family.amount)
+                            festival_get.principal_balance = max(
+                                0.0,
+                                float(festival_get.principal_balance) - float(temp_family.amount),
+                            )
                             festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + float(
                                 temp_family.interst_amount)
-                            festival_get.intrest_balance_amt = float(festival_get.intrest_balance_amt) - float(
-                                temp_family.interst_amount)
+                            festival_get.intrest_balance_amt = max(
+                                0.0,
+                                float(festival_get.intrest_balance_amt) - float(temp_family.interst_amount),
+                            )
                             festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) + float(
                                 temp_family.penalty_amount)
-                            festival_get.penalty_balance_amt = float(festival_get.penalty_balance_amt) - float(
-                                temp_family.penalty_amount)
+                            festival_get.penalty_balance_amt = max(
+                                0.0,
+                                float(festival_get.penalty_balance_amt) - float(temp_family.penalty_amount),
+                            )
                             festival_get.save()
 
                             if interest_obj.interest_category == "Installment Interest":
