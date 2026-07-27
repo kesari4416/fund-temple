@@ -160,17 +160,13 @@ def _resolve_bill_meta(row):
 
 
 def _build_ledger(member, since):
-    """Build the accounting-style ledger rows for the member.
+    """Build the accounting-style ledger rows for the member for the
+    1-year statement window (`since` → today).
 
-    One row per PeoplesAmountDetails entry (bill raised) — matches the
-    Sl No / Date / Particulars / Name / Credit / Debit / Balance / Penalty
-    layout the operator uses on their existing statement print.
-
-    Shows the full ledger (no date cutoff): a balance sheet by nature is
-    cumulative — older entries and unpaid dues both matter. `since` is
-    passed for compatibility but no longer used for filtering.
+    One row per PeoplesAmountDetails entry in that window (bill raised) —
+    matches the Sl No / Date / Particulars / Name / Credit / Debit / Balance
+    / Penalty layout the operator uses on their existing statement print.
     """
-    del since  # kept in signature for backward compatibility
     bills = (
         PeoplesAmountDetails.objects
         .filter(member=member)
@@ -185,6 +181,10 @@ def _build_ledger(member, since):
     for row in bills:
         src_date, src_name = _resolve_bill_meta(row)
         date_ref = src_date or (row.created_at.date() if row.created_at else None)
+        # Strict 1-year window so the ledger period matches the header on
+        # the public page ("Statement period: <since> to <today>").
+        if date_ref and date_ref < since:
+            continue
         credit = float(row.amount or 0)
         debit = float(row.total_paid_amt or 0)
         outstanding = float(row.total_bal_amt or 0)
