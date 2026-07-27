@@ -139,21 +139,33 @@ const PublicMemberStatement = () => {
           </Muted>
         ) : (
           <div style={{ marginTop: 8 }} data-testid="statement-payments-list">
-            {collections.map((c) => (
-              <Row key={c.id}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{c.category || "—"}</div>
-                  <Muted>
-                    {c.date} · {c.payment_mode || "-"}
-                    {c.collection_no ? ` · #${c.collection_no}` : ""}
-                  </Muted>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div>{fmt(c.amount)}</div>
-                  <Muted>Running: {fmt(c.running_total)}</Muted>
-                </div>
-              </Row>
-            ))}
+            {collections.map((c) => {
+              const isInterest =
+                c.category === "Management Interest" ||
+                c.category === "Chit Interest";
+              return (
+                <Row key={c.id} data-testid={`statement-payment-${c.id}`}>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{c.category || "—"}</div>
+                    <Muted>
+                      {c.date} · {c.payment_mode || "-"}
+                      {c.collection_no ? ` · #${c.collection_no}` : ""}
+                    </Muted>
+                    {isInterest && (
+                      <Muted data-testid={`statement-payment-${c.id}-breakdown`}>
+                        P: {fmt(c.principal_amount)} · I:{" "}
+                        {fmt(c.interest_amount)} · Pen:{" "}
+                        {fmt(c.penalty_amount)}
+                      </Muted>
+                    )}
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div>{fmt(c.amount)}</div>
+                    <Muted>Running: {fmt(c.running_total)}</Muted>
+                  </div>
+                </Row>
+              );
+            })}
           </div>
         )}
       </Card>

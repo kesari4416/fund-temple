@@ -14,6 +14,7 @@ import json
 from datetime import timedelta
 
 from django.conf import settings
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -23,6 +24,8 @@ from rest_framework import status
 from family.models import Member_Details
 from collection.models import CollectionDetails
 from amount.models import PeoplesAmountDetails
+from interest.models import PeopleInterestDetails
+from balancesheet.models import PeopleInterestBalanceSheet
 
 
 # ---------------------------------------------------------------------------
@@ -85,14 +88,37 @@ def get_member_statement_token(request, member_id: int):
 # Public statement endpoint
 # ---------------------------------------------------------------------------
 def _serialize_pending(member):
-    """Aggregate pending dues per category via PeoplesAmountDetails."""
-    unpaid = PeoplesAmountDetails.objects.filter(member=member, paid=False)
+    """Aggregate pending dues per category.
+
+    Combines:
+    - `PeoplesAmountDetails` (unpaid Festival / Subscription Tariff / Marriage / Death rows)
+    - `PeopleInterestBalanceSheet` (unpaid Management Interest & Chit fund Interest rows
+      belonging to this member as the borrower — `interest.people_member`)
+    """
     per_category = {}
+
+    unpaid = PeoplesAmountDetails.objects.filter(member=member, paid=False)
     for row in unpaid:
         key = row.name or "Other"
         per_category[key] = round(
             per_category.get(key, 0.0) + float(row.total_bal_amt or row.amount_balance or 0), 2
         )
+
+    # Interest dues for loans taken by this member. Both interest types
+    # (Management Interest and Chit fund Interest) are surfaced separately
+    # so the member sees each ledger they participate in.
+    interest_rows = PeopleInterestBalanceSheet.objects.filter(
+        interest__people_member=member,
+        interest__action=True,
+        paid=False,
+    ).select_related("interest")
+    for row in interest_rows:
+        label = "Chit Interest" if (row.interest and row.interest.interest_type == "Chit fund Interest") else "Management Interest"
+        balance = float(row.balance_amt or 0) + float(row.penalty_balance_amt or 0)
+        if balance <= 0:
+            continue
+        per_category[label] = round(per_category.get(label, 0.0) + balance, 2)
+
     per_category["Total"] = round(sum(v for k, v in per_category.items() if k != "Total"), 2)
     return per_category
 
@@ -114,24 +140,41 @@ def public_member_statement(request, token: str):
         return Response({"detail": "member not found"}, status=status.HTTP_404_NOT_FOUND)
 
     since = timezone.now().date() - timedelta(days=365)
+    # Include:
+    #  (a) collections where the member is DIRECTLY the payer (`member=member`)
+    #  (b) collections for Management Interest / Chit Interest where the
+    #      linked interest record's borrower is this member
+    #      (`interest.people_member=member`). These rows historically leave
+    #      `member` NULL, so we must OR them in explicitly.
     collections = (
         CollectionDetails.objects
-        .filter(member=member, pay_date__gte=since, action=True)
+        .filter(pay_date__gte=since, action=True)
+        .filter(Q(member=member) | Q(interest__people_member=member))
+        .distinct()
         .order_by("-pay_date", "-id")
     )
 
     running = 0.0
     rows = []
     for c in reversed(list(collections)):  # oldest → newest for running total
-        amt = float(c.amount or 0)
-        running += amt
+        # For Management Interest / Chit Interest the operator often stores
+        # only the principal in `amount`; interest & penalty portions are in
+        # separate columns. The customer statement must reflect the TOTAL
+        # paid on that day.
+        principal = float(c.amount or 0)
+        interest_amt = float(c.interst_amount or 0)
+        penalty_amt = float(c.penalty_amount or 0)
+        is_interest_row = c.collection_category in ("Management Interest", "Chit Interest")
+        total_paid = principal + interest_amt + penalty_amt if is_interest_row else principal
+        running += total_paid
         rows.append({
             "id": c.id,
             "date": c.pay_date.isoformat() if c.pay_date else None,
             "category": c.collection_category,
-            "amount": amt,
-            "interest_amount": float(c.interst_amount or 0),
-            "penalty_amount": float(c.penalty_amount or 0),
+            "amount": round(total_paid, 2),
+            "principal_amount": principal,
+            "interest_amount": interest_amt,
+            "penalty_amount": penalty_amt,
             "payment_mode": c.payment_mode,
             "collection_no": c.collaction_no,
             "running_total": round(running, 2),
