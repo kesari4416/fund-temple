@@ -537,10 +537,20 @@ export const Collection = ({ trigger }) => {
   }));
 
   //  ---------------festivaloptions -------------------
-  const festivaloptions = festivalData?.map((fest) => ({
-    label: `${fest?.festival_name} / ${fest?.festival_no}`,
-    value: fest?.id,
-  }));
+  // Only show upcoming/active festivals. Any festival whose `action` has
+  // been toggled to false (marked Completed) or whose end_date has passed
+  // must NOT appear in the Choose Festival dropdown on the Collection form.
+  const _todayISO = new Date().toISOString().slice(0, 10);
+  const festivaloptions = festivalData
+    ?.filter(
+      (fest) =>
+        fest?.action !== false &&
+        (!fest?.end_date || String(fest.end_date) >= _todayISO)
+    )
+    .map((fest) => ({
+      label: `${fest?.festival_name} / ${fest?.festival_no}`,
+      value: fest?.id,
+    }));
 
   //  ---------------Rent options -------------------
   const Rentoptions = leaseDetails?.map((rentmap) => ({
