@@ -1395,11 +1395,27 @@ def Single_mem_balancesheet(request):
         management=ManagementDetails.objects.all().first()
         
     if request.method == 'POST':
-        memid=int(request.data['id'])
-        start_date=request.data['start_date']
-        end_date=request.data['end_date']
+        # ------------------------------------------------------------------
+        # Guard against missing / malformed inputs. Previously any KeyError
+        # or bad date value bubbled up as a raw 500 to the operator.
+        # ------------------------------------------------------------------
+        try:
+            memid = int(request.data.get('id'))
+        except (TypeError, ValueError):
+            return Response({"message": "Member id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
+        if not start_date or not end_date:
+            return Response(
+                {"message": "start_date and end_date are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         dict98={}
         member=Member_Details.objects.filter(id=memid).first()
+        if not member:
+            return Response({"message": "Member not found"}, status=status.HTTP_404_NOT_FOUND)
         setrial1=Member_DetailsSerializer98(member)
         dict98['member']=setrial1.data
         reports=TempleMemberReport.objects.filter(members=member,reportdate__gte=start_date,reportdate__lte=end_date)
@@ -1410,15 +1426,18 @@ def Single_mem_balancesheet(request):
             dict98['start_date']=request.data['start_date']
             dict98['end_date']=request.data['end_date']
         else:
-           
-          report_check=  TempleMemberReport.objects.filter(members=member).last()    
-          
+
+          report_check=  TempleMemberReport.objects.filter(members=member).last()
+
           dict1={}
           dict1['reportdate']=""
           dict1['type_choice']="Opening Balance"
           dict1['credit_amt']=""
           dict1['debit_amt']=""
-          dict1['balance_amt']=report_check.balance_amt
+          # Guard: a member with no reports at all previously crashed here
+          # (`NoneType` had no `balance_amt`). Fall back to 0 so the UI can
+          # still show an empty balance sheet cleanly.
+          dict1['balance_amt']= report_check.balance_amt if report_check else 0
           dict1['name_type']=""
           dict1['pre_balance_amt']=""
           out.append(dict1)
