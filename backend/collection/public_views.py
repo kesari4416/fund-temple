@@ -165,7 +165,12 @@ def _build_ledger(member, since):
     One row per PeoplesAmountDetails entry (bill raised) — matches the
     Sl No / Date / Particulars / Name / Credit / Debit / Balance / Penalty
     layout the operator uses on their existing statement print.
+
+    Shows the full ledger (no date cutoff): a balance sheet by nature is
+    cumulative — older entries and unpaid dues both matter. `since` is
+    passed for compatibility but no longer used for filtering.
     """
+    del since  # kept in signature for backward compatibility
     bills = (
         PeoplesAmountDetails.objects
         .filter(member=member)
@@ -179,19 +184,15 @@ def _build_ledger(member, since):
     sl = 0
     for row in bills:
         src_date, src_name = _resolve_bill_meta(row)
-        # Skip anything older than a year (based on the source date, falling
-        # back to created_at) so the statement stays "1 year".
         date_ref = src_date or (row.created_at.date() if row.created_at else None)
-        if date_ref and date_ref < since:
-            continue
         credit = float(row.amount or 0)
         debit = float(row.total_paid_amt or 0)
-        balance = float(row.total_bal_amt or 0)
+        outstanding = float(row.total_bal_amt or 0)
         penalty_flag = bool(row.penalty) or float(row.penalty_amount or 0) > 0
         sl += 1
         total_credit += credit
         total_debit += debit
-        total_balance += balance
+        total_balance += outstanding
         ledger.append({
             "sl_no": sl,
             "date": date_ref.isoformat() if date_ref else None,
@@ -199,7 +200,7 @@ def _build_ledger(member, since):
             "name": src_name or "-",
             "credit": round(credit, 2),
             "debit": round(debit, 2),
-            "balance": round(balance, 2),
+            "balance": round(outstanding, 2),
             "penalty": "Yes" if penalty_flag else "No",
         })
     return ledger, {
