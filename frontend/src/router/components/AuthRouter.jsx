@@ -5,8 +5,8 @@ import AuthPage from '@router/components/AuthPage'
 
 // Path prefixes that must always render their `anonymous` route, even for
 // authenticated (or non-authenticated) users. Used for shareable public
-// pages such as `/statement/:token`.
-const PUBLIC_ONLY_PREFIXES = ['/statement/']
+// pages such as `/statement/:token` and `/interest-statement/:token`.
+const PUBLIC_ONLY_PREFIXES = ['/statement/', '/interest-statement/']
 
 const isPublicPath = (pathname) =>
   PUBLIC_ONLY_PREFIXES.some((p) => pathname.startsWith(p))
