@@ -240,13 +240,40 @@ def recompute_interest_balance(request):
         except PeopleInterestBalanceSheet.DoesNotExist:
             continue
 
-        reports = InterestPeopleReport.objects.filter(interest=rec)
-        credit = float(sum(float(r.credit_amt or 0) for r in reports))
-        debit = float(sum(float(r.debit_amt or 0) for r in reports))
-        new_balance = round(credit - debit, 2)
+        # Walk the audit trail chronologically and rebuild the running
+        # balance. Clamp at 0 – a payment that overshoots must NOT leave
+        # a negative amount on the ledger (per operator business rule).
+        # Also updates each report row's `balance_amt` so the balance-sheet
+        # UI stops oscillating on the last few transactions.
+        reports = list(
+            InterestPeopleReport.objects
+            .filter(interest=rec)
+            .order_by("reportdate", "id")
+        )
+        running = 0.0
+        credit_sum = 0.0
+        debit_sum = 0.0
+        row_changes = 0
+        for r in reports:
+            c = float(r.credit_amt or 0)
+            d = float(r.debit_amt or 0)
+            credit_sum += c
+            debit_sum += d
+            running = round(running + c - d, 2)
+            # A debit that overshoots the current balance must be clamped
+            # so the last transaction lands on exactly 0.00.
+            if running < 0:
+                running = 0.0
+            if abs(float(r.balance_amt or 0) - running) >= 0.01:
+                row_changes += 1
+                if not dry_run:
+                    r.balance_amt = running
+                    r.save(update_fields=["balance_amt"])
+
+        new_balance = round(max(0.0, credit_sum - debit_sum), 2)
         drift = round(float(bal.balance_amt or 0) - new_balance, 2)
 
-        if abs(drift) < 0.01:
+        if abs(drift) < 0.01 and row_changes == 0:
             continue
 
         fixed.append({
@@ -254,13 +281,14 @@ def recompute_interest_balance(request):
             "old_balance": float(bal.balance_amt or 0),
             "new_balance": new_balance,
             "drift": drift,
-            "credit_sum": round(credit, 2),
-            "debit_sum": round(debit, 2),
+            "credit_sum": round(credit_sum, 2),
+            "debit_sum": round(debit_sum, 2),
+            "row_balance_fixes": row_changes,
         })
 
         if not dry_run:
-            bal.credit_amt = round(credit, 2)
-            bal.debit_amt = round(debit, 2)
+            bal.credit_amt = round(credit_sum, 2)
+            bal.debit_amt = round(debit_sum, 2)
             bal.balance_amt = new_balance
             bal.save()
 
