@@ -30,6 +30,17 @@ def _days_between(a, b):
         return None
 
 
+def _weeks_between(a, b):
+    """Full weeks between two dates (integer, floor). Returns None if
+    either date is missing. Post-due-date week counter — used on the
+    Pending sheet per TC_CHITFUND_005 so operators see how many *weeks*
+    a borrower is behind rather than raw days."""
+    d = _days_between(a, b)
+    if d is None or d < 0:
+        return None
+    return d // 7
+
+
 @api_view(["GET"])
 def chit_fund_pending_borrowers(request, chit_id: int):
     """Return active Chit-Fund-Interest borrowers with outstanding principal.
@@ -143,6 +154,14 @@ def chit_fund_pending_borrowers(request, chit_id: int):
             "end_date": end.isoformat() if end else None,
             "days_from_start": _days_between(start, today),
             "days_from_last_payment": _days_between(last_payment, today),
+            # TC_CHITFUND_005 — surface weeks (post-collection counter).
+            # weeks_from_start = raw weeks since the loan began.
+            # weeks_from_last_payment = weeks since the borrower's most
+            # recent payment (i.e., the clock starts only *after* a
+            # collection has happened; before any collection this is
+            # null and the UI renders '-').
+            "weeks_from_start": _weeks_between(start, today),
+            "weeks_from_last_payment": _weeks_between(last_payment, today),
             # Combined values (Principal + Interest) — what the operator
             # sees on the Pending sheet per TC_CHITFUND_004.
             "principal_amt": round(principal_plus_interest, 2),

@@ -103,7 +103,7 @@ const ChitFundPendingBorrowersPage = () => {
   const { id } = useParams();
   const [state, setState] = useState({ loading: true, error: null, data: null });
   const [query, setQuery] = useState("");
-  const [sortKey, setSortKey] = useState("days_from_start");
+  const [sortKey, setSortKey] = useState("weeks_from_start");
   const [sortDir, setSortDir] = useState("desc");
 
   useEffect(() => {
@@ -166,7 +166,7 @@ const ChitFundPendingBorrowersPage = () => {
       alert("No mobile number saved for this borrower.");
       return;
     }
-    const msg = `Reminder: ₹${fmt(b.balance_amt)} is pending on your ${b.interest_type} loan (start ${b.start_date}, ${b.days_from_start} days). Please clear at the earliest.`;
+    const msg = `Reminder: ₹${fmt(b.balance_amt)} is pending on your ${b.interest_type} loan (start ${b.start_date}, ${b.weeks_from_start ?? "-"} weeks). Please clear at the earliest.`;
     window.open(
       `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`,
       "_blank",
@@ -255,9 +255,9 @@ const ChitFundPendingBorrowersPage = () => {
           }}
           data-testid="pending-borrowers-sort"
         >
-          <option value="days_from_start:desc">Oldest first (days from start)</option>
-          <option value="days_from_start:asc">Newest first</option>
-          <option value="days_from_last_payment:desc">Longest overdue (last pay)</option>
+          <option value="weeks_from_start:desc">Oldest first (weeks from start)</option>
+          <option value="weeks_from_start:asc">Newest first</option>
+          <option value="weeks_from_last_payment:desc">Longest overdue (weeks since last pay)</option>
           <option value="balance_amt:desc">Highest balance first</option>
           <option value="balance_amt:asc">Lowest balance first</option>
           <option value="name:asc">Name A → Z</option>
@@ -281,8 +281,8 @@ const ChitFundPendingBorrowersPage = () => {
                 <th>Interest type</th>
                 <th onClick={() => toggleSort("start_date")} style={{ cursor: "pointer" }}>Start</th>
                 <th>End</th>
-                <th className="num" onClick={() => toggleSort("days_from_start")} style={{ cursor: "pointer" }}>Days (start)</th>
-                <th className="num" onClick={() => toggleSort("days_from_last_payment")} style={{ cursor: "pointer" }}>Days (last pay)</th>
+                <th className="num" onClick={() => toggleSort("weeks_from_start")} style={{ cursor: "pointer" }} title="Weeks since loan started">Weeks (start)</th>
+                <th className="num" onClick={() => toggleSort("weeks_from_last_payment")} style={{ cursor: "pointer" }} title="Weeks since the borrower's most recent payment (only starts counting after the first collection)">Weeks (since last pay)</th>
                 <th className="num" title="Principal + Interest">Principal + Interest</th>
                 <th className="num">Paid</th>
                 <th className="num">Penalty bal</th>
@@ -303,8 +303,8 @@ const ChitFundPendingBorrowersPage = () => {
                   <td>{b.interest_type || "-"}</td>
                   <td>{b.start_date || "-"}</td>
                   <td>{b.end_date || "-"}</td>
-                  <td className="num">{b.days_from_start ?? "-"}</td>
-                  <td className="num">{b.days_from_last_payment ?? "-"}</td>
+                  <td className="num">{b.weeks_from_start ?? "-"}</td>
+                  <td className="num">{b.weeks_from_last_payment ?? "-"}</td>
                   <td className="num">₹ {fmt(b.principal_amt)}</td>
                   <td className="num">₹ {fmt(b.principal_paid)}</td>
                   <td className="num">₹ {fmt(b.penalty_balance_amt)}</td>
