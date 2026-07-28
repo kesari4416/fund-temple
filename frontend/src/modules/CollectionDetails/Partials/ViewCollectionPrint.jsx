@@ -191,7 +191,6 @@ const ViewCollectionPrint = ({ CollectionRecord }) => {
         <WhatsappStatementButton
           CollectionRecord={CollectionRecord}
           templeName={templeData?.temple_name}
-          receiptOnly
         />
       </Flex>
 

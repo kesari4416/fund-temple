@@ -90,51 +90,17 @@ const buildMessage = ({
   payDate,
   templeName,
   link,
-  statement,
-  isInterest,
 }) => {
-  const greeting = `Dear ${name}, thanks for your payment of \u20B9${paidAmt} on ${payDate}.`;
-  // Member statement → per-bill ledger (Credit/Debit/Balance/Penalty).
-  // Interest loan statement → per-payment history.
-  const table = !isInterest && Array.isArray(statement?.ledger)
-    ? buildLedgerTable(statement.ledger)
-    : buildTable(statement?.collections || [], isInterest);
-  const t = statement?.totals || {};
-  const lt = statement?.ledger_totals || {};
-  const totalsLine = t.amount !== undefined
-    ? `Total received (1 yr): \u20B9${fmtAmt(t.amount)} · ${t.count} payments`
-    : "";
-  const ledgerTotalsLine = !isInterest && statement?.ledger_totals
-    ? `Ledger totals: Credit \u20B9${fmtAmt(lt.credit)} · Debit \u20B9${fmtAmt(lt.debit)} · Balance \u20B9${fmtAmt(lt.balance)}`
-    : "";
-  const breakdownParts = [];
-  if ((t.interest ?? 0) > 0) breakdownParts.push(`Interest \u20B9${fmtAmt(t.interest)}`);
-  if ((t.penalty ?? 0) > 0) breakdownParts.push(`Penalty \u20B9${fmtAmt(t.penalty)}`);
-  const breakdownLine = breakdownParts.length ? `(of which ${breakdownParts.join(" · ")})` : "";
-
-  let outstanding = "";
-  if (isInterest && statement?.outstanding) {
-    const o = statement.outstanding;
-    outstanding = `Outstanding: Principal \u20B9${fmtAmt(o.principal_balance)} · Penalty \u20B9${fmtAmt(o.penalty_balance_amt)} = \u20B9${fmtAmt(Number(o.balance_amt || 0) + Number(o.penalty_balance_amt || 0))}`;
-  } else if (!isInterest && statement?.pending_dues && statement.pending_dues.Total !== undefined) {
-    const tot = Number(statement.pending_dues.Total || 0);
-    if (tot > 0) outstanding = `Pending dues: \u20B9${fmtAmt(tot)}`;
-  }
+  // Short WhatsApp message. The 1-year balance sheet lives on the public
+  // statement page opened via `link` — we no longer dump the ledger table
+  // into the message body (URL length + readability).
   return [
-    greeting,
-    "",
+    `Dear ${name}, thanks for your payment of \u20B9${paidAmt} on ${payDate}.`,
     `*1-year balance sheet*`,
-    table,
-    ledgerTotalsLine,
-    totalsLine,
-    breakdownLine,
-    outstanding,
-    "",
+    ``,
     `Full details: ${link}`,
     `— ${templeName || "our Temple"}`,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  ].join("\n");
 };
 
 /**
@@ -251,7 +217,6 @@ const WhatsappStatementButton = ({
       let link;
       let fallbackName;
       let fallbackMobile;
-      let statement;
       if (isInterest) {
         const { data: tokenResp } = await axios.get(
           `${API_BASE}/api/collection/interest_statement/token/${interestId}/`
@@ -259,10 +224,6 @@ const WhatsappStatementButton = ({
         link = buildInterestStatementLink(tokenResp.token);
         fallbackName = tokenResp.name;
         fallbackMobile = tokenResp.mobile;
-        const { data: stmt } = await axios.get(
-          `${API_BASE}/api/collection/public/interest_statement/${tokenResp.token}/`
-        );
-        statement = stmt;
       } else {
         const { data: tokenResp } = await axios.get(
           `${API_BASE}/api/collection/member_statement/token/${memberId}/`
@@ -270,10 +231,6 @@ const WhatsappStatementButton = ({
         link = buildMemberStatementLink(tokenResp.token);
         fallbackName = tokenResp.name;
         fallbackMobile = tokenResp.mobile;
-        const { data: stmt } = await axios.get(
-          `${API_BASE}/api/collection/public/member_statement/${tokenResp.token}/`
-        );
-        statement = stmt;
       }
       const phone = String(rawMobile || fallbackMobile || "").replace(/\D/g, "");
       const waNumber = phone.length === 10 ? `91${phone}` : phone;
@@ -291,8 +248,6 @@ const WhatsappStatementButton = ({
         payDate: CollectionRecord?.pay_date,
         templeName,
         link,
-        statement,
-        isInterest,
       });
       const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
       window.open(url, "_blank", "noopener,noreferrer");

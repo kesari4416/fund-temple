@@ -198,7 +198,7 @@ const PublicInterestStatement = () => {
       )}
 
       <Card>
-        <Title style={{ fontSize: 16 }}>Payments (most recent first)</Title>
+        <Title style={{ fontSize: 16 }}>1-year balance sheet</Title>
         {collections.length === 0 ? (
           <Muted
             style={{ marginTop: 12 }}
@@ -207,29 +207,40 @@ const PublicInterestStatement = () => {
             No payments recorded in the last 12 months.
           </Muted>
         ) : (
-          <div
-            style={{ marginTop: 8 }}
-            data-testid="interest-statement-payments-list"
-          >
-            {collections.map((c) => (
-              <Row key={c.id} data-testid={`interest-payment-${c.id}`}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{c.category || "—"}</div>
-                  <Muted>
-                    {c.date} · {c.payment_mode || "-"}
-                    {c.collection_no ? ` · #${c.collection_no}` : ""}
-                  </Muted>
-                  <Muted>
-                    P: {fmt(c.principal_amount)} · I: {fmt(c.interest_amount)}{" "}
-                    · Pen: {fmt(c.penalty_amount)}
-                  </Muted>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div>{fmt(c.amount)}</div>
-                  <Muted>Running: {fmt(c.running_total)}</Muted>
-                </div>
-              </Row>
-            ))}
+          <div style={{ marginTop: 8, overflowX: "auto" }} data-testid="interest-statement-payments-list">
+            <table
+              data-testid="interest-statement-table"
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: 12,
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+              }}
+            >
+              <thead>
+                <tr style={{ background: "#f8fafc", color: "#0f172a" }}>
+                  <th style={{ padding: "8px 10px", textAlign: "left", borderBottom: "1px solid #e2e8f0" }}>Date</th>
+                  <th style={{ padding: "8px 10px", textAlign: "left", borderBottom: "1px solid #e2e8f0" }}>Category</th>
+                  <th style={{ padding: "8px 10px", textAlign: "right", borderBottom: "1px solid #e2e8f0" }}>Amt</th>
+                  <th style={{ padding: "8px 10px", textAlign: "right", borderBottom: "1px solid #e2e8f0" }}>Pen</th>
+                  <th style={{ padding: "8px 10px", textAlign: "right", borderBottom: "1px solid #e2e8f0" }}>Running</th>
+                </tr>
+              </thead>
+              <tbody>
+                {collections.map((c) => (
+                  <tr key={c.id} data-testid={`interest-payment-${c.id}`}>
+                    <td style={{ padding: "6px 10px", borderBottom: "1px solid #f1f5f9" }}>{c.date || "-"}</td>
+                    <td style={{ padding: "6px 10px", borderBottom: "1px solid #f1f5f9" }}>{c.category || "-"}</td>
+                    <td style={{ padding: "6px 10px", textAlign: "right", borderBottom: "1px solid #f1f5f9" }}>{fmt(c.amount)}</td>
+                    <td style={{ padding: "6px 10px", textAlign: "right", borderBottom: "1px solid #f1f5f9", color: Number(c.penalty_amount || 0) > 0 ? "#b91c1c" : "#0f172a" }}>{fmt(c.penalty_amount)}</td>
+                    <td style={{ padding: "6px 10px", textAlign: "right", borderBottom: "1px solid #f1f5f9", fontWeight: 600 }}>{fmt(c.running_total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 10, fontSize: 12 }}>
+              Total received (1 yr): <strong>{fmt(totals.amount)}</strong> · {totals.count} payments
+            </div>
           </div>
         )}
       </Card>
