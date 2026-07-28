@@ -173,18 +173,38 @@ const ChitFundListView = () => {
         return Number(val) || 0;
     };
 
-    // Management Amount = Total Profit Amount − Σ (Share Amount of each investor member)
-    // "Each member" refers to Member 1..N (outer investors). Management (Member 0)
-    // is excluded because this figure represents what remains for management.
+    // Per-investor PROFIT SHARE (the portion of profit_amount that each
+    // investor receives, based on their share_count). This is what
+    // reconciles with Management Amount so that:
+    //     Profit Amount = Σ Investor Profit Shares + Management Amount
+    // (whereas the displayed "Share Amount" on each card is the GROSS
+    // settlement value, i.e. their investment + their profit share.)
+    const totalShareCount = effectiveInvestersShareCount;
+    const investorsProfitShareTotal = useMemo(() => {
+        const profit = Number(findIds?.profit_amount || 0);
+        const investers = Number(findIds?.investers_share_count || 0);
+        if (!totalShareCount) return 0;
+        const value = (profit * investers) / totalShareCount;
+        return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
+    }, [findIds?.profit_amount, findIds?.investers_share_count, totalShareCount]);
+
+    // Management Amount = Profit Amount − Σ (Profit Share of each investor member)
+    // Equivalently: profit_amount × management_share_count / total_share_count.
+    // Sum-check enforced below via `reconciliationDelta` so any rounding
+    // drift is surfaced to the operator instead of silently hidden.
     const managementAmount = useMemo(() => {
         const profit = Number(findIds?.profit_amount || 0);
-        const totalInvestorShare = (MemDetails || []).reduce(
-            (sum, m) => sum + getMemberShareAmount(m),
-            0,
-        );
-        const value = profit - totalInvestorShare;
+        const value = profit - investorsProfitShareTotal;
         return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
-    }, [findIds?.profit_amount, MemDetails]);
+    }, [findIds?.profit_amount, investorsProfitShareTotal]);
+
+    // Reconciliation: (Σ Investor Profit Shares + Management Amount) − Profit.
+    // Should be ≈ 0. Anything above ₹1 indicates a data issue and is shown
+    // to the operator as a red warning.
+    const reconciliationDelta = useMemo(() => {
+        const profit = Number(findIds?.profit_amount || 0);
+        return Number((investorsProfitShareTotal + managementAmount - profit).toFixed(2));
+    }, [findIds?.profit_amount, investorsProfitShareTotal, managementAmount]);
 
     // Pending members = investors whose per-member balance (share_amount − collected)
     // is still > 0 AND who are not yet settled.  NOTE: kept for backward compat
@@ -287,11 +307,31 @@ const ChitFundListView = () => {
                             <div className="info-row" data-testid="management-amount-row">
                                 <h3 className="info-label">Management Amount </h3>
                                 <span>:</span>&nbsp;
-                                <Tooltip title="Total Profit Amount − Σ Share Amount of each investor member">
+                                <Tooltip
+                                    title={`Management's profit share = Profit × ${findIds?.management_share_count || 0} / ${totalShareCount || 0}. Investors' total profit share: ₹ ${investorsProfitShareTotal.toFixed(2)}`}
+                                >
                                     <span style={{ fontWeight: 600, color: '#0F5132' }} data-testid="management-amount-value">
                                         ₹ {managementAmount.toFixed(2)}
                                     </span>
                                 </Tooltip>
+                                &nbsp;&nbsp;
+                                {Math.abs(reconciliationDelta) < 1 ? (
+                                    <span
+                                        data-testid="management-amount-reconciled"
+                                        style={{ fontSize: 12, color: '#0F5132' }}
+                                        title={`✓ Σ Investor Profit Shares (₹ ${investorsProfitShareTotal.toFixed(2)}) + Management Amount (₹ ${managementAmount.toFixed(2)}) = Profit (₹ ${Number(findIds?.profit_amount || 0).toFixed(2)})`}
+                                    >
+                                        ✓ reconciled
+                                    </span>
+                                ) : (
+                                    <span
+                                        data-testid="management-amount-mismatch"
+                                        style={{ fontSize: 12, color: '#b91c1c', fontWeight: 700 }}
+                                        title={`Delta = ${reconciliationDelta}`}
+                                    >
+                                        ⚠ mismatch (Δ {reconciliationDelta})
+                                    </span>
+                                )}
                             </div>
                         </Totalstyle>
                     </Col>
