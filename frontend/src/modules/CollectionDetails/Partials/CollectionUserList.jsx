@@ -27,6 +27,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { MdLocalPrintshop } from "react-icons/md";
 import CollectionViewDetails from "./CollectionView";
+import ViewCollectionPrint from "./ViewCollectionPrint";
 import Bill from "@modules/Bill/Bill";
 import request from "@request/request";
 import successHandler from "@request/successHandler";
@@ -130,7 +131,11 @@ export const CollectionUserList = () => {
   //---------------------------
   const ViewPrintModal = (record) => {
     setWidth(500);
-    setModalContent(<Bill CollectionRecord={record} />);
+    // Collection HISTORY → View → Print. Use ViewCollectionPrint so the
+    // WhatsApp "Share Statement" button attached inside sends the FULL
+    // 1-year balance sheet (not the receipt-only mode used by `Bill` when
+    // adding a fresh collection).
+    setModalContent(<ViewCollectionPrint CollectionRecord={record} />);
     showModal();
   };
 
