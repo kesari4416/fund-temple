@@ -91,12 +91,10 @@ const buildMessage = ({
   templeName,
   link,
 }) => {
-  // Short WhatsApp message. The 1-year balance sheet lives on the public
-  // statement page opened via `link` — we no longer dump the ledger table
-  // into the message body (URL length + readability).
+  // Minimal WhatsApp message — greeting + link + sign-off.
+  // The full 1-year balance sheet lives on the public page at `link`.
   return [
     `Dear ${name}, thanks for your payment of \u20B9${paidAmt} on ${payDate}.`,
-    `*1-year balance sheet*`,
     ``,
     `Full details: ${link}`,
     `— ${templeName || "our Temple"}`,
