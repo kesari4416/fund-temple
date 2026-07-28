@@ -456,7 +456,7 @@ const ChitFundListView = () => {
                                                         <th style={{ padding: '6px 8px', textAlign: 'left' }}>End Date</th>
                                                         <th style={{ padding: '6px 8px', textAlign: 'right' }}>Days (from start)</th>
                                                         <th style={{ padding: '6px 8px', textAlign: 'right' }}>Days (from last pay)</th>
-                                                        <th style={{ padding: '6px 8px', textAlign: 'right' }}>Principal</th>
+                                                        <th style={{ padding: '6px 8px', textAlign: 'right' }} title="Principal + Interest">Principal + Interest</th>
                                                         <th style={{ padding: '6px 8px', textAlign: 'right' }}>Paid</th>
                                                         <th style={{ padding: '6px 8px', textAlign: 'right' }}>Balance</th>
                                                     </tr>
