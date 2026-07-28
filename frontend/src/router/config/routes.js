@@ -77,6 +77,7 @@ import ChitFundBalanceSheet from "@modules/ChitFund/Partials/BalanceSheet"
 import ChitFundSettlementApplicationList from "@modules/ChitFund/Partials/SettlementApplication/Partials/ChitFundSettlementApplnList"
 import ChitFundSettlementList from "@modules/ChitFund/Partials/ChitFundSettlement/Partials/ChitFundSettlementList"
 import ChitFundListView from "@modules/ChitFund/Partials/AddChitFunds/Partials/ChitFundListView"
+import ChitFundPendingBorrowersPage from "@modules/ChitFund/Partials/AddChitFunds/Partials/ChitFundPendingBorrowersPage"
 import { InvestorTable } from "@modules/ChitFund/Partials/ChitFundInvestors/InvestorTable"
 import BankTransactionForm from "@modules/BankTransaction/Partials/BankTransactionForm"
 
@@ -401,6 +402,10 @@ export const adminAuthenticated = [
         Component: ChitFundListView,
     },
     {
+        routePath: '/chit-fund/:id/pending-borrowers',
+        Component: ChitFundPendingBorrowersPage,
+    },
+    {
         routePath: '/ManagementInterestProfile/:id',
         Component: ManagementInterestProfile,
     },
@@ -709,6 +714,10 @@ export const userAuthenticated = [
     {
         routePath: '/chitfundListView/:id',
         Component: ChitFundListView,
+    },
+    {
+        routePath: '/chit-fund/:id/pending-borrowers',
+        Component: ChitFundPendingBorrowersPage,
     },
     {
         routePath: '/ManagementInterestProfile/:id',
