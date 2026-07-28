@@ -138,6 +138,34 @@ const buildMessage = ({
 };
 
 /**
+ * Compose a concise payment-receipt WhatsApp message (TC_COLLECTION_001).
+ * No balance sheet, no ledger totals, no public link — just:
+ *   thank-you · amount · date · purpose · temple sign-off.
+ */
+const buildReceiptMessage = ({
+  name,
+  paidAmt,
+  payDate,
+  templeName,
+  purpose,
+  collectionNo,
+  paymentMode,
+}) => {
+  const purposeLine = purpose ? ` for ${purpose}` : "";
+  const modeLine = paymentMode ? ` (${paymentMode})` : "";
+  const refLine = collectionNo ? `\nReceipt #: ${collectionNo}` : "";
+  return [
+    `*Payment Receipt*`,
+    ``,
+    `Dear ${name},`,
+    `Thanks for your payment of \u20B9${paidAmt}${purposeLine} on ${payDate}${modeLine}.` +
+      refLine,
+    ``,
+    `— ${templeName || "our Temple"}`,
+  ].join("\n");
+};
+
+/**
  * "Share Statement" WhatsApp button.
  * - For regular collections: opens the per-Member 1-year statement.
  * - For Management/Chit Interest: opens the per-loan statement.
@@ -149,8 +177,19 @@ const buildMessage = ({
  *   templeName        – for the sign-off
  *   autoTrigger       – when true, invokes send() automatically on mount
  *                       (used by Bill after a new collection is added)
+ *   receiptOnly       – when true, sends a concise payment-receipt (no
+ *                       ledger / no public link). Used from Bill after
+ *                       adding a collection so the operator's WhatsApp
+ *                       message is a clean receipt (TC_COLLECTION_001).
+ *                       Balance-sheet share stays on the Family Details
+ *                       → Balance Sheet page.
  */
-const WhatsappStatementButton = ({ CollectionRecord, templeName, autoTrigger = false }) => {
+const WhatsappStatementButton = ({
+  CollectionRecord,
+  templeName,
+  autoTrigger = false,
+  receiptOnly = false,
+}) => {
   const [loading, setLoading] = useState(false);
   const firedRef = useRef(false);
 
@@ -159,12 +198,13 @@ const WhatsappStatementButton = ({ CollectionRecord, templeName, autoTrigger = f
   const interestId = CollectionRecord?.interest;
   const isInterest = INTEREST_CATEGORIES.has(category);
 
-  const canSend =
-    category !== "Chit-fund" &&
-    ((isInterest && interestId) || (!isInterest && memberId));
-
   const rawMobile =
     CollectionRecord?.mobile_number || CollectionRecord?.mobile_no || "";
+
+  const canSend = receiptOnly
+    ? !!rawMobile && category !== "Chit-fund"
+    : category !== "Chit-fund" &&
+      ((isInterest && interestId) || (!isInterest && memberId));
 
   const amount = parseFloat(CollectionRecord?.amount) || 0;
   const interestAmount = parseFloat(CollectionRecord?.interst_amount) || 0;
@@ -175,6 +215,39 @@ const WhatsappStatementButton = ({ CollectionRecord, templeName, autoTrigger = f
     if (loading || !canSend) return;
     setLoading(true);
     try {
+      // Receipt-only fast path (TC_COLLECTION_001): no server round-trip,
+      // no ledger, no public link. Just a clean thank-you message with the
+      // purpose (festival / subscription month / etc.).
+      if (receiptOnly) {
+        const phone = String(rawMobile || "").replace(/\D/g, "");
+        const waNumber = phone.length === 10 ? `91${phone}` : phone;
+        if (waNumber.length < 10) {
+          alert(
+            "No mobile number is saved for this record. Please update the profile and try again."
+          );
+          return;
+        }
+        const purpose =
+          CollectionRecord?.festival_name ||
+          CollectionRecord?.sub_tariff_name ||
+          CollectionRecord?.marriage_name ||
+          CollectionRecord?.death_name ||
+          CollectionRecord?.collection_category ||
+          "";
+        const msg = buildReceiptMessage({
+          name: CollectionRecord?.member_name || "Customer",
+          paidAmt: fmtAmt(paidAmt),
+          payDate: CollectionRecord?.pay_date,
+          templeName,
+          purpose,
+          collectionNo: CollectionRecord?.collaction_no,
+          paymentMode: CollectionRecord?.payment_mode,
+        });
+        const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
+        window.open(url, "_blank", "noopener,noreferrer");
+        return;
+      }
+
       let link;
       let fallbackName;
       let fallbackMobile;
@@ -231,12 +304,20 @@ const WhatsappStatementButton = ({ CollectionRecord, templeName, autoTrigger = f
   }, [
     loading,
     canSend,
+    receiptOnly,
     isInterest,
     interestId,
     memberId,
     rawMobile,
     CollectionRecord?.member_name,
     CollectionRecord?.pay_date,
+    CollectionRecord?.festival_name,
+    CollectionRecord?.sub_tariff_name,
+    CollectionRecord?.marriage_name,
+    CollectionRecord?.death_name,
+    CollectionRecord?.collection_category,
+    CollectionRecord?.collaction_no,
+    CollectionRecord?.payment_mode,
     paidAmt,
     templeName,
   ]);
@@ -261,12 +342,12 @@ const WhatsappStatementButton = ({ CollectionRecord, templeName, autoTrigger = f
         ) : (
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
             <FaWhatsapp style={{ fontSize: "22px" }} />
-            Share Statement
+            {receiptOnly ? "Share Receipt" : "Share Statement"}
           </span>
         )
       }
       onClick={send}
-      data-testid="collection-whatsapp-btn"
+      data-testid={receiptOnly ? "collection-whatsapp-receipt-btn" : "collection-whatsapp-btn"}
     />
   );
 };

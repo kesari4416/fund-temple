@@ -204,7 +204,14 @@ def add_family(request):
                         dict8['member_joining_amt']=prod[f"family[{num}][member_joining_amt]"]
 
                         try:
-                            dict8['member_photo']=prod[f"family[{num}][member_photo]"]
+                            _mp = prod[f"family[{num}][member_photo]"]
+                            # Only accept an actual uploaded File. If the
+                            # frontend sends the existing URL (str) or the
+                            # literal "undefined" (image_send_value was
+                            # empty) we skip so the ORM keeps the current
+                            # photo instead of overwriting with garbage.
+                            if hasattr(_mp, "read") and hasattr(_mp, "name"):
+                                dict8['member_photo'] = _mp
                         except:
                             pass
                         
@@ -423,7 +430,14 @@ def edit_family(request,pk):
                         dict8['member_balance_amt']=prod[f"family[{num}][member_balance_amt]"]
                         dict8['member_joining_amt']=prod[f"family[{num}][member_joining_amt]"]
                         try:
-                            dict8['member_photo']=prod[f"family[{num}][member_photo]"]
+                            _mp = prod[f"family[{num}][member_photo]"]
+                            # Only accept an actual uploaded File. If the
+                            # frontend sends the existing URL (str) or the
+                            # literal "undefined" (image_send_value was
+                            # empty) we skip so the ORM keeps the current
+                            # photo instead of overwriting with garbage.
+                            if hasattr(_mp, "read") and hasattr(_mp, "name"):
+                                dict8['member_photo'] = _mp
                         except:
                             pass
                         
@@ -474,12 +488,21 @@ def edit_family(request,pk):
                 dict87['family']=produ_list
                 print('final')
                 print(dict87)
-            except:
-                return Response({"Message":"Data requirement error"},status=status.HTTP_417_EXPECTATION_FAILED)
-                    
+            except Exception as _e:
+                # Log full traceback so photo-upload / other 500s are
+                # diagnosable (TC_FAMILYDETAILS_002).
+                import traceback as _tb
+                _tb.print_exc()
+                return Response({"Message":"Data requirement error", "detail": str(_e)},status=status.HTTP_417_EXPECTATION_FAILED)
+
             serializer876 = Fammily_DetailsSerializer(customer,data=dict87)
             if serializer876.is_valid():
-                temp_family=serializer876.save()
+                try:
+                    temp_family=serializer876.save()
+                except Exception as _e:
+                    import traceback as _tb
+                    _tb.print_exc()
+                    return Response({"Message":"Family save failed","detail":str(_e)},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 temp_family.created_by=rejin.id
                 temp_family.management_profile=management
                 temp_family.save()

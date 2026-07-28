@@ -67,6 +67,7 @@ const Bill = ({ CollectionRecord }) => {
           CollectionRecord={CollectionRecord}
           templeName={templeData?.temple_name}
           autoTrigger
+          receiptOnly
         />
       </Flex>
       <PrintWrapper>
