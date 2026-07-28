@@ -670,6 +670,22 @@ def interest_profile(request, pk):
     if not mer:
         return Response({"message": "Interest profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
+    # ------------------------------------------------------------------
+    # TC_INTEREST_002 — auto-apply overdue Interest & Penalty rows for
+    # this record BEFORE returning its balance sheet so the operator
+    # always sees an up-to-date ledger (no manual "Recompute" needed).
+    #
+    # `_apply_for_record` is fully idempotent: rows are only inserted
+    # when the corresponding month is >= today and no matching row
+    # exists yet in `InterestPeopleReport`. Safe to run on every load.
+    # ------------------------------------------------------------------
+    if mer.action:
+        try:
+            from interest.overdue_views import _apply_for_record
+            _apply_for_record(mer)
+        except Exception as _e:  # pragma: no cover — never block the read
+            print("interest_profile: overdue apply failed:", _e)
+
     serializer1 = PeopleInterestDetailsSerializer(mer)
     coll_obj = CollectionDetails.objects.filter(management_profile=management, interest=mer)
     serializer5 = CollectionDetailsSerializer(coll_obj, many=True)
