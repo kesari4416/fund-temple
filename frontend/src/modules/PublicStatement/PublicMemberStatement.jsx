@@ -244,54 +244,6 @@ const PublicMemberStatement = () => {
       </Card>
 
       <Card>
-        <Title style={{ fontSize: 16 }}>Payments (most recent first)</Title>
-        {collections.length === 0 ? (
-          <Muted style={{ marginTop: 12 }} data-testid="statement-no-payments">
-            No payments recorded in the last 12 months.
-          </Muted>
-        ) : (
-          <div style={{ marginTop: 8 }} data-testid="statement-payments-list">
-            {collections.map((c) => {
-              const isInterest =
-                c.category === "Management Interest" ||
-                c.category === "Chit Interest";
-              const hasPenalty = Number(c.penalty_amount || 0) > 0;
-              return (
-                <Row key={c.id} data-testid={`statement-payment-${c.id}`}>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{c.category || "—"}</div>
-                    <Muted>
-                      {c.date} · {c.payment_mode || "-"}
-                      {c.collection_no ? ` · #${c.collection_no}` : ""}
-                    </Muted>
-                    {isInterest && (
-                      <Muted data-testid={`statement-payment-${c.id}-breakdown`}>
-                        P: {fmt(c.principal_amount)} · I:{" "}
-                        {fmt(c.interest_amount)} · Pen:{" "}
-                        {fmt(c.penalty_amount)}
-                      </Muted>
-                    )}
-                    {!isInterest && hasPenalty && (
-                      <Muted
-                        data-testid={`statement-payment-${c.id}-penalty`}
-                        style={{ color: "#b91c1c" }}
-                      >
-                        Penalty: {fmt(c.penalty_amount)}
-                      </Muted>
-                    )}
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div>{fmt(c.amount)}</div>
-                    <Muted>Running: {fmt(c.running_total)}</Muted>
-                  </div>
-                </Row>
-              );
-            })}
-          </div>
-        )}
-      </Card>
-
-      <Card>
         <Title style={{ fontSize: 16 }}>Pending dues</Title>
         {Object.keys(pending_dues).filter((k) => k !== "Total").length === 0 ? (
           <Muted style={{ marginTop: 12 }} data-testid="statement-no-pending">

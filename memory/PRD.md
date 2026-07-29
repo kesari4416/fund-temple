@@ -154,6 +154,22 @@ Business rule clarified with the user:
   - `family/views.py` outer `except:` in `edit_family` PUT now uses `Exception as _e` + `traceback.print_exc()` and returns the detail message. Save call wrapped separately so an ORM error returns a distinct 500 with the specific message.
   - `dict8['member_photo']` assignment now only stores the value when it looks like an actual uploaded file (`hasattr(_mp, "read") and hasattr(_mp, "name")`). Fixes the most common regression: when the frontend guard passes but `image_send_value` was empty, it was appending `undefined` to the FormData and the backend serializer rejected the resulting string.
 
+## What's been implemented (2026-02 fork — continued session)
+- [x] **Bug 2 — Periodic Interest + Penalty Scheduled Task**. Django management command `apply_periodic_interest_penalty` is now bootstrapped correctly (missing `management/__init__.py` and `commands/__init__.py` files added). Command wraps the existing idempotent engine (`interest.overdue_views._apply_for_record`) and walks every active `PeopleInterestDetails` row. Supports `--dry-run`. Wire it to cron/apscheduler on EC2:
+  `python manage.py apply_periodic_interest_penalty`.
+- [x] **Bug 1 — NameError in edit_interest_given_details** verified via code review: the `customer.principal_amt` reversal happens before `serializer876.save()` and `temp_family` is only referenced *after* the save. Cash-in-hand reconciliation now correctly reverses OLD principal then applies NEW principal for both Management and Chit-fund interest edits.
+- [x] **QA Bug 10 — Member List logic**. `sangam/views.py::get_sangam_members` was filtering `death=True` and therefore returning **dead** members instead of active ones for the "Member List" tab. Fixed to filter `death=False, marriage_remove=False` so the tab now shows only active temple members. Death List and Marriage-Remove List remain their own dedicated tabs.
+- [x] **QA Bug 1 — Total Due vs Total Collected split** on Member Profile view. Added two new rows (`data-testid=member-total-collected`, `member-total-due`) alongside the existing "Total Pending Balance". Total Collected = `paid_amt_total`; Total Due = `paid_amt_total + temple_mem_pending_amt`.
+- [x] **QA Bug 5/6 — Notification / WhatsApp receipt now surfaces fine (penalty) & interest amounts.** `WhatsappStatementButton::buildReceiptMessage` now conditionally appends a breakdown block:
+  ```
+  Breakdown:
+  - Amount: ₹1000.00
+  - Interest: ₹150.00
+  - Fine: ₹25.00
+  ```
+  when either interest or penalty is non-zero. Base-amount, interest, and penalty are wired from `CollectionRecord.amount / interst_amount / penalty_amount`.
+- [x] **WhatsApp share link now points at the internal Member/Interest Profile view** as requested by user. `buildMemberStatementLink` → `/memberProfileView/<memberId>`, `buildInterestStatementLink` → `/ManagementInterestProfile/<id>` or `/chit-Fund_Interest/<id>` depending on the interest category. Legacy tokenised public URLs kept as fallback.
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.

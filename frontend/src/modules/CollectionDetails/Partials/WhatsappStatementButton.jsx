@@ -15,19 +15,36 @@ const API_BASE =
 // may hit browser URL-length limits (~8 KB); if that ever happens the fetch
 // will still open WhatsApp, just truncated by the OS/browser.
 
-const buildMemberStatementLink = (token) => {
+const buildMemberStatementLink = (token, memberId) => {
   const origin =
     typeof window !== "undefined" && window.location?.origin
       ? window.location.origin
       : "";
+  // User request: share the internal Member Profile view directly. Falls
+  // back to the tokenised public statement link if memberId is missing.
+  if (memberId) {
+    return `${origin}/memberProfileView/${memberId}`;
+  }
   return `${origin}/statement/${token}`;
 };
 
-const buildInterestStatementLink = (token) => {
+const buildInterestStatementLink = (token, interestType, interestId) => {
   const origin =
     typeof window !== "undefined" && window.location?.origin
       ? window.location.origin
       : "";
+  // User request: share the internal Interest Profile view directly.
+  // Management Interest → /ManagementInterestProfile/:id
+  // Chit fund Interest  → /chit-Fund_Interest/:id
+  // Fallback: tokenised public interest statement page.
+  if (interestId) {
+    if (interestType === "Management Interest") {
+      return `${origin}/ManagementInterestProfile/${interestId}`;
+    }
+    if (interestType === "Chit Interest") {
+      return `${origin}/chit-Fund_Interest/${interestId}`;
+    }
+  }
   return `${origin}/interest-statement/${token}`;
 };
 
@@ -104,7 +121,11 @@ const buildMessage = ({
 /**
  * Compose a concise payment-receipt WhatsApp message (TC_COLLECTION_001).
  * No balance sheet, no ledger totals, no public link — just:
- *   thank-you · amount · date · purpose · temple sign-off.
+ *   thank-you · amount · date · purpose · fine / interest breakdown ·
+ *   temple sign-off.
+ *
+ * QA Bug 5/6 — Fine amount is now surfaced in the receipt whenever a
+ * penalty (or interest) is charged so the payer can see the split.
  */
 const buildReceiptMessage = ({
   name,
@@ -114,16 +135,31 @@ const buildReceiptMessage = ({
   purpose,
   collectionNo,
   paymentMode,
+  interestAmt,
+  penaltyAmt,
+  baseAmt,
 }) => {
   const purposeLine = purpose ? ` for ${purpose}` : "";
   const modeLine = paymentMode ? ` (${paymentMode})` : "";
   const refLine = collectionNo ? `\nReceipt #: ${collectionNo}` : "";
+  const showBreakdown =
+    (Number(interestAmt) || 0) > 0 || (Number(penaltyAmt) || 0) > 0;
+  const breakdownLines = showBreakdown
+    ? [
+        ``,
+        `Breakdown:`,
+        `- Amount: \u20B9${fmtAmt(baseAmt)}`,
+        Number(interestAmt) > 0 ? `- Interest: \u20B9${fmtAmt(interestAmt)}` : null,
+        Number(penaltyAmt) > 0 ? `- Fine: \u20B9${fmtAmt(penaltyAmt)}` : null,
+      ].filter(Boolean)
+    : [];
   return [
     `*Payment Receipt*`,
     ``,
     `Dear ${name},`,
     `Thanks for your payment of \u20B9${paidAmt}${purposeLine} on ${payDate}${modeLine}.` +
       refLine,
+    ...breakdownLines,
     ``,
     `— ${templeName || "our Temple"}`,
   ].join("\n");
@@ -206,6 +242,9 @@ const WhatsappStatementButton = ({
           purpose,
           collectionNo: CollectionRecord?.collaction_no,
           paymentMode: CollectionRecord?.payment_mode,
+          interestAmt: interestAmount,
+          penaltyAmt: penaltyAmount,
+          baseAmt: amount,
         });
         const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
         window.open(url, "_blank", "noopener,noreferrer");
@@ -219,14 +258,14 @@ const WhatsappStatementButton = ({
         const { data: tokenResp } = await axios.get(
           `${API_BASE}/api/collection/interest_statement/token/${interestId}/`
         );
-        link = buildInterestStatementLink(tokenResp.token);
+        link = buildInterestStatementLink(tokenResp.token, category, interestId);
         fallbackName = tokenResp.name;
         fallbackMobile = tokenResp.mobile;
       } else {
         const { data: tokenResp } = await axios.get(
           `${API_BASE}/api/collection/member_statement/token/${memberId}/`
         );
-        link = buildMemberStatementLink(tokenResp.token);
+        link = buildMemberStatementLink(tokenResp.token, memberId);
         fallbackName = tokenResp.name;
         fallbackMobile = tokenResp.mobile;
       }

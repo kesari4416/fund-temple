@@ -32,7 +32,15 @@ def get_sangam_members(request):
         management=ManagementDetails.objects.all().first()
         
     if request.method == 'GET':
-        our_MEMBERS = Member_Details.objects.filter(management_profile=management,death=True)
+        # QA Bug 10 — Sangam "Member List" was previously filtering
+        # `death=True`, which returned only DEAD members instead of active
+        # ones. The Sangam "Member List" tab should list currently-active
+        # temple members (alive AND not marriage-removed).
+        our_MEMBERS = Member_Details.objects.filter(
+            management_profile=management,
+            death=False,
+            marriage_remove=False,
+        )
         all_mem=[]
         for mem in our_MEMBERS:
             dict96={}

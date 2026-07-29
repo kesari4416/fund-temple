@@ -176,6 +176,26 @@ const MemberProfile = () => {
                                     {/* <h3>D.O.B : <span> {Memberprofile?.member_dob}</span></h3> */}
                                     <h3>Joining Amount : <span> {Memberprofile?.member_joining_amt}</span>&nbsp;{Memberprofile?.member_joining_amt > 0 && <span style={{ cursor: 'pointer'}} onClick={handlePrintClick}><FcPrint size={25} /></span>}</h3>
                                     {/* <h3>Opening Balance Amount : <span>{Memberprofile?.member_balance_amt}</span></h3> */}
+                                    {/* QA Bug 1 — separate "Total Due" and "Total Collected"
+                                        so operators can quickly reconcile a member's
+                                        historical dues against payments received. */}
+                                    <h3 data-testid="member-total-collected">
+                                        Total Collected :
+                                        <span>
+                                            &nbsp;₹&nbsp;
+                                            {Number(MemberDetails?.paid_amt_total || 0).toFixed(2)}
+                                        </span>
+                                    </h3>
+                                    <h3 data-testid="member-total-due">
+                                        Total Due :
+                                        <span>
+                                            &nbsp;₹&nbsp;
+                                            {(
+                                                Number(MemberDetails?.paid_amt_total || 0) +
+                                                Number(MemberDetails?.temple_mem_pending_amt || 0)
+                                            ).toFixed(2)}
+                                        </span>
+                                    </h3>
                                     <h3>Total Pending Balance : <span>₹&nbsp;{MemberDetails?.temple_mem_pending_amt}</span></h3>
                                 </Totalstyle>
                             </Col>

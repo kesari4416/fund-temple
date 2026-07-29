@@ -401,32 +401,48 @@ def edit_interest_given_details(request,pk):
 
             serializer876 = PeopleInterestDetailsSerializer(customer,data=request.data)
             if serializer876.is_valid():
-         
+
+                # ------------------------------------------------------------------
+                # BUG 1 FIX — Reverse the OLD principal effect BEFORE we save, using
+                # `customer` (the existing DB row). After the save we re-apply the
+                # NEW principal from `temp_family`. Previous code referenced
+                # `temp_family` here, which was NameError since `temp_family` only
+                # exists after `serializer876.save()`.
+                # ------------------------------------------------------------------
                 if interest_type=="Management Interest":
                     managefilter=ManagementTreasure.objects.filter(management_profile=management)
                     if managefilter:
                         manage_get=ManagementTreasure.objects.get(management_profile=management)
-                        # manage_get.cash_in_hand = float(manage_get.cash_in_hand) - float(temp_family.principal_amt)
-                        manage_get.expence_amt = float(manage_get.expence_amt) - float(temp_family.principal_amt)
+                        manage_get.expence_amt = float(manage_get.expence_amt) - float(customer.principal_amt or 0)
                         manage_get.save()
-                   
+                elif interest_type=="Chit fund Interest":
+                    chit_fund_object= ChitFundsDetails.objects.filter(id=customer.chitt_fund.id)
+                    if chit_fund_object:
+                        chit_fund_get_new=ChitFundsDetails.objects.get(id=customer.chitt_fund.id)
+                        old_principal = float(customer.principal_amt or 0)
+                        chit_fund_get_new.cash_inhand_amount = float(chit_fund_get_new.cash_inhand_amount) + old_principal
+                        chit_fund_get_new.principal_given_amount = float(chit_fund_get_new.principal_given_amount) - old_principal
+                        chit_fund_get_new.save()
+
+                temp_family=serializer876.save()
+                temp_family.created_by=rejin.id
+                temp_family.save()
+
+                # Apply the NEW principal now that temp_family exists.
+                if interest_type=="Management Interest":
+                    managefilter=ManagementTreasure.objects.filter(management_profile=management)
+                    if managefilter:
+                        manage_get=ManagementTreasure.objects.get(management_profile=management)
+                        manage_get.expence_amt = float(manage_get.expence_amt) + float(temp_family.principal_amt or 0)
+                        manage_get.save()
                 elif interest_type=="Chit fund Interest":
                     chit_fund_object= ChitFundsDetails.objects.filter(id=temp_family.chitt_fund.id)
                     if chit_fund_object:
                         chit_fund_get_new=ChitFundsDetails.objects.get(id=temp_family.chitt_fund.id)
-                        # Reverse the OLD principal that was loaned out
-                        old_principal = float(customer.principal_amt or 0)
-                        chit_fund_get_new.cash_inhand_amount = float(chit_fund_get_new.cash_inhand_amount) + old_principal
-                        chit_fund_get_new.principal_given_amount = float(chit_fund_get_new.principal_given_amount) - old_principal
-                        # Apply the NEW principal coming in the request (edit flow)
-                        new_principal = float(request.data.get('principal_amt', old_principal))
+                        new_principal = float(temp_family.principal_amt or 0)
                         chit_fund_get_new.cash_inhand_amount = float(chit_fund_get_new.cash_inhand_amount) - new_principal
                         chit_fund_get_new.principal_given_amount = float(chit_fund_get_new.principal_given_amount) + new_principal
                         chit_fund_get_new.save()
-                
-                temp_family=serializer876.save()
-                temp_family.created_by=rejin.id
-                temp_family.save()
                 
                 if temp_family.first_interest_amt !=None:
                     pay=float(temp_family.first_interest_amt)
