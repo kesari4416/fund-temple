@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import public_views
+from . import pdf_views
 
 urlpatterns = [
     path('add_collection_details/', views.add_collection_details,name='add_collection_details'),
@@ -52,6 +53,10 @@ urlpatterns = [
     # ---- Public 1-year interest-loan statement (for non-Member borrowers)
     path('interest_statement/token/<int:interest_id>/', public_views.get_interest_statement_token, name='get_interest_statement_token'),
     path('public/interest_statement/<str:token>/', public_views.public_interest_statement, name='public_interest_statement'),
+
+    # ---- Public DIRECT-PDF statement endpoints (WhatsApp link opens PDF)
+    path('public/member_statement_pdf/<str:token>/', pdf_views.public_member_statement_pdf, name='public_member_statement_pdf'),
+    path('public/interest_statement_pdf/<str:token>/', pdf_views.public_interest_statement_pdf, name='public_interest_statement_pdf'),
 
 
 ]

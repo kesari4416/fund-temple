@@ -15,18 +15,11 @@ const API_BASE =
 // may hit browser URL-length limits (~8 KB); if that ever happens the fetch
 // will still open WhatsApp, just truncated by the OS/browser.
 
-const buildMemberStatementLink = (token, memberId, receipt) => {
-  const origin =
-    typeof window !== "undefined" && window.location?.origin
-      ? window.location.origin
-      : "";
-  // User request: WhatsApp link MUST NOT require a portal login. Use the
-  // tokenised public statement URL (`/statement/<token>`) which serves
-  // the Balance Sheet as a stand-alone page with auto-print (?print=1)
-  // and Receipt block from URL params. memberId is retained only for
-  // API-call context — the URL itself is token-based.
+const buildMemberStatementLink = (token, memberId, receipt, apiBase) => {
+  // Direct-PDF URL — clicking the WhatsApp link opens the PDF file straight
+  // in the browser / mobile viewer. No portal login, no HTML page, no JS —
+  // just a `Content-Type: application/pdf` response from the backend.
   const params = new URLSearchParams();
-  params.set("print", "1");
   if (receipt) {
     if (receipt.no) params.set("receipt_no", receipt.no);
     if (receipt.amt) params.set("receipt_amt", receipt.amt);
@@ -34,20 +27,14 @@ const buildMemberStatementLink = (token, memberId, receipt) => {
     if (receipt.purpose) params.set("receipt_purpose", receipt.purpose);
     if (receipt.mode) params.set("receipt_mode", receipt.mode);
   }
-  return `${origin}/statement/${token}?${params.toString()}`;
+  const qs = params.toString();
+  const base = (apiBase || API_BASE || "").replace(/\/$/, "");
+  return `${base}/api/collection/public/member_statement_pdf/${token}/${qs ? `?${qs}` : ""}`;
 };
 
-const buildInterestStatementLink = (token, interestType, interestId, receipt) => {
-  const origin =
-    typeof window !== "undefined" && window.location?.origin
-      ? window.location.origin
-      : "";
-  // Interest borrowers are typically NOT temple members so they don't have
-  // a Member Profile page. We share the tokenised public interest
-  // statement instead (auth-free) with the same auto-PDF flow as the
-  // member link (print=1 + receipt_*).
+const buildInterestStatementLink = (token, interestType, interestId, receipt, apiBase) => {
+  // Direct-PDF URL for interest borrowers (same rationale as above).
   const params = new URLSearchParams();
-  params.set("print", "1");
   if (receipt) {
     if (receipt.no) params.set("receipt_no", receipt.no);
     if (receipt.amt) params.set("receipt_amt", receipt.amt);
@@ -55,7 +42,9 @@ const buildInterestStatementLink = (token, interestType, interestId, receipt) =>
     if (receipt.purpose) params.set("receipt_purpose", receipt.purpose);
     if (receipt.mode) params.set("receipt_mode", receipt.mode);
   }
-  return `${origin}/interest-statement/${token}?${params.toString()}`;
+  const qs = params.toString();
+  const base = (apiBase || API_BASE || "").replace(/\/$/, "");
+  return `${base}/api/collection/public/interest_statement_pdf/${token}/${qs ? `?${qs}` : ""}`;
 };
 
 const pad = (s, n) => {

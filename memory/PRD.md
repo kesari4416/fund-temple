@@ -221,6 +221,21 @@ Business rule clarified with the user:
 - [x] **Complete parity** with the interest-borrower flow — both member and interest WhatsApp shares now use token-based public URLs with the same auto-print + receipt-block pattern.
 - [x] **Verified live in a fresh browser context (no cookies, no login)** — statement page rendered fully with Payment Receipt (COL2 / 2024-04-07 / Subscription Tariff / Offline / ₹100), member details (S.M NAVEEN M6), 1-year balance sheet table with 1 row + Total, 1-year totals, and Pending dues (Death ₹300 + Subscription Tariff ₹200 = Total ₹500). Auto-print console log fired.
 
+## What's been implemented (2026-02 fork — DIRECT PDF link, no HTML)
+- [x] **`backend/collection/pdf_views.py`** created — two new endpoints:
+  - `GET /api/collection/public/member_statement_pdf/<token>/?receipt_*`
+  - `GET /api/collection/public/interest_statement_pdf/<token>/?receipt_*`
+  Both return `Content-Type: application/pdf` with `Content-Disposition: inline; filename="…"`. Built with reportlab (pre-installed). Contents:
+  - Temple / Loan statement header + 1-year period range
+  - Payment Receipt card (Receipt No · Date · Purpose · Mode · Amount)
+  - Member/Borrower details card
+  - Pending Dues (member) or Outstanding balance (interest)
+  - 1-Year Balance Sheet table with totals row
+  - Footer: "Generated on …"
+- [x] **HMAC tokens reused** from `public_views` so links are interoperable with the existing HTML statements.
+- [x] **`WhatsappStatementButton.jsx`** — `buildMemberStatementLink` and `buildInterestStatementLink` now return the backend PDF URL directly (`{API_BASE}/api/collection/public/…_pdf/<token>/?…`). The URL is a real PDF file, no HTML/JS/portal.
+- [x] **Verified live**: `curl -sI ...pdf/token/...` returns `HTTP 200 · application/pdf`. `pypdf` extracted text confirms all sections rendered correctly for both endpoints. Playwright confirms browser treats URL as a real PDF download (Download is starting event fires).
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.
