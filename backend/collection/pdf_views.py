@@ -181,17 +181,34 @@ def public_member_statement_pdf(request, token: str):
         return HttpResponseNotFound("member not found")
 
     since = timezone.now().date() - timedelta(days=365)
-    # Fetch the actual "Balance Sheet" rows from TempleMemberReport (same
-    # source that powers Family Details → Member List → Balance Sheet tab).
-    # This is a running-balance ledger — one row per bill raised AND one row
-    # per collection received — so the recipient sees the exact same numbers
-    # the operator sees in the portal.
-    reports = (
+
+    # QA Bug — the operator asked that every WhatsApp share be scoped to the
+    # SPECIFIC category of the payment that just happened (Sub Tariff /
+    # Festival / Death / Marriage). Recipients should not see unrelated
+    # ledger rows. The frontend passes the CollectionRecord.collection_category
+    # as `?category=` and we map that to the TempleMemberReport `type_choice`
+    # enum values below.
+    category = (request.GET.get("category") or "").strip()
+    CATEGORY_MAP = {
+        "Subscription Tariff": ["subscription Tariff", "subscription Tariff Penalty"],
+        "subscription Tariff": ["subscription Tariff", "subscription Tariff Penalty"],
+        "Festival": ["Festival", "Festival Penalty"],
+        "Death": ["Death Tariff", "Death Tariff Penalty"],
+        "Death Tariff": ["Death Tariff", "Death Tariff Penalty"],
+        "Marriage": ["Marriage Amount"],
+        "Marriage Amount": ["Marriage Amount"],
+    }
+    type_choices = CATEGORY_MAP.get(category)
+
+    reports_qs = (
         TempleMemberReport.objects
         .filter(members=member, reportdate__gte=since)
         .select_related("sub_tariff", "festivals", "marriage", "death_tariff", "collection")
-        .order_by("reportdate", "created_at", "id")
     )
+    if type_choices:
+        reports_qs = reports_qs.filter(type_choice__in=type_choices)
+
+    reports = reports_qs.order_by("reportdate", "created_at", "id")
     bs_rows = []
     total_credit = 0.0
     total_debit = 0.0
@@ -230,15 +247,42 @@ def public_member_statement_pdf(request, token: str):
         total_credit += credit
         total_debit += debit
         prev_balance = balance
-    pending = _serialize_pending(member) or {}
+    # Scope pending dues to the category when a category filter is active
+    full_pending = _serialize_pending(member) or {}
+    if type_choices:
+        # PeoplesAmountDetails uses these `name` values as bucket keys:
+        # "Subscription Tariff", "Festival", "Marriage", "Death"
+        # (no " Tariff"/" Amount" suffix). Map from incoming category → bucket keys.
+        CATEGORY_TO_PENDING_KEYS = {
+            "Subscription Tariff": ["Subscription Tariff", "subscription Tariff"],
+            "subscription Tariff": ["Subscription Tariff", "subscription Tariff"],
+            "Festival": ["Festival"],
+            "Death": ["Death", "Death Tariff"],
+            "Death Tariff": ["Death", "Death Tariff"],
+            "Marriage": ["Marriage", "Marriage Amount"],
+            "Marriage Amount": ["Marriage", "Marriage Amount"],
+        }
+        wanted = set(CATEGORY_TO_PENDING_KEYS.get(category, [category]))
+        pending = {k: v for k, v in full_pending.items() if k != "Total" and k in wanted}
+        pending["Total"] = round(sum(v for v in pending.values() if isinstance(v, (int, float))), 2)
+    else:
+        pending = full_pending
 
     full_name = " ".join(x for x in [member.member_name, getattr(member, "last_name", "")] if x)
-    title = f"Statement_{member.member_no or member.id}_{timezone.now().date().isoformat()}.pdf"
+    category_label = category if type_choices else ""
+    title_prefix = f"{category_label}_" if category_label else ""
+    title = f"{title_prefix}Statement_{member.member_no or member.id}_{timezone.now().date().isoformat()}.pdf".replace(" ", "_")
     doc, buf, styles = _styled_doc(title)
     story = []
 
-    story.append(Paragraph("Temple Statement", styles["TitleG"]))
-    story.append(Paragraph(f"1-Year Balance Sheet · {since.strftime('%d-%b-%Y')} to {timezone.now().date().strftime('%d-%b-%Y')}", styles["Muted"]))
+    header_line = "Temple Statement"
+    if category_label:
+        header_line = f"{category_label} Statement"
+    story.append(Paragraph(header_line, styles["TitleG"]))
+    period_line = f"1-Year Balance Sheet · {since.strftime('%d-%b-%Y')} to {timezone.now().date().strftime('%d-%b-%Y')}"
+    if category_label:
+        period_line = f"{category_label} · {period_line}"
+    story.append(Paragraph(period_line, styles["Muted"]))
     story.append(Spacer(1, 6 * mm))
 
     story.extend(_receipt_flowables(styles, _receipt_from_query(request)))

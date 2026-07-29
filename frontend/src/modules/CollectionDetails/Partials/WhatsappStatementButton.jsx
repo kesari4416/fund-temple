@@ -15,11 +15,16 @@ const API_BASE =
 // may hit browser URL-length limits (~8 KB); if that ever happens the fetch
 // will still open WhatsApp, just truncated by the OS/browser.
 
-const buildMemberStatementLink = (token, memberId, receipt, apiBase) => {
+const buildMemberStatementLink = (token, memberId, receipt, apiBase, category) => {
   // Direct-PDF URL — clicking the WhatsApp link opens the PDF file straight
   // in the browser / mobile viewer. No portal login, no HTML page, no JS —
   // just a `Content-Type: application/pdf` response from the backend.
+  //
+  // `category` scopes the balance sheet to the payment category that just
+  // happened (Sub Tariff / Festival / Death / Marriage). Each category
+  // shares its own dedicated PDF.
   const params = new URLSearchParams();
+  if (category) params.set("category", category);
   if (receipt) {
     if (receipt.no) params.set("receipt_no", receipt.no);
     if (receipt.amt) params.set("receipt_amt", receipt.amt);
@@ -358,13 +363,19 @@ const WhatsappStatementButton = ({
           CollectionRecord?.death_name ||
           CollectionRecord?.collection_category ||
           "";
-        link = buildMemberStatementLink(tokenResp.token, memberId, {
-          no: CollectionRecord?.collaction_no || "",
-          amt: fmtAmt(paidAmt),
-          date: CollectionRecord?.pay_date || "",
-          purpose,
-          mode: CollectionRecord?.payment_mode || "",
-        });
+        link = buildMemberStatementLink(
+          tokenResp.token,
+          memberId,
+          {
+            no: CollectionRecord?.collaction_no || "",
+            amt: fmtAmt(paidAmt),
+            date: CollectionRecord?.pay_date || "",
+            purpose,
+            mode: CollectionRecord?.payment_mode || "",
+          },
+          undefined,
+          category,
+        );
         fallbackName = tokenResp.name;
         fallbackMobile = tokenResp.mobile;
         try {

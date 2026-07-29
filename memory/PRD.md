@@ -244,6 +244,21 @@ Business rule clarified with the user:
   - Member 225 (J.Radhakrishnan): balance sheet row shows Sub Tariff Jun-2026 · Credit ₹100 · **Closing Balance ₹5,175** — matches the portal exactly. Pending Dues block shows all four category buckets summing to ₹63,222.69.
   - Member 8: 2-row ledger where Pre Balance ₹500 on row 2 correctly carries from row 1's Balance ₹500 — closing balance ₹400.
 
+## What's been implemented (2026-02 fork — Per-category scoped PDFs)
+- [x] **Every WhatsApp share now generates a category-scoped Balance Sheet PDF.** When the operator hits Share Statement on a "Subscription Tariff" collection, the recipient's PDF shows ONLY Subscription-Tariff balance-sheet rows + Subscription-Tariff pending dues. Same isolation for Festival / Death / Marriage.
+- [x] **`public_member_statement_pdf`** now reads `?category=` from the query string and:
+  - Maps the category → matching `TempleMemberReport.type_choice` enum values (e.g. `Death` → `["Death Tariff", "Death Tariff Penalty"]`)
+  - Filters the balance-sheet reports by that enum set
+  - Filters `_serialize_pending()` output to only the matching pending bucket(s)
+  - Rewrites the header ("Subscription Tariff Statement" instead of "Temple Statement") and the PDF filename (`Subscription_Tariff_Statement_M225_2026-07-29.pdf`)
+- [x] **`WhatsappStatementButton::buildMemberStatementLink`** now accepts a `category` argument and appends `?category=` to the URL. The `send()` handler passes `CollectionRecord.collection_category`.
+- [x] **Verified live** for member 225 (J.Radhakrishnan) across all 4 categories:
+  - Sub Tariff → Pending ₹925 · 1 BS row
+  - Festival → Pending ₹3,750 · 0 rows in window
+  - Death → Pending ₹600 · 0 rows
+  - Marriage → Pending ₹0 · 0 rows
+- [x] Interest categories (Chit Interest / Management Interest) already generate per-loan PDFs via the interest endpoint — inherent isolation, no changes needed.
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.
