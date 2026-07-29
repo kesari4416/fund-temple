@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import styled from "styled-components";
 
@@ -63,6 +63,31 @@ const PublicInterestStatement = () => {
   const { token } = useParams();
   const [state, setState] = useState({ loading: true, error: null, data: null });
 
+  // WhatsApp share flow: URL params carry the receipt of the just-made
+  // payment + a print=1 flag that auto-triggers the browser's Save-as-PDF
+  // dialog so the recipient gets Receipt + Balance Sheet in one PDF.
+  const [searchParams] = useSearchParams();
+  const autoPrint = searchParams.get("print") === "1";
+  const receipt = {
+    no: searchParams.get("receipt_no") || "",
+    amt: searchParams.get("receipt_amt") || "",
+    date: searchParams.get("receipt_date") || "",
+    purpose: searchParams.get("receipt_purpose") || "",
+    mode: searchParams.get("receipt_mode") || "",
+  };
+  const hasReceipt = Boolean(receipt.no || receipt.amt);
+
+  const printedRef = useRef(false);
+  useEffect(() => {
+    if (!autoPrint || printedRef.current) return;
+    if (state.loading || state.error) return;
+    printedRef.current = true;
+    // eslint-disable-next-line no-console
+    console.log("[InterestStatement] Auto-triggering print dialog…");
+    const t = setTimeout(() => window.print(), 800);
+    return () => clearTimeout(t);
+  }, [autoPrint, state.loading, state.error]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -107,6 +132,42 @@ const PublicInterestStatement = () => {
 
   return (
     <Wrap data-testid="interest-statement-root">
+      {hasReceipt && (
+        <Card data-testid="interest-statement-receipt">
+          <Title style={{ fontSize: 18 }}>Payment Receipt</Title>
+          {receipt.no && (
+            <Row>
+              <span>Receipt No</span>
+              <strong>{receipt.no}</strong>
+            </Row>
+          )}
+          {receipt.date && (
+            <Row>
+              <span>Date</span>
+              <strong>{receipt.date}</strong>
+            </Row>
+          )}
+          {receipt.purpose && (
+            <Row>
+              <span>Purpose</span>
+              <strong>{receipt.purpose}</strong>
+            </Row>
+          )}
+          {receipt.mode && (
+            <Row>
+              <span>Payment Mode</span>
+              <strong>{receipt.mode}</strong>
+            </Row>
+          )}
+          {receipt.amt && (
+            <Row>
+              <strong>Amount Paid</strong>
+              <Chip>{`\u20B9 ${receipt.amt}`}</Chip>
+            </Row>
+          )}
+        </Card>
+      )}
+
       <Card>
         <Title data-testid="interest-statement-name">{borrower.name}</Title>
         <Muted>

@@ -42,24 +42,25 @@ const buildMemberStatementLink = (token, memberId, receipt) => {
   return `${origin}/statement/${token}`;
 };
 
-const buildInterestStatementLink = (token, interestType, interestId) => {
+const buildInterestStatementLink = (token, interestType, interestId, receipt) => {
   const origin =
     typeof window !== "undefined" && window.location?.origin
       ? window.location.origin
       : "";
-  // User request: share the internal Interest Profile view directly.
-  // Management Interest → /ManagementInterestProfile/:id
-  // Chit fund Interest  → /chit-Fund_Interest/:id
-  // Fallback: tokenised public interest statement page.
-  if (interestId) {
-    if (interestType === "Management Interest") {
-      return `${origin}/ManagementInterestProfile/${interestId}`;
-    }
-    if (interestType === "Chit Interest") {
-      return `${origin}/chit-Fund_Interest/${interestId}`;
-    }
+  // Interest borrowers are typically NOT temple members so they don't have
+  // a Member Profile page. We share the tokenised public interest
+  // statement instead (auth-free) with the same auto-PDF flow as the
+  // member link (print=1 + receipt_*).
+  const params = new URLSearchParams();
+  params.set("print", "1");
+  if (receipt) {
+    if (receipt.no) params.set("receipt_no", receipt.no);
+    if (receipt.amt) params.set("receipt_amt", receipt.amt);
+    if (receipt.date) params.set("receipt_date", receipt.date);
+    if (receipt.purpose) params.set("receipt_purpose", receipt.purpose);
+    if (receipt.mode) params.set("receipt_mode", receipt.mode);
   }
-  return `${origin}/interest-statement/${token}`;
+  return `${origin}/interest-statement/${token}?${params.toString()}`;
 };
 
 const pad = (s, n) => {
@@ -338,7 +339,20 @@ const WhatsappStatementButton = ({
         const { data: tokenResp } = await axios.get(
           `${API_BASE}/api/collection/interest_statement/token/${interestId}/`
         );
-        link = buildInterestStatementLink(tokenResp.token, category, interestId);
+        const purpose =
+          CollectionRecord?.festival_name ||
+          CollectionRecord?.sub_tariff_name ||
+          CollectionRecord?.marriage_name ||
+          CollectionRecord?.death_name ||
+          CollectionRecord?.collection_category ||
+          "";
+        link = buildInterestStatementLink(tokenResp.token, category, interestId, {
+          no: CollectionRecord?.collaction_no || "",
+          amt: fmtAmt(paidAmt),
+          date: CollectionRecord?.pay_date || "",
+          purpose,
+          mode: CollectionRecord?.payment_mode || "",
+        });
         fallbackName = tokenResp.name;
         fallbackMobile = tokenResp.mobile;
         try {

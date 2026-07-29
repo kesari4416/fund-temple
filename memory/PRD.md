@@ -199,6 +199,19 @@ Business rule clarified with the user:
   - Balance-sheet table (last 12 months, columns: Sl No · Date · Particulars · Name · Pre Balance · Credit · Debit · Balance).
   - Totals footer (Total Credit · Total Debit · Closing Balance).
 
+## What's been implemented (2026-02 fork — Interest categories get same auto-PDF flow)
+- [x] **Chit Interest / Management Interest WhatsApp share** now routes to `/interest-statement/<token>?print=1&receipt_*` instead of the internal auth-protected `/chit-Fund_Interest/{id}` / `/ManagementInterestProfile/{id}` links. Interest borrowers are typically NOT temple members so they get the token-based public interest statement.
+- [x] **`PublicInterestStatement.jsx`** (route `/interest-statement/:token`) now:
+  - Reads `?print=1` + `?receipt_*` URL params.
+  - Renders a new `Payment Receipt` card at the top when receipt params are present (`data-testid=interest-statement-receipt`).
+  - Auto-fires `window.print()` 800ms after the statement data loads (guarded with a `useRef` so it fires exactly once). Console log `[InterestStatement] Auto-triggering print dialog…` confirms the effect ran during live Playwright verification.
+- [x] **PDF for interest borrowers includes:**
+  - Payment Receipt (No / Date / Purpose / Mode / Amount)
+  - Borrower details (name, interest type, chit / management fund, mobile) + statement period
+  - Totals card (Total received 1-yr, count, principal / interest / penalty split)
+  - Outstanding balance card (Principal issued / paid / balance + Penalty balance + Total outstanding)
+  - 1-year balance sheet ledger table
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.
