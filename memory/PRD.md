@@ -236,6 +236,14 @@ Business rule clarified with the user:
 - [x] **`WhatsappStatementButton.jsx`** — `buildMemberStatementLink` and `buildInterestStatementLink` now return the backend PDF URL directly (`{API_BASE}/api/collection/public/…_pdf/<token>/?…`). The URL is a real PDF file, no HTML/JS/portal.
 - [x] **Verified live**: `curl -sI ...pdf/token/...` returns `HTTP 200 · application/pdf`. `pypdf` extracted text confirms all sections rendered correctly for both endpoints. Playwright confirms browser treats URL as a real PDF download (Download is starting event fires).
 
+## What's been implemented (2026-02 fork — PDF now uses the real Balance Sheet)
+- [x] **`public_member_statement_pdf`** now sources balance-sheet rows from `TempleMemberReport` (same table that powers Family Details → Member List → Balance Sheet tab) instead of the raw `PeoplesAmountDetails` bills. This gives a proper running-balance ledger with Pre-Balance carried across rows, and shows both bills raised AND collections received in chronological order.
+- [x] **PDF column layout now matches the on-screen Balance Sheet tab**: `Sl · Date · Particulars · Name · Pre Balance · Credit · Debit · Balance`.
+- [x] **Totals row** shows Total Credit / Total Debit / Closing Balance.
+- [x] **Verified live** for two members:
+  - Member 225 (J.Radhakrishnan): balance sheet row shows Sub Tariff Jun-2026 · Credit ₹100 · **Closing Balance ₹5,175** — matches the portal exactly. Pending Dues block shows all four category buckets summing to ₹63,222.69.
+  - Member 8: 2-row ledger where Pre Balance ₹500 on row 2 correctly carries from row 1's Balance ₹500 — closing balance ₹400.
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.

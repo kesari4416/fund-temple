@@ -41,6 +41,7 @@ from family.models import Member_Details
 from collection.models import CollectionDetails
 from interest.models import PeopleInterestDetails
 from balancesheet.models import PeopleInterestBalanceSheet
+from reports.models import TempleMemberReport
 
 # Reuse the HMAC helpers + pending-dues logic from public_views so tokens
 # stay compatible with the HTML public statement.
@@ -48,7 +49,6 @@ from collection.public_views import (
     _unsign_member_id,
     _unsign_interest_id,
     _serialize_pending,
-    _build_ledger,
 )
 
 
@@ -181,7 +181,55 @@ def public_member_statement_pdf(request, token: str):
         return HttpResponseNotFound("member not found")
 
     since = timezone.now().date() - timedelta(days=365)
-    ledger, ledger_totals = _build_ledger(member, since)
+    # Fetch the actual "Balance Sheet" rows from TempleMemberReport (same
+    # source that powers Family Details → Member List → Balance Sheet tab).
+    # This is a running-balance ledger — one row per bill raised AND one row
+    # per collection received — so the recipient sees the exact same numbers
+    # the operator sees in the portal.
+    reports = (
+        TempleMemberReport.objects
+        .filter(members=member, reportdate__gte=since)
+        .select_related("sub_tariff", "festivals", "marriage", "death_tariff", "collection")
+        .order_by("reportdate", "created_at", "id")
+    )
+    bs_rows = []
+    total_credit = 0.0
+    total_debit = 0.0
+    prev_balance = 0.0
+    for idx, r in enumerate(reports, start=1):
+        credit = float(r.credit_amt or 0)
+        debit = float(r.debit_amt or 0)
+        balance = float(r.balance_amt or 0)
+        # Compute "particulars" — the report's type_choice enum, e.g.
+        # "Sub Tariff" / "Death" / "Festival" / "Marriage" / "Joining"
+        particulars = r.type_choice or "-"
+        # "Name" — human-readable sub-identifier for the bill (matches
+        # frontend `name_type` field, e.g. "Jun-2026" or "Ganesh Chaturthi").
+        name = None
+        if r.death_tariff_id and r.death_tariff:
+            name = r.death_tariff.member_name
+        elif r.festivals_id and r.festivals:
+            name = r.festivals.festival_name
+        elif r.marriage_id and r.marriage:
+            name = r.marriage.marriage_no
+        elif r.sub_tariff_id and r.sub_tariff:
+            if r.sub_tariff.from_date:
+                name = r.sub_tariff.from_date.strftime("%b-%Y")
+            else:
+                name = r.sub_tariff.subscription_no or "-"
+        bs_rows.append({
+            "sl": idx,
+            "date": r.reportdate.isoformat() if r.reportdate else "-",
+            "particulars": particulars,
+            "name": name or "-",
+            "pre_balance": prev_balance,
+            "credit": credit,
+            "debit": debit,
+            "balance": balance,
+        })
+        total_credit += credit
+        total_debit += debit
+        prev_balance = balance
     pending = _serialize_pending(member) or {}
 
     full_name = " ".join(x for x in [member.member_name, getattr(member, "last_name", "")] if x)
@@ -253,40 +301,42 @@ def public_member_statement_pdf(request, token: str):
         story.append(p_tbl)
         story.append(Spacer(1, 6 * mm))
 
-    # Balance sheet ledger
+    # Balance sheet ledger — mirrors Family Details → Member List → Balance Sheet
     story.append(Paragraph("1-Year Balance Sheet", styles["H2"]))
-    if not ledger:
+    if not bs_rows:
         story.append(Paragraph("No entries in the last 12 months.", styles["Muted"]))
     else:
-        headers = ["Sl", "Date", "Particulars", "Name", "Credit", "Debit", "Balance", "Pen"]
+        headers = ["Sl", "Date", "Particulars", "Name", "Pre Balance", "Credit", "Debit", "Balance"]
         data = [headers]
-        for r in ledger:
+        for r in bs_rows:
             data.append([
-                str(r.get("sl_no", "")),
-                str(r.get("date", "")),
-                str(r.get("particulars", ""))[:32],
-                str(r.get("name", ""))[:22],
-                f"{float(r.get('credit', 0)):,.2f}",
-                f"{float(r.get('debit', 0)):,.2f}",
-                f"{float(r.get('balance', 0)):,.2f}",
-                str(r.get("penalty", "")),
+                str(r["sl"]),
+                str(r["date"]),
+                str(r["particulars"])[:22],
+                str(r["name"])[:20],
+                f"{r['pre_balance']:,.2f}",
+                f"{r['credit']:,.2f}",
+                f"{r['debit']:,.2f}",
+                f"{r['balance']:,.2f}",
             ])
-        if ledger_totals:
-            data.append([
-                "", "", "", "Total",
-                f"{float(ledger_totals.get('credit', 0)):,.2f}",
-                f"{float(ledger_totals.get('debit', 0)):,.2f}",
-                f"{float(ledger_totals.get('balance', 0)):,.2f}",
-                "",
-            ])
-        tbl = Table(data, colWidths=[9 * mm, 22 * mm, 42 * mm, 30 * mm, 20 * mm, 18 * mm, 22 * mm, 12 * mm])
+        # Totals row: Total Credit · Total Debit · Closing Balance
+        closing = bs_rows[-1]["balance"] if bs_rows else 0.0
+        data.append([
+            "", "", "", "Total",
+            "",
+            f"{total_credit:,.2f}",
+            f"{total_debit:,.2f}",
+            f"{closing:,.2f}",
+        ])
+        tbl = Table(
+            data,
+            colWidths=[8 * mm, 22 * mm, 34 * mm, 30 * mm, 22 * mm, 22 * mm, 20 * mm, 22 * mm],
+        )
         style = _table_style_header()
-        # right-align numeric columns
-        for col in (4, 5, 6):
+        for col in (4, 5, 6, 7):
             style.add("ALIGN", (col, 0), (col, -1), "RIGHT")
-        if ledger_totals:
-            style.add("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#f1f5f9"))
-            style.add("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold")
+        style.add("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#f1f5f9"))
+        style.add("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold")
         tbl.setStyle(style)
         story.append(tbl)
 
