@@ -183,11 +183,13 @@ def public_member_statement_pdf(request, token: str):
     since = timezone.now().date() - timedelta(days=365)
 
     # QA Bug — the operator asked that every WhatsApp share be scoped to the
-    # SPECIFIC category of the payment that just happened (Sub Tariff /
-    # Festival / Death / Marriage). Recipients should not see unrelated
-    # ledger rows. The frontend passes the CollectionRecord.collection_category
-    # as `?category=` and we map that to the TempleMemberReport `type_choice`
-    # enum values below.
+    # SPECIFIC category of the payment (Sub Tariff / Festival / Death /
+    # Marriage). Category scoping affects the *Payment Receipt* block and
+    # the highlighted *Pending Balance ({category})* chip only. The
+    # Balance Sheet ledger itself stays UNFILTERED so its closing balance
+    # matches the portal's `Total Pending Balance` value shown on the
+    # Member List / Member Profile screen. The frontend passes the
+    # CollectionRecord.collection_category as `?category=`.
     category = (request.GET.get("category") or "").strip()
     CATEGORY_MAP = {
         "Subscription Tariff": ["subscription Tariff", "subscription Tariff Penalty"],
@@ -200,15 +202,13 @@ def public_member_statement_pdf(request, token: str):
     }
     type_choices = CATEGORY_MAP.get(category)
 
-    reports_qs = (
+    # Full unfiltered ledger — closing balance == portal's Total Pending Balance
+    reports = (
         TempleMemberReport.objects
         .filter(members=member, reportdate__gte=since)
         .select_related("sub_tariff", "festivals", "marriage", "death_tariff", "collection")
+        .order_by("reportdate", "created_at", "id")
     )
-    if type_choices:
-        reports_qs = reports_qs.filter(type_choice__in=type_choices)
-
-    reports = reports_qs.order_by("reportdate", "created_at", "id")
     bs_rows = []
     total_credit = 0.0
     total_debit = 0.0
@@ -247,12 +247,25 @@ def public_member_statement_pdf(request, token: str):
         total_credit += credit
         total_debit += debit
         prev_balance = balance
-    # Scope pending dues to the category when a category filter is active
+
+    # ---- Total Pending Balance sourced EXACTLY like the portal ----
+    # `family/views.py` computes `temple_mem_pending_amt =
+    # TempleMemberReport.objects.filter(members=member).last().balance_amt`.
+    # We replicate that here so the PDF's "Total Pending Balance" always
+    # equals the value shown on Family Details → Member List → single-member
+    # data. This decouples the pending total from the 1-year window used by
+    # the ledger.
+    last_report = (
+        TempleMemberReport.objects
+        .filter(members=member)
+        .order_by("reportdate", "created_at", "id")
+        .last()
+    )
+    total_pending_portal = float(last_report.balance_amt or 0) if last_report else 0.0
+
+    # Category-scoped pending (for the highlighted chip beneath the receipt)
     full_pending = _serialize_pending(member) or {}
     if type_choices:
-        # PeoplesAmountDetails uses these `name` values as bucket keys:
-        # "Subscription Tariff", "Festival", "Marriage", "Death"
-        # (no " Tariff"/" Amount" suffix). Map from incoming category → bucket keys.
         CATEGORY_TO_PENDING_KEYS = {
             "Subscription Tariff": ["Subscription Tariff", "subscription Tariff"],
             "subscription Tariff": ["Subscription Tariff", "subscription Tariff"],
@@ -263,10 +276,13 @@ def public_member_statement_pdf(request, token: str):
             "Marriage Amount": ["Marriage", "Marriage Amount"],
         }
         wanted = set(CATEGORY_TO_PENDING_KEYS.get(category, [category]))
-        pending = {k: v for k, v in full_pending.items() if k != "Total" and k in wanted}
-        pending["Total"] = round(sum(v for v in pending.values() if isinstance(v, (int, float))), 2)
+        category_pending_bucket = {k: v for k, v in full_pending.items() if k != "Total" and k in wanted}
+        category_pending_total = round(
+            sum(v for v in category_pending_bucket.values() if isinstance(v, (int, float))), 2
+        )
     else:
-        pending = full_pending
+        category_pending_bucket = {k: v for k, v in full_pending.items() if k != "Total"}
+        category_pending_total = total_pending_portal
 
     full_name = " ".join(x for x in [member.member_name, getattr(member, "last_name", "")] if x)
     category_label = category if type_choices else ""
@@ -289,10 +305,9 @@ def public_member_statement_pdf(request, token: str):
 
     # Prominent "Pending Balance for {Category}" chip right under the
     # receipt so the recipient sees the outstanding amount at a glance.
-    pending_total_val = float(pending.get("Total", 0) if pending else 0)
-    if pending_total_val > 0:
+    if category_pending_total > 0:
         label = f"Pending Balance ({category_label})" if category_label else "Pending Balance"
-        pb_data = [[label, _rupee(pending_total_val)]]
+        pb_data = [[label, _rupee(category_pending_total)]]
         pb_tbl = Table(pb_data, colWidths=[100 * mm, None])
         pb_tbl.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#fef3c7")),
@@ -337,16 +352,20 @@ def public_member_statement_pdf(request, token: str):
     story.append(m_tbl)
     story.append(Spacer(1, 6 * mm))
 
-    # Pending Balance card (was "Pending Dues" — matches portal terminology
-    # "Total Pending Balance")
-    if pending:
+    # Pending Balance card — Total matches the portal's `temple_mem_pending_amt`
+    # value (Family Details → Member List → single member data). Category
+    # breakdown rows come from _serialize_pending().
+    if category_pending_bucket or total_pending_portal > 0:
         p_data = [["Pending Balance", ""]]
-        for k, v in pending.items():
+        # Show every non-zero category bucket so the recipient sees the
+        # full breakdown when they open the PDF.
+        breakdown = category_pending_bucket if type_choices else full_pending
+        for k, v in breakdown.items():
             if k == "Total":
                 continue
             if float(v or 0) != 0:
                 p_data.append([k, _rupee(v)])
-        p_data.append(["Total Pending Balance", _rupee(pending.get("Total", 0))])
+        p_data.append(["Total Pending Balance", _rupee(total_pending_portal)])
         p_tbl = Table(p_data, colWidths=[80 * mm, None])
         p_tbl.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), TEMPLE_GREEN),
@@ -387,13 +406,15 @@ def public_member_statement_pdf(request, token: str):
                 f"{r['balance']:,.2f}",
             ])
         # Totals row: Total Credit · Total Debit · Closing Balance
-        closing = bs_rows[-1]["balance"] if bs_rows else 0.0
+        # The closing balance MUST equal the portal's Total Pending Balance
+        # (Family Details → Member List → single member) — sourced from the
+        # latest TempleMemberReport row's balance_amt.
         data.append([
             "", "", "", "Total",
             "",
             f"{total_credit:,.2f}",
             f"{total_debit:,.2f}",
-            f"{closing:,.2f}",
+            f"{total_pending_portal:,.2f}",
         ])
         tbl = Table(
             data,

@@ -264,6 +264,14 @@ Business rule clarified with the user:
 - [x] **"Pending Dues" section renamed to "Pending Balance"** and "Total Pending" renamed to "Total Pending Balance" — matches the terminology used in the app (`temple_mem_pending_amt` / "Total Pending Balance" label on Member Profile).
 - [x] **Verified live** for member 225 Festival share: PDF renders Payment Receipt (COL9 · ₹500) + yellow `Pending Balance (Festival) Rs. 3,750.00` chip + full Pending Balance breakdown card + empty balance sheet (no fest transactions in year window).
 
+## What's been implemented (2026-02 fork — PDF closing balance matches portal)
+- [x] **PDF's `Total Pending Balance` and Balance Sheet closing row now source from the same field the portal uses** — `TempleMemberReport.objects.filter(members=member).last().balance_amt` (aka `temple_mem_pending_amt` in `family/views.py::single_member_view`). This guarantees the number a recipient sees in the shared PDF matches the "Total Pending Amount" the operator sees on the Member List / single-member data.
+- [x] **Balance Sheet ledger table reverted to un-filtered** (all categories) so its Total row's Closing Balance equals the portal's Total Pending Balance. Category filter now scopes ONLY the receipt block + the yellow `Pending Balance ({category})` chip beneath it.
+- [x] **Verified live** for member 225 (portal: ₹5,175.00) across three test PDFs:
+  - Sub Tariff category → Chip ₹925 · Total ₹5,175 · Ledger closing ₹5,175 ✓
+  - Festival category   → Chip ₹3,750 · Total ₹5,175 · Ledger closing ₹5,175 ✓
+  - No category filter  → Chip ₹5,175 · Total ₹5,175 · Ledger closing ₹5,175 ✓
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.
