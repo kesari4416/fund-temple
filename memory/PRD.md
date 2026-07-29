@@ -171,6 +171,18 @@ Business rule clarified with the user:
 - [x] **WhatsApp share link now points at the internal Member/Interest Profile view** as requested by user. `buildMemberStatementLink` → `/memberProfileView/<memberId>?tab=balance`, `buildInterestStatementLink` → `/ManagementInterestProfile/<id>` or `/chit-Fund_Interest/<id>` depending on the interest category. Legacy tokenised public URLs kept as fallback.
 - [x] **Member Profile — 1-year Balance Sheet default when arriving from WhatsApp share.** `MemberProfile.jsx` now reads a `?tab=balance` query param (via `useSearchParams`) and defaults the `CustomTabs` `defaultActiveKey` to the Balance Sheet tab. `MemberBalanceSheet` in `MemberProfileTabs.jsx` client-side filters `temple_mem_balancesheet` rows to only entries whose `reportdate` is within the last 12 months (`dayjs().subtract(1, "year")`). Verified live with member 225 (J.Radhakrishnan): active tab = "Balance Sheet", only Jun-2026 row shown (2024/2025 rows hidden).
 
+## What's been implemented (2026-02 fork — WhatsApp Share Statement rework)
+- [x] **Collection History → Print modal** now no longer renders the inline "1-year balance sheet" widget. `ViewCollectionPrint.jsx` reduced back to a simple bill-print layout + the Share Statement (WhatsApp) button.
+- [x] **WhatsApp Share Statement message body enriched** — `WhatsappStatementButton.jsx::buildMessage` now composes:
+  - `*Payment Receipt*` header + amount + purpose + payment mode + receipt number
+  - Optional `Breakdown` block (Amount / Interest / Fine) when interest or penalty > 0
+  - `*1-Year Statement*` block with Total Received + payment count
+  - `Pending Amount` line: `pending_dues.Total` for members, or Principal+Penalty outstanding for interest
+  - `View full balance sheet:` link → `/memberProfileView/{memberId}?tab=balance` (or `/ManagementInterestProfile/:id` / `/chit-Fund_Interest/:id` for interest)
+  - Temple sign-off
+  The `send()` handler now also fetches the public statement (via the existing `/api/collection/public/member_statement/<token>/` and `/interest_statement/<token>/` endpoints) so the message reflects the exact numbers a customer would see on the Balance Sheet page.
+- [x] **Family Details → Member List** — new "Balance Sheet" action icon (money icon) alongside the existing View eye icon in every row. Clicking it navigates to `/memberProfileView/{memberId}?tab=balance` and lands on the customer's 1-year filtered balance sheet with the "Download PDF" button. `data-testid=member-balance-sheet-btn-<id>` added for automation.
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.

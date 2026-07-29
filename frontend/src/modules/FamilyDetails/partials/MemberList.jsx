@@ -306,6 +306,17 @@ const MemberList = () => {
                 </TableIconHolder>
               </Tooltip>
             ) : null}
+            {superUsers || role === userRolesConfig.ADMIN || memberListPermissions?.Family?.View ? (
+              <Tooltip title="Balance Sheet">
+                <TableIconHolder
+                  size={"28px"}
+                  onClick={() => ViewMemberBalanceSheet(record)}
+                  data-testid={`member-balance-sheet-btn-${record?.member?.id}`}
+                >
+                  <img src={SvgIcons.Money} style={{ cursor: "pointer" }} />
+                </TableIconHolder>
+              </Tooltip>
+            ) : null}
             {/* <img src={SvgIcons.Eye} onClick={() => ViewMemberProfile(record)} /> */}
             {/* <img src={SvgIcons.Edit} onClick={() =>UpdateMemberlist(record) }/> */}
             {/* <img src={SvgIcons.HandMoney} style={{cursor:"pointer"}}  onClick={handleNavigate} /> */}
@@ -406,6 +417,10 @@ const MemberList = () => {
 
   const ViewMemberProfile = (record) => {
     navigate(`/memberProfileView/${record?.member?.id}`);
+  };
+
+  const ViewMemberBalanceSheet = (record) => {
+    navigate(`/memberProfileView/${record?.member?.id}?tab=balance`);
   };
 
   const FormExternalClose = () => {

@@ -108,13 +108,78 @@ const buildMessage = ({
   payDate,
   templeName,
   link,
+  purpose,
+  collectionNo,
+  paymentMode,
+  baseAmt,
+  interestAmt,
+  penaltyAmt,
+  statement,
+  isInterest,
 }) => {
-  // Minimal WhatsApp message — greeting + link + sign-off.
-  // The full 1-year balance sheet lives on the public page at `link`.
-  return [
-    `Dear ${name}, thanks for your payment of \u20B9${paidAmt} on ${payDate}.`,
+  // Composite "Share Statement" WhatsApp message = receipt + 1-year
+  // statement summary + pending amount + link to the customer's Balance
+  // Sheet page. Sent from Collection History → Print → Share Statement.
+
+  // ---- Receipt block --------------------------------------------------
+  const purposeLine = purpose ? ` for ${purpose}` : "";
+  const modeLine = paymentMode ? ` (${paymentMode})` : "";
+  const refLine = collectionNo ? `\nReceipt #: ${collectionNo}` : "";
+  const receiptLines = [
+    `*Payment Receipt*`,
     ``,
-    `Full details: ${link}`,
+    `Dear ${name},`,
+    `Thanks for your payment of \u20B9${paidAmt}${purposeLine} on ${payDate}${modeLine}.` +
+      refLine,
+  ];
+  const showBreakdown =
+    (Number(interestAmt) || 0) > 0 || (Number(penaltyAmt) || 0) > 0;
+  const breakdownLines = showBreakdown
+    ? [
+        ``,
+        `Breakdown:`,
+        `- Amount: \u20B9${fmtAmt(baseAmt)}`,
+        Number(interestAmt) > 0 ? `- Interest: \u20B9${fmtAmt(interestAmt)}` : null,
+        Number(penaltyAmt) > 0 ? `- Fine: \u20B9${fmtAmt(penaltyAmt)}` : null,
+      ].filter(Boolean)
+    : [];
+
+  // ---- 1-year statement summary --------------------------------------
+  const t = statement?.totals || {};
+  const statementLines = [
+    ``,
+    `*1-Year Statement*`,
+    `Total Received: \u20B9${fmtAmt(t.amount)} (${t.count || 0} payments)`,
+  ];
+
+  // ---- Pending amount -------------------------------------------------
+  const pendingLines = [];
+  if (isInterest && statement?.outstanding) {
+    const outs = statement.outstanding;
+    const totalOutstanding =
+      Number(outs.balance_amt || 0) + Number(outs.penalty_balance_amt || 0);
+    if (totalOutstanding > 0) {
+      pendingLines.push(
+        `Pending: \u20B9${fmtAmt(totalOutstanding)} ` +
+          `(Principal \u20B9${fmtAmt(outs.principal_balance)} + ` +
+          `Penalty \u20B9${fmtAmt(outs.penalty_balance_amt)})`
+      );
+    }
+  } else if (!isInterest && statement?.pending_dues?.Total !== undefined) {
+    const pendingTotal = Number(statement.pending_dues.Total || 0);
+    if (pendingTotal > 0) {
+      pendingLines.push(`Pending Amount: \u20B9${fmtAmt(pendingTotal)}`);
+    }
+  }
+
+  return [
+    ...receiptLines,
+    ...breakdownLines,
+    ...statementLines,
+    ...pendingLines,
+    ``,
+    `View full balance sheet: ${link}`,
+    ``,
     `— ${templeName || "our Temple"}`,
   ].join("\n");
 };
@@ -255,6 +320,7 @@ const WhatsappStatementButton = ({
       let link;
       let fallbackName;
       let fallbackMobile;
+      let statement = null;
       if (isInterest) {
         const { data: tokenResp } = await axios.get(
           `${API_BASE}/api/collection/interest_statement/token/${interestId}/`
@@ -262,6 +328,12 @@ const WhatsappStatementButton = ({
         link = buildInterestStatementLink(tokenResp.token, category, interestId);
         fallbackName = tokenResp.name;
         fallbackMobile = tokenResp.mobile;
+        try {
+          const { data: stmt } = await axios.get(
+            `${API_BASE}/api/collection/public/interest_statement/${tokenResp.token}/`
+          );
+          statement = stmt;
+        } catch (_) { /* statement optional */ }
       } else {
         const { data: tokenResp } = await axios.get(
           `${API_BASE}/api/collection/member_statement/token/${memberId}/`
@@ -269,6 +341,12 @@ const WhatsappStatementButton = ({
         link = buildMemberStatementLink(tokenResp.token, memberId);
         fallbackName = tokenResp.name;
         fallbackMobile = tokenResp.mobile;
+        try {
+          const { data: stmt } = await axios.get(
+            `${API_BASE}/api/collection/public/member_statement/${tokenResp.token}/`
+          );
+          statement = stmt;
+        } catch (_) { /* statement optional */ }
       }
       const phone = String(rawMobile || fallbackMobile || "").replace(/\D/g, "");
       const waNumber = phone.length === 10 ? `91${phone}` : phone;
@@ -280,12 +358,27 @@ const WhatsappStatementButton = ({
       }
       const name =
         CollectionRecord?.member_name || fallbackName || "Customer";
+      const purpose =
+        CollectionRecord?.festival_name ||
+        CollectionRecord?.sub_tariff_name ||
+        CollectionRecord?.marriage_name ||
+        CollectionRecord?.death_name ||
+        CollectionRecord?.collection_category ||
+        "";
       const msg = buildMessage({
         name,
         paidAmt: fmtAmt(paidAmt),
         payDate: CollectionRecord?.pay_date,
         templeName,
         link,
+        purpose,
+        collectionNo: CollectionRecord?.collaction_no,
+        paymentMode: CollectionRecord?.payment_mode,
+        baseAmt: amount,
+        interestAmt: interestAmount,
+        penaltyAmt: penaltyAmount,
+        statement,
+        isInterest,
       });
       const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
       window.open(url, "_blank", "noopener,noreferrer");
