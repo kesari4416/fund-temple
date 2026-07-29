@@ -305,8 +305,9 @@ export const MemberBalanceSheet = ({ datas }) => {
                     <a href="https://web.whatsapp.com/" target="blank">
                         <Button.Primary text={"Share"} icon={<FaWhatsapp />} />
                     </a>
-                    <Button.Secondary text={"Print"} icon={<IoPrint />}
+                    <Button.Secondary text={"Download PDF"} icon={<IoPrint />}
                         onClick={handlePrint}
+                        data-testid="balance-sheet-download-pdf-btn"
                     />
                 </Flex>
 
@@ -327,8 +328,24 @@ export const MemberBalanceSheet = ({ datas }) => {
                 <PrintHolder ref={componentRef}>
                     <PrintShowData className="PrintShowDatadd">
                         <CommonManagePrint ProfileRecord={BalanSheetID} /><br />
-                        <h3 style={{ marginLeft: '10px' }}>Balance Sheet Details :-</h3><br />
+                        <h3 style={{ marginLeft: '10px' }}>1-Year Balance Sheet Statement</h3>
+                        <p style={{ marginLeft: '10px', color: '#555' }}>
+                            Period: {oneYearAgo.format('DD-MMM-YYYY')} &nbsp;→&nbsp; {dayjs().format('DD-MMM-YYYY')}
+                        </p>
+                        <br />
                         <CustomStandardTable columns={TabPaidHistory} data={tableData} pagination={false} />
+                        <Flex flexend={'right'} margin={"20px"} gap={'30px'} aligncenter>
+                            <h4>Total Credit :</h4>
+                            <h4>₹ {(tableData || []).reduce((s, r) => s + (parseFloat(r.credit_amt) || 0), 0).toFixed(2)}</h4>
+                            <h4>Total Debit :</h4>
+                            <h4>₹ {(tableData || []).reduce((s, r) => s + (parseFloat(r.debit_amt) || 0), 0).toFixed(2)}</h4>
+                            <h4>Closing Balance :</h4>
+                            <h4>₹ {(() => {
+                                const arr = tableData || [];
+                                if (arr.length === 0) return '0.00';
+                                return (parseFloat(arr[arr.length - 1].balance_amt) || 0).toFixed(2);
+                            })()}</h4>
+                        </Flex>
                     </PrintShowData>
                 </PrintHolder>
             </Form>
