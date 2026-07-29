@@ -183,6 +183,22 @@ Business rule clarified with the user:
   The `send()` handler now also fetches the public statement (via the existing `/api/collection/public/member_statement/<token>/` and `/interest_statement/<token>/` endpoints) so the message reflects the exact numbers a customer would see on the Balance Sheet page.
 - [x] **Family Details → Member List** — new "Balance Sheet" action icon (money icon) alongside the existing View eye icon in every row. Clicking it navigates to `/memberProfileView/{memberId}?tab=balance` and lands on the customer's 1-year filtered balance sheet with the "Download PDF" button. `data-testid=member-balance-sheet-btn-<id>` added for automation.
 
+## What's been implemented (2026-02 fork — Auto-PDF Balance Sheet)
+- [x] **WhatsApp share link now auto-opens the Balance Sheet as a PDF.** The URL emitted by `WhatsappStatementButton::buildMemberStatementLink` now includes:
+  - `?tab=balance` — lands on Balance Sheet tab
+  - `&print=1` — triggers auto-print
+  - `&receipt_no=...&receipt_amt=...&receipt_date=...&receipt_purpose=...&receipt_mode=...` — receipt of the payment
+- [x] **`MemberBalanceSheet` (Family Details → Member List → Balance Sheet tab)** now:
+  - Reads receipt URL params and renders a "Payment Receipt" block inside the printable area (only when receipt params are present).
+  - Reads `?print=1` and auto-fires `handlePrint()` (via `useReactToPrint`) once the balance-sheet data lands. Uses a `useRef` guard so it never re-triggers on data-range submits.
+  - Console log `[BalanceSheet] Auto-triggering print dialog…` verified live via Playwright.
+- [x] **Final PDF output contains, in one document:**
+  - Temple header (name + address) via `CommonManagePrint`.
+  - Payment Receipt block (Receipt No, Date, Purpose, Payment Mode, Amount Paid).
+  - "1-Year Balance Sheet Statement" title with period range.
+  - Balance-sheet table (last 12 months, columns: Sl No · Date · Particulars · Name · Pre Balance · Credit · Debit · Balance).
+  - Totals footer (Total Credit · Total Debit · Closing Balance).
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.

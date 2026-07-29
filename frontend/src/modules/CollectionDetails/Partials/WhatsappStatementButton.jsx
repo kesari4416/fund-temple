@@ -15,16 +15,29 @@ const API_BASE =
 // may hit browser URL-length limits (~8 KB); if that ever happens the fetch
 // will still open WhatsApp, just truncated by the OS/browser.
 
-const buildMemberStatementLink = (token, memberId) => {
+const buildMemberStatementLink = (token, memberId, receipt) => {
   const origin =
     typeof window !== "undefined" && window.location?.origin
       ? window.location.origin
       : "";
-  // User request: share the internal Member Profile view directly and land
-  // the recipient on the Balance Sheet tab (1-year statement). Falls back
-  // to the tokenised public statement link if memberId is missing.
+  // User request: WhatsApp link opens the member's Balance Sheet page
+  // pre-scoped to the last 1 year and auto-triggers the browser's
+  // Save-as-PDF dialog. Receipt of the payment that just happened is
+  // included so the downloaded PDF is Receipt + Balance Sheet in one
+  // document. Falls back to the tokenised public statement link if
+  // memberId is missing.
   if (memberId) {
-    return `${origin}/memberProfileView/${memberId}?tab=balance`;
+    const params = new URLSearchParams();
+    params.set("tab", "balance");
+    params.set("print", "1");
+    if (receipt) {
+      if (receipt.no) params.set("receipt_no", receipt.no);
+      if (receipt.amt) params.set("receipt_amt", receipt.amt);
+      if (receipt.date) params.set("receipt_date", receipt.date);
+      if (receipt.purpose) params.set("receipt_purpose", receipt.purpose);
+      if (receipt.mode) params.set("receipt_mode", receipt.mode);
+    }
+    return `${origin}/memberProfileView/${memberId}?${params.toString()}`;
   }
   return `${origin}/statement/${token}`;
 };
@@ -338,7 +351,22 @@ const WhatsappStatementButton = ({
         const { data: tokenResp } = await axios.get(
           `${API_BASE}/api/collection/member_statement/token/${memberId}/`
         );
-        link = buildMemberStatementLink(tokenResp.token, memberId);
+        // Bundle the current receipt details into the URL so the landing
+        // page can render Receipt + Balance Sheet in one PDF.
+        const purpose =
+          CollectionRecord?.festival_name ||
+          CollectionRecord?.sub_tariff_name ||
+          CollectionRecord?.marriage_name ||
+          CollectionRecord?.death_name ||
+          CollectionRecord?.collection_category ||
+          "";
+        link = buildMemberStatementLink(tokenResp.token, memberId, {
+          no: CollectionRecord?.collaction_no || "",
+          amt: fmtAmt(paidAmt),
+          date: CollectionRecord?.pay_date || "",
+          purpose,
+          mode: CollectionRecord?.payment_mode || "",
+        });
         fallbackName = tokenResp.name;
         fallbackMobile = tokenResp.mobile;
         try {
