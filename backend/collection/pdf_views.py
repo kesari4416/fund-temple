@@ -287,6 +287,28 @@ def public_member_statement_pdf(request, token: str):
 
     story.extend(_receipt_flowables(styles, _receipt_from_query(request)))
 
+    # Prominent "Pending Balance for {Category}" chip right under the
+    # receipt so the recipient sees the outstanding amount at a glance.
+    pending_total_val = float(pending.get("Total", 0) if pending else 0)
+    if pending_total_val > 0:
+        label = f"Pending Balance ({category_label})" if category_label else "Pending Balance"
+        pb_data = [[label, _rupee(pending_total_val)]]
+        pb_tbl = Table(pb_data, colWidths=[100 * mm, None])
+        pb_tbl.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#fef3c7")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#92400e")),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 12),
+            ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#f59e0b")),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+            ("TOPPADDING", (0, 0), (-1, -1), 8),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ]))
+        story.append(pb_tbl)
+        story.append(Spacer(1, 6 * mm))
+
     # Member card
     m_data = [
         ["Member details", ""],
@@ -315,15 +337,16 @@ def public_member_statement_pdf(request, token: str):
     story.append(m_tbl)
     story.append(Spacer(1, 6 * mm))
 
-    # Pending dues card
+    # Pending Balance card (was "Pending Dues" — matches portal terminology
+    # "Total Pending Balance")
     if pending:
-        p_data = [["Pending Dues", ""]]
+        p_data = [["Pending Balance", ""]]
         for k, v in pending.items():
             if k == "Total":
                 continue
             if float(v or 0) != 0:
                 p_data.append([k, _rupee(v)])
-        p_data.append(["Total Pending", _rupee(pending.get("Total", 0))])
+        p_data.append(["Total Pending Balance", _rupee(pending.get("Total", 0))])
         p_tbl = Table(p_data, colWidths=[80 * mm, None])
         p_tbl.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), TEMPLE_GREEN),

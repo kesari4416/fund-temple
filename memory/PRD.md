@@ -259,6 +259,11 @@ Business rule clarified with the user:
   - Marriage → Pending ₹0 · 0 rows
 - [x] Interest categories (Chit Interest / Management Interest) already generate per-loan PDFs via the interest endpoint — inherent isolation, no changes needed.
 
+## What's been implemented (2026-02 fork — Prominent Pending Balance)
+- [x] **PDF now shows a prominent Pending Balance chip** right below the Payment Receipt block, tagged with the specific category (e.g. `Pending Balance (Festival) · Rs. 3,750.00`). Yellow highlight so the recipient sees it at a glance.
+- [x] **"Pending Dues" section renamed to "Pending Balance"** and "Total Pending" renamed to "Total Pending Balance" — matches the terminology used in the app (`temple_mem_pending_amt` / "Total Pending Balance" label on Member Profile).
+- [x] **Verified live** for member 225 Festival share: PDF renders Payment Receipt (COL9 · ₹500) + yellow `Pending Balance (Festival) Rs. 3,750.00` chip + full Pending Balance breakdown card + empty balance sheet (no fest transactions in year window).
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.
