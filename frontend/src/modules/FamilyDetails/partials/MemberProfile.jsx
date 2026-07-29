@@ -6,7 +6,7 @@ import React, { Fragment, useEffect, useState } from 'react'
 import { MemberBalanceReport, MemberBalanceSheet, MemberPaidHistory } from './MemberProfileTabs'
 import { StyledHeading } from '../style'
 import request from '@request/request'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { APIURLS } from '@request/apiUrls/urls'
 import successHandler from '@request/successHandler'
 import styled from 'styled-components'
@@ -30,6 +30,11 @@ const MemberProfile = () => {
 
     const [form] = Form.useForm()
     const { id } = useParams()
+    // WhatsApp share links come in as /memberProfileView/:id?tab=balance so
+    // the balance sheet opens straight away without the user hunting for the
+    // right tab. Default remains the Report tab for regular navigation.
+    const [searchParams] = useSearchParams()
+    const initialTabKey = searchParams.get('tab') === 'balance' ? '3' : '1'
 
     const [MemberDetails, setMemberDetails] = useState({})
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -232,7 +237,7 @@ const MemberProfile = () => {
                     </Col>
                     {Memberprofile?.member_tax_eligible &&
                         <Col span={24} md={24}>
-                            <CustomTabs tabs={TabOptions} />
+                            <CustomTabs tabs={TabOptions} defaultActiveKey={initialTabKey} />
                         </Col>}
                 </CustomRow>
 

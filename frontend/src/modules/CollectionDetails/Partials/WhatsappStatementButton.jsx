@@ -20,10 +20,11 @@ const buildMemberStatementLink = (token, memberId) => {
     typeof window !== "undefined" && window.location?.origin
       ? window.location.origin
       : "";
-  // User request: share the internal Member Profile view directly. Falls
-  // back to the tokenised public statement link if memberId is missing.
+  // User request: share the internal Member Profile view directly and land
+  // the recipient on the Balance Sheet tab (1-year statement). Falls back
+  // to the tokenised public statement link if memberId is missing.
   if (memberId) {
-    return `${origin}/memberProfileView/${memberId}`;
+    return `${origin}/memberProfileView/${memberId}?tab=balance`;
   }
   return `${origin}/statement/${token}`;
 };

@@ -167,11 +167,24 @@ export const MemberBalanceSheet = ({ datas }) => {
     const [filterTableData, setFilterTableData] = useState([])
     const [dateRange, setDateRange] = useState(dayjs().format("YYYY-MM-DD"));
 
+    // Rows from the last 12 months only (the "1 year statement" the
+    // operator shares over WhatsApp). Falls back to everything if the
+    // row's reportdate is missing / unparseable.
+    const oneYearAgo = dayjs().subtract(1, "year").startOf("day");
+    const filterLastYear = (rows) => {
+        if (!Array.isArray(rows)) return [];
+        return rows.filter((r) => {
+            if (!r?.reportdate) return true;
+            const d = dayjs(r.reportdate);
+            return d.isValid() ? d.isAfter(oneYearAgo) : true;
+        });
+    };
+
     let BalanSheetdata
     if (filterTableData.length > 1) {
         BalanSheetdata = filterTableData
     } else {
-        BalanSheetdata = datas?.temple_mem_balancesheet
+        BalanSheetdata = filterLastYear(datas?.temple_mem_balancesheet)
     }
 
     const BalanSheetID = datas?.profile
