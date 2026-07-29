@@ -272,6 +272,12 @@ Business rule clarified with the user:
   - Festival category   → Chip ₹3,750 · Total ₹5,175 · Ledger closing ₹5,175 ✓
   - No category filter  → Chip ₹5,175 · Total ₹5,175 · Ledger closing ₹5,175 ✓
 
+## What's been implemented (2026-02 fork — Hotfix: EC2 login broken)
+- [x] **Root cause identified**: `pdf_views.py` had a top-level `from reportlab...` import. EC2 didn't have reportlab installed → Django refused to boot → whole app inaccessible → frontend showed "Not able to connect server".
+- [x] **Lazy-guarded the reportlab import** — the module now wraps every reportlab symbol in a `try/except ImportError` that flips a `_REPORTLAB_AVAILABLE` flag. If false, both PDF views return HTTP 501 with a plain-text install hint: `Install with: pip install reportlab`. Backend boots cleanly either way.
+- [x] **Added `reportlab>=4.0` to `backend/requirements.txt`** (preserving the file's original UTF-16 LE encoding + CRLF line endings). Any fresh deploy picks it up automatically.
+- [x] **Verified live**: backend restart → login returns JWT · PDF endpoint still returns 200/application/pdf (reportlab pre-installed in pod).
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.

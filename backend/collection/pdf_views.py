@@ -19,23 +19,47 @@ generation. Layout:
 from datetime import timedelta
 from io import BytesIO
 
-from django.http import FileResponse, HttpResponseNotFound
+from django.http import FileResponse, HttpResponseNotFound, HttpResponse
 from django.utils import timezone
 from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import mm
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Paragraph,
-    Spacer,
-    Table,
-    TableStyle,
-)
+# Lazy reportlab import — some deployments (older EC2 images) may not yet
+# have reportlab installed. Loading it inside the view functions instead of
+# at module import time means the Django backend can still boot cleanly;
+# the two PDF endpoints will surface a 501 with an install hint until the
+# operator runs `pip install reportlab`.
+try:
+    from reportlab.lib import colors  # noqa: F401
+    from reportlab.lib.pagesizes import A4  # noqa: F401
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle  # noqa: F401
+    from reportlab.lib.units import mm  # noqa: F401
+    from reportlab.platypus import (  # noqa: F401
+        SimpleDocTemplate,
+        Paragraph,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+    _REPORTLAB_AVAILABLE = True
+    _REPORTLAB_IMPORT_ERROR = None
+except Exception as _e:  # ImportError, or transitive missing lib
+    _REPORTLAB_AVAILABLE = False
+    _REPORTLAB_IMPORT_ERROR = str(_e)
+
+
+def _reportlab_missing_response():
+    return HttpResponse(
+        (
+            "PDF generation requires the `reportlab` python package. Install "
+            "it on this server with:\n\n    pip install reportlab\n\n"
+            f"(import error: {_REPORTLAB_IMPORT_ERROR})"
+        ),
+        status=501,
+        content_type="text/plain; charset=utf-8",
+    )
+
 
 from family.models import Member_Details
 from collection.models import CollectionDetails
@@ -172,6 +196,8 @@ def _table_style_header():
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def public_member_statement_pdf(request, token: str):
+    if not _REPORTLAB_AVAILABLE:
+        return _reportlab_missing_response()
     member_id = _unsign_member_id(token)
     if member_id is None:
         return HttpResponseNotFound("invalid or expired link")
@@ -444,6 +470,8 @@ def public_member_statement_pdf(request, token: str):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def public_interest_statement_pdf(request, token: str):
+    if not _REPORTLAB_AVAILABLE:
+        return _reportlab_missing_response()
     interest_id = _unsign_interest_id(token)
     if interest_id is None:
         return HttpResponseNotFound("invalid or expired link")
