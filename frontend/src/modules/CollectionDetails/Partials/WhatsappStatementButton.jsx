@@ -20,26 +20,21 @@ const buildMemberStatementLink = (token, memberId, receipt) => {
     typeof window !== "undefined" && window.location?.origin
       ? window.location.origin
       : "";
-  // User request: WhatsApp link opens the member's Balance Sheet page
-  // pre-scoped to the last 1 year and auto-triggers the browser's
-  // Save-as-PDF dialog. Receipt of the payment that just happened is
-  // included so the downloaded PDF is Receipt + Balance Sheet in one
-  // document. Falls back to the tokenised public statement link if
-  // memberId is missing.
-  if (memberId) {
-    const params = new URLSearchParams();
-    params.set("tab", "balance");
-    params.set("print", "1");
-    if (receipt) {
-      if (receipt.no) params.set("receipt_no", receipt.no);
-      if (receipt.amt) params.set("receipt_amt", receipt.amt);
-      if (receipt.date) params.set("receipt_date", receipt.date);
-      if (receipt.purpose) params.set("receipt_purpose", receipt.purpose);
-      if (receipt.mode) params.set("receipt_mode", receipt.mode);
-    }
-    return `${origin}/memberProfileView/${memberId}?${params.toString()}`;
+  // User request: WhatsApp link MUST NOT require a portal login. Use the
+  // tokenised public statement URL (`/statement/<token>`) which serves
+  // the Balance Sheet as a stand-alone page with auto-print (?print=1)
+  // and Receipt block from URL params. memberId is retained only for
+  // API-call context — the URL itself is token-based.
+  const params = new URLSearchParams();
+  params.set("print", "1");
+  if (receipt) {
+    if (receipt.no) params.set("receipt_no", receipt.no);
+    if (receipt.amt) params.set("receipt_amt", receipt.amt);
+    if (receipt.date) params.set("receipt_date", receipt.date);
+    if (receipt.purpose) params.set("receipt_purpose", receipt.purpose);
+    if (receipt.mode) params.set("receipt_mode", receipt.mode);
   }
-  return `${origin}/statement/${token}`;
+  return `${origin}/statement/${token}?${params.toString()}`;
 };
 
 const buildInterestStatementLink = (token, interestType, interestId, receipt) => {

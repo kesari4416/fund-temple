@@ -212,6 +212,15 @@ Business rule clarified with the user:
   - Outstanding balance card (Principal issued / paid / balance + Penalty balance + Total outstanding)
   - 1-year balance sheet ledger table
 
+## What's been implemented (2026-02 fork — Login-free WhatsApp PDF)
+- [x] **`buildMemberStatementLink` now always emits the token-based public URL** `/statement/<token>?print=1&receipt_*` instead of the auth-protected `/memberProfileView/{id}`. Recipients no longer need to log into the admin portal to view the balance sheet.
+- [x] **`PublicMemberStatement.jsx`** (route `/statement/:token`) now:
+  - Reads `?print=1` + `?receipt_*` URL params via `useSearchParams`.
+  - Renders a `Payment Receipt` card at the top when receipt params are present (`data-testid=statement-receipt`).
+  - Auto-fires `window.print()` 800ms after statement data lands (guarded with `useRef` so it fires exactly once). Console log `[MemberStatement] Auto-triggering print dialog…` confirms the effect.
+- [x] **Complete parity** with the interest-borrower flow — both member and interest WhatsApp shares now use token-based public URLs with the same auto-print + receipt-block pattern.
+- [x] **Verified live in a fresh browser context (no cookies, no login)** — statement page rendered fully with Payment Receipt (COL2 / 2024-04-07 / Subscription Tariff / Offline / ₹100), member details (S.M NAVEEN M6), 1-year balance sheet table with 1 row + Total, 1-year totals, and Pending dues (Death ₹300 + Subscription Tariff ₹200 = Total ₹500). Auto-print console log fired.
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.
