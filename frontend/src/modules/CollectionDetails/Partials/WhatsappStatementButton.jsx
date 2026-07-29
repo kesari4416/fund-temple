@@ -11,6 +11,24 @@ const INTEREST_CATEGORIES = new Set(["Chit Interest", "Management Interest"]);
 const API_BASE =
   import.meta.env?.VITE_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || "";
 
+/**
+ * Resolve the origin (scheme + host) of the API when API_BASE is empty.
+ * On production EC2 the frontend and backend are usually served from the
+ * same host, so `window.location.origin` is the correct fallback. This
+ * guarantees the WhatsApp link is always an absolute URL — never a bare
+ * `/api/...` path that the recipient's phone can't open.
+ */
+const resolveApiBase = (override) => {
+  const candidate = (override || API_BASE || "").trim();
+  if (candidate && /^https?:\/\//i.test(candidate)) {
+    return candidate.replace(/\/$/, "");
+  }
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin.replace(/\/$/, "");
+  }
+  return candidate.replace(/\/$/, "");
+};
+
 // No row cap — the customer sees the full 1-year ledger. Very large tables
 // may hit browser URL-length limits (~8 KB); if that ever happens the fetch
 // will still open WhatsApp, just truncated by the OS/browser.
@@ -33,7 +51,7 @@ const buildMemberStatementLink = (token, memberId, receipt, apiBase, category) =
     if (receipt.mode) params.set("receipt_mode", receipt.mode);
   }
   const qs = params.toString();
-  const base = (apiBase || API_BASE || "").replace(/\/$/, "");
+  const base = resolveApiBase(apiBase);
   return `${base}/api/collection/public/member_statement_pdf/${token}/${qs ? `?${qs}` : ""}`;
 };
 
@@ -48,7 +66,7 @@ const buildInterestStatementLink = (token, interestType, interestId, receipt, ap
     if (receipt.mode) params.set("receipt_mode", receipt.mode);
   }
   const qs = params.toString();
-  const base = (apiBase || API_BASE || "").replace(/\/$/, "");
+  const base = resolveApiBase(apiBase);
   return `${base}/api/collection/public/interest_statement_pdf/${token}/${qs ? `?${qs}` : ""}`;
 };
 

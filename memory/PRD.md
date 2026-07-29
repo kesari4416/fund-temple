@@ -278,6 +278,12 @@ Business rule clarified with the user:
 - [x] **Added `reportlab>=4.0` to `backend/requirements.txt`** (preserving the file's original UTF-16 LE encoding + CRLF line endings). Any fresh deploy picks it up automatically.
 - [x] **Verified live**: backend restart → login returns JWT · PDF endpoint still returns 200/application/pdf (reportlab pre-installed in pod).
 
+## What's been implemented (2026-02 fork — Absolute-URL fallback for WhatsApp share)
+- [x] **WhatsApp share was emitting relative `/api/...` URLs on EC2** because `VITE_BACKEND_URL` was empty in the production build.
+- [x] **Added `resolveApiBase()` helper** in `WhatsappStatementButton.jsx` — tries the explicit override / `VITE_BACKEND_URL` first, then falls back to `window.location.origin`. Guarantees the shared URL is always absolute (scheme + host + path).
+- [x] Both `buildMemberStatementLink` and `buildInterestStatementLink` now use `resolveApiBase(apiBase)` before concatenating the path.
+- [x] Recommended env var for EC2 (optional but future-proof): `VITE_BACKEND_URL=https://temple.sparkcurv.in`.
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.
