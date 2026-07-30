@@ -401,23 +401,15 @@ export const AddExpenseForm = ({
       });
   };
   const onFinish = (data) => {
-    let NewData;
-  
-    if (TransactionData === "Online") {
-      NewData = {
-        ...data,
-        date: expenseDate,
-        transaction_date: transactionDate,
+    // Always build the payload — previously we only built `NewData` when
+    // TransactionData was "Online" or "Offline", causing the submit to
+    // silently no-op if the payment_mode state hadn't been captured yet.
+    const NewData = {
+      ...data,
+      date: expenseDate,
+      transaction_date: transactionDate,
+    };
 
-      };
-    } else if (TransactionData === "Offline") {
-      NewData = {
-        ...data,
-        date: expenseDate,
-        transaction_date: transactionDate,
-      };
-    }
-  
     if (UpdateRecord) {
       EditExpense(NewData);
     } else {

@@ -294,5 +294,11 @@ Business rule clarified with the user:
 - P2: WhatsApp / Print integrations on the Pending Penalty page.
 - P2: User EC2 login returning HTTP 204 — needs their Nginx/Django infra debugging.
 
+## What's been implemented (2026-02 fork — EC2 subcategory column fix)
+- [x] **Root cause of 500 error on Add Income/Expense with new categories**: Django migration `0002_addexpensedetails_expense_subcategory` and `0002_addincomedetails_income_subcategory` were applied on preview but NOT on the EC2 database. The frontend now sends `expense_subcategory` / `income_subcategory` in the payload; MySQL rejected the INSERT with "Unknown column" → 500. The user assumed a missing table.
+- [x] **Delivered `/app/scripts/fix_income_expense_subcategory_ec2.sql`** — safe idempotent script that adds the two columns (guarded by `information_schema.COLUMNS` check) and records the migrations in `django_migrations` so `manage.py migrate` stays in sync.
+- [x] **Hardened `AddExpense.jsx::onFinish`** — previously the payload was only built when `TransactionData` was strictly `"Online"` or `"Offline"`; if the payment_mode `onChange` state hadn't captured yet, `AddExpense(undefined)` was sent silently → "form not submitting" symptom. Now the payload is always constructed from `data` + captured dates.
+- [x] Local preview verified: add_expen_categry, add_income_categry, add_expen_details (Chit Fund + Temple), add_income_details (Chit Fund + Temple with new categories `chitfund`/`temple`) all return HTTP 201.
+
 ## Test credentials
 See `/app/memory/test_credentials.md`.
