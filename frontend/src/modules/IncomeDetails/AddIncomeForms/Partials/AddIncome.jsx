@@ -463,12 +463,23 @@ export const AddIncomeForm = ({
         return response.data;
       })
       .catch(function (error) {
-        if (error.response.status === 400) {
+        if (error.response?.status === 400) {
           if (error.response.data?.date) {
             toast.error(error.response.data?.date[0]);
+          } else if (error.response.data && typeof error.response.data === "object") {
+            const first = Object.entries(error.response.data)[0];
+            if (first) {
+              const [field, msgs] = first;
+              const msg = Array.isArray(msgs) ? msgs[0] : String(msgs);
+              toast.error(`${field}: ${msg}`);
+            } else {
+              toast.error("Please check the form and try again");
+            }
+          } else {
+            toast.error("Please check the form and try again");
           }
         }
-        else if (error.response.status === 406) {
+        else if (error.response?.status === 406) {
           toast.error(error.response.data.message);
         }
         else {
@@ -493,9 +504,20 @@ export const AddIncomeForm = ({
         return response.data;
       })
       .catch(function (error) {
-        if (error.response.status === 400) {
+        if (error.response?.status === 400) {
           if (error.response.data?.date) {
             toast.error(error.response.data?.date[0]);
+          } else if (error.response.data && typeof error.response.data === "object") {
+            const first = Object.entries(error.response.data)[0];
+            if (first) {
+              const [field, msgs] = first;
+              const msg = Array.isArray(msgs) ? msgs[0] : String(msgs);
+              toast.error(`${field}: ${msg}`);
+            } else {
+              toast.error("Please check the form and try again");
+            }
+          } else {
+            toast.error("Please check the form and try again");
           }
         }
         else {
