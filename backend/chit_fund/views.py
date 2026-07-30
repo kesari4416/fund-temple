@@ -736,78 +736,17 @@ def add_chit_fund_settlement_application_details(request):
                 invest_fund.save()
 
                 # Once an investor settles out of the chit their shares
-                # leave the profit-sharing pool.  We *redistribute* those
-                # shares proportionally to the remaining shareholders —
-                # both the Management (its baseline share, e.g. 1) and the
-                # remaining active investors — so that Management continues
-                # to receive its fair slice of future profit collections.
+                # leave the pool entirely — the exiting shares are NOT
+                # redistributed to Management or remaining investors.
+                # Business rule confirmed with owner: subtract exiting
+                # shares from investers_share_count, leave management
+                # untouched, and recompute total_share_count.
                 exit_shares = int(inve_share_count or 0)
                 if exit_shares > 0:
-                    mgmt_shares = int(total_fund_amount_details.management_share_count or 0)
-                    remaining_invs = list(
-                        ChitFundInvesters.objects.filter(
-                            chitt_fund=total_fund_amount_details,
-                            settled=False,
-                            action=True,
-                        ).exclude(id=invest_fund.id)
+                    total_fund_amount_details.investers_share_count = (
+                        int(total_fund_amount_details.investers_share_count or 0)
+                        - exit_shares
                     )
-                    remaining_total = sum(int(i.share_count or 0) for i in remaining_invs)
-                    denom = mgmt_shares + remaining_total
-
-                    if denom > 0:
-                        # Proportional integer split using largest-remainder method
-                        allocations = []  # list of (obj, floor_bonus, remainder)
-
-                        mgmt_raw = exit_shares * mgmt_shares / denom
-                        mgmt_floor = int(mgmt_raw)
-                        allocations.append(("mgmt", None, mgmt_floor, mgmt_raw - mgmt_floor))
-
-                        for inv in remaining_invs:
-                            inv_share = int(inv.share_count or 0)
-                            raw = exit_shares * inv_share / denom
-                            floor_b = int(raw)
-                            allocations.append(("inv", inv, floor_b, raw - floor_b))
-
-                        distributed = sum(a[2] for a in allocations)
-                        leftover = exit_shares - distributed
-                        # Hand out the +1 remainders to those with the largest
-                        # fractional part (Management wins ties by design —
-                        # it appears first in the list).
-                        ordered = sorted(
-                            range(len(allocations)), key=lambda k: -allocations[k][3]
-                        )
-                        for k in ordered[:leftover]:
-                            kind, obj, fb, rem = allocations[k]
-                            allocations[k] = (kind, obj, fb + 1, rem)
-
-                        # Apply bonuses
-                        mgmt_bonus = 0
-                        investor_bonus_total = 0
-                        for kind, obj, bonus, _ in allocations:
-                            if bonus <= 0:
-                                continue
-                            if kind == "mgmt":
-                                mgmt_bonus += bonus
-                            else:
-                                obj.share_count = int(obj.share_count or 0) + bonus
-                                obj.save()
-                                investor_bonus_total += bonus
-
-                        total_fund_amount_details.management_share_count = mgmt_shares + mgmt_bonus
-                        # Investors lose the exiting shares but gain their proportional bonus
-                        total_fund_amount_details.investers_share_count = (
-                            int(total_fund_amount_details.investers_share_count or 0)
-                            - exit_shares
-                            + investor_bonus_total
-                        )
-                    else:
-                        # No remaining pool to share with (edge case) — just
-                        # reduce the investor count and leave management alone.
-                        total_fund_amount_details.investers_share_count = (
-                            int(total_fund_amount_details.investers_share_count or 0)
-                            - exit_shares
-                        )
-
                     # Keep total_share_count consistent with its two components
                     total_fund_amount_details.total_share_count = (
                         int(total_fund_amount_details.management_share_count or 0)
@@ -898,11 +837,33 @@ def edit_chit_fund_settlement_application_details(request,pk):
                 return Response({"Message":"Cant be deleted as the amount is settled"},status=status.HTTP_300_MULTIPLE_CHOICES)
             else:
                 invest_fund=ChitFundInvesters.objects.filter(id=customer.investers_id).first()
-                invest_fund.share_amount=0
-                invest_fund.application_date=None
-                invest_fund.action=True
-                invest_fund.final_settlement_amount=0
-                invest_fund.save()
+                # Restore the chit's share count and invested principal so
+                # deleting a settlement application returns the pool to
+                # its pre-application state (mirrors the new subtractive
+                # settlement logic — cannot undo the old redistribution
+                # bonuses since those weren't tracked per-investor).
+                if invest_fund:
+                    chit_amount = ChitFundsDetails.objects.filter(
+                        id=customer.chitt_fund_id
+                    ).first()
+                    if chit_amount is not None:
+                        exit_shares = int(invest_fund.share_count or 0)
+                        chit_amount.investers_share_count = (
+                            int(chit_amount.investers_share_count or 0) + exit_shares
+                        )
+                        chit_amount.total_share_count = (
+                            int(chit_amount.management_share_count or 0)
+                            + int(chit_amount.investers_share_count or 0)
+                        )
+                        chit_amount.outer_invest_amount = float(
+                            chit_amount.outer_invest_amount or 0
+                        ) + float(invest_fund.investment_amt or 0)
+                        chit_amount.save()
+                    invest_fund.share_amount=0
+                    invest_fund.application_date=None
+                    invest_fund.action=True
+                    invest_fund.final_settlement_amount=0
+                    invest_fund.save()
                 customer.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
