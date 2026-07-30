@@ -59,7 +59,7 @@ export const AddExpenseForm = ({
   const [expeNameTrigger, setExpeNameTrigger] = useState(0);
   const [expeCategyTrigger, setExpeCategyTrigger] = useState(0);
   const [transactionType, setTransactionType] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedExpName, setSelectedExpName] = useState([]);
   const [selectedBankDetails, setSelectedBankDetails] = useState([]);
   const [selectedfestivalType, setSelectedFestivaltype] = useState([]);
@@ -165,7 +165,13 @@ export const AddExpenseForm = ({
 
 
   useEffect(() => {
-    form.setFieldsValue({ category_name: selectedCategory });
+    // Only push a string value; skip when selectedCategory is null/empty
+    // (initial mount, or after subcategory switch cleared it) — otherwise
+    // an array [] would land in the payload and DRF rejects it with
+    // "category_name: Not a valid string."
+    if (typeof selectedCategory === "string" && selectedCategory.length > 0) {
+      form.setFieldsValue({ category_name: selectedCategory });
+    }
     if (UpdateRecord) {
       form.setFieldsValue({ category_name: UpdateRecord?.category_name });
     }
@@ -491,7 +497,7 @@ export const AddExpenseForm = ({
                 // Subcategory changes — prevents stale FK / label carrying
                 // over between Temple and Chit Fund selections.
                 form.setFieldsValue({ category: undefined, category_name: undefined });
-                setSelectedCategory([]);
+                setSelectedCategory(null);
               }}
               rules={[
                 {
