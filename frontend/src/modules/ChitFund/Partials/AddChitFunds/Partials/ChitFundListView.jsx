@@ -430,10 +430,17 @@ const ChitFundListView = () => {
                                     <h3 className="info-label">Share Amount  </h3>
                                     <span>:</span>&nbsp;
                                     <span data-testid="member-0-share-amount">
-                                      {(
-                                        Number(demandShareAmount || 0) *
-                                        Number(findIds?.management_share_count || 0)
-                                      ).toFixed(2)}
+                                      {/*
+                                        Management's Share Amount uses the same
+                                        LIVE-accumulated formula as regular
+                                        investors (collected_share_amount).
+                                        For Management that value is
+                                        Profit × management_share_count /
+                                        total_share_count — i.e., its slice
+                                        of the current profit pool. Computed
+                                        by `managementAmount` above.
+                                      */}
+                                      {Number(managementAmount || 0).toFixed(2)}
                                     </span>
                                   </div>
                                   <div className="info-row">
