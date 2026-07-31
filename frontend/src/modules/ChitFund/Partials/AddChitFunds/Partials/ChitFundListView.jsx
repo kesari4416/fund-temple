@@ -280,24 +280,6 @@ const ChitFundListView = () => {
                                         ₹ {managementAmount.toFixed(2)}
                                     </span>
                                 </Tooltip>
-                                &nbsp;&nbsp;
-                                {Math.abs(reconciliationDelta) < 1 ? (
-                                    <span
-                                        data-testid="management-amount-reconciled"
-                                        style={{ fontSize: 12, color: '#0F5132' }}
-                                        title={`✓ Σ Investor Profit Shares (₹ ${investorsProfitShareTotal.toFixed(2)}) + Management Amount (₹ ${managementAmount.toFixed(2)}) = Profit (₹ ${Number(findIds?.profit_amount || 0).toFixed(2)})`}
-                                    >
-                                        ✓ reconciled
-                                    </span>
-                                ) : (
-                                    <span
-                                        data-testid="management-amount-mismatch"
-                                        style={{ fontSize: 12, color: '#b91c1c', fontWeight: 700 }}
-                                        title={`Delta = ${reconciliationDelta}`}
-                                    >
-                                        ⚠ mismatch (Δ {reconciliationDelta})
-                                    </span>
-                                )}
                             </div>
                         </Totalstyle>
                     </Col>
