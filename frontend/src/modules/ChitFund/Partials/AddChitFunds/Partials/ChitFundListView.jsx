@@ -80,6 +80,34 @@ const ChitFundListView = () => {
 
     const [menberDetalView, setMenberDetalView] = useState({});
     const [findIds, setFindIds] = useState({});
+    // "Pending Amount to Collect" — sourced from the pending-borrowers
+    // endpoint so the header value reconciles with the "View details"
+    // page. total_pending_balance = Σ (balance_amt + penalty_balance)
+    // across every active Chit-Fund-Interest borrower.
+    const [pendingSummary, setPendingSummary] = useState({
+        total_pending_principal: null,
+        total_pending_interest: null,
+        total_pending_balance: null,
+    });
+
+    useEffect(() => {
+        if (!id) return;
+        let cancelled = false;
+        request
+            .get(`chit_fund/pending_borrowers/${id}/`)
+            .then((res) => {
+                if (cancelled) return;
+                setPendingSummary({
+                    total_pending_principal: Number(res?.data?.total_pending_principal || 0),
+                    total_pending_interest: Number(res?.data?.total_pending_interest || 0),
+                    total_pending_balance: Number(res?.data?.total_pending_balance || 0),
+                });
+            })
+            .catch(() => {
+                // Silent — falls back to the legacy principal-only diff below.
+            });
+        return () => { cancelled = true; };
+    }, [id]);
 
     // Effective share count used in the display and in the Demand Share Amount formula.
     // It includes the Management share (typically 1) alongside the investor shares — per business
@@ -325,9 +353,18 @@ const ChitFundListView = () => {
                                 <h3 className="info-label">Pending Amount to Collect</h3>
                                 <span>:</span>&nbsp;
                                 <span style={{ color: '#b91c1c', fontWeight: 700 }} data-testid="chit-pending-to-collect-value">
+                                  {/*
+                                    Same figure the "View details" page shows
+                                    as "Total outstanding (incl. penalty)".
+                                    Falls back to the legacy principal-only
+                                    diff if the pending endpoint hasn't
+                                    responded yet, so the row is never blank.
+                                  */}
                                   ₹ {(
-                                    Number(findIds?.principal_given_amount || 0) -
-                                    Number(findIds?.collected_principal_amount || 0)
+                                    pendingSummary.total_pending_balance !== null
+                                      ? pendingSummary.total_pending_balance
+                                      : Number(findIds?.principal_given_amount || 0) -
+                                        Number(findIds?.collected_principal_amount || 0)
                                   ).toFixed(2)}
                                 </span>
                                 &nbsp;&nbsp;
