@@ -99,7 +99,10 @@ def _apply_for_record(record: PeopleInterestDetails) -> dict:
                 applied.append({"month": checking_day.isoformat(), "interest": inc})
 
         # ---- 2) Penalty on day 20 if still unpaid ----------------------
-        if penalty_day <= today and float(bal.intrest_balance_amt or 0) > 0:
+        # Owner toggle: skip penalty entirely for records where
+        # penalty_enabled is False (Feb 2026 rule).
+        penalty_on = True if record.penalty_enabled is None else bool(record.penalty_enabled)
+        if penalty_on and penalty_day <= today and float(bal.intrest_balance_amt or 0) > 0:
             already_penalised = InterestPeopleReport.objects.filter(
                 interest=record,
                 reportdate=penalty_day,

@@ -260,6 +260,10 @@ export const Interest = ({ RecordData, ClosUpdaForm, manageTrigger }) => {
                 setDisablePenalty(false)
             }
             setpenalty(RecordData?.penalty_type);
+            // Prefill Y/N toggle from server (defaults to True when missing).
+            form.setFieldsValue({
+                penalty_enabled: RecordData?.penalty_enabled === false ? false : true,
+            });
             const dateFormat = 'YYYY-MM-DD'
             const intdate = new Date(RecordData?.interest_date);
             const Intrestdate = dayjs(intdate).format(dateFormat);
@@ -694,6 +698,10 @@ export const Interest = ({ RecordData, ClosUpdaForm, manageTrigger }) => {
         formData.append('interest_type_new', data?.interest_type_new);
         formData.append('interest_amt', categoryChoose === "Installment Interest" ? (boxChecked ? data?.installment_amt : data?.interest_amt) : data?.interest_amt);
         formData.append('penalty_amount', data?.penalty_amount || 0);
+        // Y/N toggle for penalty (Feb 2026). Backend defaults to True
+        // when this field isn't sent, so on old records the behaviour
+        // stays unchanged.
+        formData.append('penalty_enabled', data?.penalty_enabled === false ? 'False' : 'True');
 
         if (data?.penalty_type === undefined) {
             console.log('penaltyType');
@@ -1134,6 +1142,30 @@ export const Interest = ({ RecordData, ClosUpdaForm, manageTrigger }) => {
                                         },
                                     },
                                 ]} />
+                        </Col>}
+
+                    {categoryChoose === 'Interest with capital' ? null :
+                        <Col span={24} md={12}>
+                            {/*
+                              Y/N toggle (Feb 2026). When unchecked, the
+                              periodic accrual job skips penalty entirely
+                              for this loan — interest still accrues.
+                              Sent as boolean `penalty_enabled` in the form
+                              payload.
+                            */}
+                            <div style={{ marginTop: 32, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <Form.Item
+                                    name="penalty_enabled"
+                                    valuePropName="checked"
+                                    initialValue={true}
+                                    style={{ margin: 0 }}
+                                >
+                                    <input type="checkbox" data-testid="penalty-enabled-checkbox" style={{ width: 18, height: 18 }} />
+                                </Form.Item>
+                                <label htmlFor="penalty-enabled-checkbox" style={{ fontWeight: 500 }}>
+                                    Apply penalty after due date
+                                </label>
+                            </div>
                         </Col>}
 
                     {categoryChoose === 'Installment Interest' ?

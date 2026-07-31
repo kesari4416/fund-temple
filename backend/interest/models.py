@@ -67,6 +67,10 @@ class PeopleInterestDetails(models.Model):
     penalty_percentage=models.DecimalField(max_digits=65,decimal_places=2,null=True,blank=True,default=0)
     penalty_type=models.CharField(max_length=255,choices=PENALTY_CHOICES,null=True,blank=True)
     penalty_amount=models.DecimalField(max_digits=65,decimal_places=2,null=True,blank=True,default=0)
+    # Owner-controlled toggle (Feb 2026). When False, the periodic
+    # accrual job skips penalty rows entirely for this loan — interest
+    # still accrues normally.
+    penalty_enabled=models.BooleanField(default=True,null=True,blank=True)
     
     nominee_apply=models.BooleanField(null=True)
     nominee_person_type=models.CharField(max_length=255,choices=NATIVE_CHOICES,null=True,blank=True)
