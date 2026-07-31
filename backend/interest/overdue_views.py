@@ -58,6 +58,14 @@ def _apply_for_record(record: PeopleInterestDetails) -> dict:
     except PeopleInterestBalanceSheet.DoesNotExist:
         return {"interest_id": record.id, "applied_months": [], "skipped": "no balance sheet"}
 
+    # Installment loans have their own cadence-aware handler:
+    # per owner rule (Feb 2026), the penalty for those loans is
+    # 3 % × installment_amt applied every installment period after
+    # the due date — weekly if interest_period_type = "week",
+    # monthly if "month", etc.
+    if (record.interest_category or "").lower() == "installment interest":
+        return _apply_for_installment(record, bal)
+
     today = datetime.date.today()
     applied = []
     y, m = _first_pending_month(record.interest_date, bal.interest_apply_date)
@@ -139,6 +147,109 @@ def _apply_for_record(record: PeopleInterestDetails) -> dict:
         if datetime.date(y, m, 5) > today:
             break
 
+    return {"interest_id": record.id, "applied_months": applied}
+
+
+def _installment_delta(record: PeopleInterestDetails):
+    """Timedelta between two installment due dates.
+
+    Reads `interest_period` (n) + `interest_period_type` (week / month /
+    days) from the loan and returns a `relativedelta`.  Defaults to a
+    monthly cadence when either is missing so legacy records still tick.
+    """
+    try:
+        period = int(record.interest_period or 1)
+    except (TypeError, ValueError):
+        period = 1
+    ptype = (record.interest_period_type or "month").lower()
+    if ptype in ("day", "days"):
+        return relativedelta(days=period)
+    if ptype in ("week", "weeks"):
+        return relativedelta(weeks=period)
+    return relativedelta(months=period)
+
+
+def _apply_for_installment(
+    record: PeopleInterestDetails, bal: PeopleInterestBalanceSheet
+) -> dict:
+    """Penalty accrual for Installment-Interest loans.
+
+    Rule (Feb 2026, per owner):
+        * Cadence follows `interest_period_type` (weekly / monthly).
+        * Every due date past today with UNPAID interest triggers one
+          penalty row of `installment_amt × penalty_amount%`
+          (default 3 %).  Base is the installment amount, NOT the
+          principal balance.
+        * Interest rows are NOT auto-created for installment loans —
+          they carry a fixed installment_amt schedule instead.
+    """
+    today = datetime.date.today()
+    applied = []
+
+    # Skip when owner has toggled penalty off for this loan.
+    penalty_on = True if record.penalty_enabled is None else bool(record.penalty_enabled)
+    if not penalty_on:
+        return {"interest_id": record.id, "applied_months": [], "skipped": "penalty disabled"}
+
+    start = record.interest_date
+    if not start:
+        return {"interest_id": record.id, "applied_months": [], "skipped": "no interest_date"}
+
+    delta = _installment_delta(record)
+    installment_amt = float(record.installment_amt or 0)
+    if installment_amt <= 0:
+        return {"interest_id": record.id, "applied_months": [], "skipped": "installment_amt missing"}
+
+    # Only apply penalty when unpaid interest exists on this loan
+    # (owner rule: penalty is gated on interest not being cleared).
+    if float(bal.intrest_balance_amt or 0) <= 0:
+        return {"interest_id": record.id, "applied_months": [], "skipped": "no unpaid interest"}
+
+    # Penalty per installment cycle: pct% × installment_amt.
+    if (record.penalty_type or "").lower() == "amount":
+        pen_per_cycle = float(record.penalty_amount or 0)
+    else:  # percentage (default 3 %)
+        pen_per_cycle = installment_amt * float(record.penalty_amount or 0) / 100.0
+    if pen_per_cycle <= 0:
+        return {"interest_id": record.id, "applied_months": [], "skipped": "penalty rate 0"}
+
+    # Walk every due date from `start + delta` to today. Skip cycles the
+    # borrower has already paid — `paid_counts` tracks how many
+    # installments were settled.
+    paid_counts = int(record.paid_counts or 0)
+    cycle = 1
+    due_date = start + delta
+    while due_date <= today:
+        # Cycles already paid do not receive a penalty row.
+        if cycle > paid_counts:
+            already = InterestPeopleReport.objects.filter(
+                interest=record,
+                reportdate=due_date,
+                type_choice="Penalty",
+            ).exists()
+            if not already:
+                bal.penalty_amt = float(bal.penalty_amt or 0) + pen_per_cycle
+                bal.penalty_balance_amt = float(bal.penalty_balance_amt or 0) + pen_per_cycle
+                bal.credit_amt = float(bal.credit_amt or 0) + pen_per_cycle
+                bal.balance_amt = float(bal.balance_amt or 0) + pen_per_cycle
+                bal.save()
+                InterestPeopleReport.objects.create(
+                    management_profile=record.management_profile,
+                    interest=record,
+                    reportdate=due_date,
+                    credit_amt=pen_per_cycle,
+                    balance_amt=bal.balance_amt,
+                    type_choice="Penalty",
+                    created_by=record.created_by,
+                )
+                applied.append({"due_date": due_date.isoformat(), "penalty": pen_per_cycle})
+
+        cycle += 1
+        due_date = start + (delta * cycle)
+
+    # Stamp the last processed due date so re-runs are cheap.
+    bal.interest_apply_date = start + (delta * (cycle - 1))
+    bal.save()
     return {"interest_id": record.id, "applied_months": applied}
 
 
