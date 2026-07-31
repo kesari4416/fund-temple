@@ -155,16 +155,23 @@ const ChitFundListView = () => {
         setFindIds(FindId)
     }, [AllDetails]);
 
-    // Per-investor Share Amount (matches the value shown on each member card).
-    // For settled investors, use the FROZEN share_amount. Otherwise show LIVE
-    // collected_share_amount (falling back to share_amount).
-    const getMemberShareAmount = (m) => {
-        const settled = m?.action === false || !!m?.application_date;
-        const val = settled
-            ? m?.share_amount ?? 0
-            : (m?.collected_share_amount ?? m?.share_amount ?? 0);
-        return Number(val) || 0;
+    // Per-member PROFIT SHARE — the slice of `profit_amount` each member
+    // (Management + every investor) is entitled to based on their
+    // share_count. Rule locked with owner:
+    //
+    //   Profit Amount = Σ Share Amount(Member 0..N)
+    //
+    // So EVERY card renders `profit × share_count / total_share_count`
+    // via this helper, guaranteeing the sum reconciles exactly.
+    const getProfitShare = (share_count) => {
+        const profit = Number(findIds?.profit_amount || 0);
+        const sc = Number(share_count || 0);
+        if (!totalShareCount) return 0;
+        const value = (profit * sc) / totalShareCount;
+        return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
     };
+
+    const getMemberShareAmount = (m) => getProfitShare(m?.share_count);
 
     // Per-investor PROFIT SHARE (the portion of profit_amount that each
     // investor receives, based on their share_count). This is what
@@ -431,16 +438,12 @@ const ChitFundListView = () => {
                                     <span>:</span>&nbsp;
                                     <span data-testid="member-0-share-amount">
                                       {/*
-                                        Management's Share Amount uses the same
-                                        LIVE-accumulated formula as regular
-                                        investors (collected_share_amount).
-                                        For Management that value is
-                                        Profit × management_share_count /
-                                        total_share_count — i.e., its slice
-                                        of the current profit pool. Computed
-                                        by `managementAmount` above.
+                                        Management's profit-share slice —
+                                        same formula as every investor card:
+                                        Profit × share_count / total_share_count.
+                                        Guarantees Σ Share Amount = Profit.
                                       */}
-                                      {Number(managementAmount || 0).toFixed(2)}
+                                      {getProfitShare(findIds?.management_share_count).toFixed(2)}
                                     </span>
                                   </div>
                                   <div className="info-row">
@@ -533,22 +536,15 @@ const ChitFundListView = () => {
                                                 <h3 className="info-label">Share Amount  </h3>
                                                 <span>:</span>&nbsp;
                                                 <span>
-                                                  {(() => {
-                                                    // If the investor is already settled
-                                                    // (application submitted -> action=false or
-                                                    // application_date is set), show the FROZEN
-                                                    // share_amount that was locked at settlement.
-                                                    // Otherwise show the LIVE collected_share_amount.
-                                                    const settled =
-                                                      find?.action === false ||
-                                                      !!find?.application_date;
-                                                    const value = settled
-                                                      ? find?.share_amount ?? 0
-                                                      : find?.collected_share_amount ??
-                                                        find?.share_amount ??
-                                                        0;
-                                                    return Number(value).toFixed(2);
-                                                  })()}
+                                                  {/*
+                                                    Profit-share slice per
+                                                    owner rule:
+                                                    Profit × share_count / total_share_count.
+                                                    Sum across Member 0..N
+                                                    reconciles exactly with
+                                                    Profit Amount.
+                                                  */}
+                                                  {getProfitShare(find?.share_count).toFixed(2)}
                                                 </span>
                                             </div>
 
