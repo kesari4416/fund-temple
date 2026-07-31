@@ -229,8 +229,12 @@ const ChitFundPendingBorrowersPage = () => {
           <strong>{d.count}</strong>
         </Stat>
         <Stat data-testid="pending-summary-principal">
-          <small>Total Principal + Interest</small>
+          <small>Total Principal</small>
           <strong>₹ {fmt(d.total_pending_principal)}</strong>
+        </Stat>
+        <Stat data-testid="pending-summary-interest">
+          <small>Total Interest</small>
+          <strong>₹ {fmt(d.total_pending_interest)}</strong>
         </Stat>
         <Stat data-testid="pending-summary-balance">
           <small>Total outstanding (incl. penalty)</small>
@@ -283,8 +287,10 @@ const ChitFundPendingBorrowersPage = () => {
                 <th>End</th>
                 <th className="num" onClick={() => toggleSort("weeks_from_start")} style={{ cursor: "pointer" }} title="Weeks since loan started">Weeks (start)</th>
                 <th className="num" onClick={() => toggleSort("weeks_from_last_payment")} style={{ cursor: "pointer" }} title="Weeks since the borrower's most recent payment (only starts counting after the first collection)">Weeks (since last pay)</th>
-                <th className="num" title="Principal + Interest">Principal + Interest</th>
-                <th className="num">Paid</th>
+                <th className="num" title="Principal only">Principal</th>
+                <th className="num">Principal paid</th>
+                <th className="num" title="Interest charged on the loan">Interest</th>
+                <th className="num">Interest paid</th>
                 <th className="num">Penalty bal</th>
                 <th className="num" onClick={() => toggleSort("balance_amt")} style={{ cursor: "pointer" }}>Balance</th>
                 <th>Action</th>
@@ -307,6 +313,8 @@ const ChitFundPendingBorrowersPage = () => {
                   <td className="num">{b.weeks_from_last_payment ?? "-"}</td>
                   <td className="num">₹ {fmt(b.principal_amt)}</td>
                   <td className="num">₹ {fmt(b.principal_paid)}</td>
+                  <td className="num">₹ {fmt(b.interest_amt)}</td>
+                  <td className="num">₹ {fmt(b.interest_paid)}</td>
                   <td className="num">₹ {fmt(b.penalty_balance_amt)}</td>
                   <td className="num bal" data-testid={`pending-borrowers-row-${b.id}-balance`}>
                     ₹ {fmt(b.balance_amt)}

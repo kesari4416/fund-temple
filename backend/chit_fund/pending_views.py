@@ -101,6 +101,7 @@ def chit_fund_pending_borrowers(request, chit_id: int):
     today = date.today()
     borrowers = []
     total_principal = 0.0
+    total_interest = 0.0
     total_balance = 0.0
     for b in rows:
         interest = b.interest
@@ -123,11 +124,12 @@ def chit_fund_pending_borrowers(request, chit_id: int):
                 end = None
 
         last_payment = b.updated_at.date() if b.updated_at else None
-        # TC_CHITFUND_004 — the "Principal Amount" shown in the pending
-        # sheet must equal Principal + Interest (total commitment on the
-        # loan, not just the money that went out). Paid and Balance are
-        # summed the same way so the three columns stay algebraically
-        # consistent (Principal + Interest − Paid = Balance).
+        # TC_CHITFUND_004 — per owner (Feb 2026), the pending sheet must
+        # show Principal and Interest in SEPARATE columns instead of a
+        # single combined "Principal + Interest" column. We therefore
+        # return the raw split values, and let the UI place them side by
+        # side. `total_pending_principal` now really means "total pending
+        # principal only" — the UI adds interest as its own subtotal.
         principal_only = float(b.principal_amt or 0)
         interest_charged = float(b.intrest_amt or 0)
         interest_paid = float(b.intrest_paid_amt or 0)
@@ -137,11 +139,8 @@ def chit_fund_pending_borrowers(request, chit_id: int):
         penalty_balance = float(b.penalty_balance_amt or 0)
         balance_amt = float(b.balance_amt or 0)
 
-        principal_plus_interest = principal_only + interest_charged
-        paid_plus_interest = principal_paid + interest_paid
-        balance_plus_interest = principal_balance + interest_balance
-
-        total_principal += principal_plus_interest
+        total_principal += principal_only
+        total_interest += interest_charged
         total_balance += balance_amt + penalty_balance
 
         borrowers.append({
@@ -162,16 +161,17 @@ def chit_fund_pending_borrowers(request, chit_id: int):
             # null and the UI renders '-').
             "weeks_from_start": _weeks_between(start, today),
             "weeks_from_last_payment": _weeks_between(last_payment, today),
-            # Combined values (Principal + Interest) — what the operator
-            # sees on the Pending sheet per TC_CHITFUND_004.
-            "principal_amt": round(principal_plus_interest, 2),
-            "principal_paid": round(paid_plus_interest, 2),
-            "principal_balance": round(balance_plus_interest, 2),
-            # Raw split still exposed for downstream reports/audit.
+            # Principal-only figures (was Principal+Interest until Feb 2026).
+            "principal_amt": round(principal_only, 2),
+            "principal_paid": round(principal_paid, 2),
+            "principal_balance": round(principal_balance, 2),
+            # Interest side (own column in the UI).
+            "interest_amt": round(interest_charged, 2),
+            "interest_paid": round(interest_paid, 2),
+            "interest_balance": round(interest_balance, 2),
+            # Raw fields still exposed for any downstream report.
             "principal_only": principal_only,
             "interest_charged": interest_charged,
-            "interest_paid": interest_paid,
-            "interest_balance": interest_balance,
             "penalty_balance_amt": penalty_balance,
             "balance_amt": balance_amt,
         })
@@ -183,6 +183,7 @@ def chit_fund_pending_borrowers(request, chit_id: int):
         "collected_principal_amount": float(chit.collected_principal_amount or 0),
         "count": len(borrowers),
         "total_pending_principal": round(total_principal, 2),
+        "total_pending_interest": round(total_interest, 2),
         "total_pending_balance": round(total_balance, 2),
         "borrowers": borrowers,
     })
