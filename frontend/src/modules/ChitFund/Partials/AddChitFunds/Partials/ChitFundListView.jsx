@@ -273,13 +273,9 @@ const ChitFundListView = () => {
                             <div className="info-row" data-testid="management-amount-row">
                                 <h3 className="info-label">Management Profit Share </h3>
                                 <span>:</span>&nbsp;
-                                <Tooltip
-                                    title={`Management's profit share = Profit × ${findIds?.management_share_count || 0} / ${totalShareCount || 0}. Investors' total profit share: ₹ ${investorsProfitShareTotal.toFixed(2)}`}
-                                >
-                                    <span style={{ fontWeight: 600, color: '#0F5132' }} data-testid="management-amount-value">
-                                        ₹ {managementAmount.toFixed(2)}
-                                    </span>
-                                </Tooltip>
+                                <span style={{ fontWeight: 600, color: '#0F5132' }} data-testid="management-amount-value">
+                                    ₹ {managementAmount.toFixed(2)}
+                                </span>
                             </div>
                         </Totalstyle>
                     </Col>
