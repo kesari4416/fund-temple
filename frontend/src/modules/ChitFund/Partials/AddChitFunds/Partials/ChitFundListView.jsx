@@ -201,20 +201,30 @@ const ChitFundListView = () => {
 
     const getMemberShareAmount = (m) => getProfitShare(m?.share_count);
 
-    // Per-investor PROFIT SHARE (the portion of profit_amount that each
-    // investor receives, based on their share_count). This is what
-    // reconciles with Management Amount so that:
-    //     Profit Amount = Σ Investor Profit Shares + Management Amount
-    // (whereas the displayed "Share Amount" on each card is the GROSS
-    // settlement value, i.e. their investment + their profit share.)
+    // Per-investor PROFIT SHARE — computed as a LITERAL SUM over every
+    // active investor row (not the aggregate `investers_share_count`
+    // column) so any data drift between the two is caught here.
+    // Formula matches owner spec exactly:
+    //     Σ Investor Profit Shares = Σ (profit × investor.share_count / total_share_count)
+    // and therefore:
+    //     Management Amount = Profit − Σ Investor Profit Shares
+    //                       = Profit × management_share_count / total_share_count   (equivalent)
     const totalShareCount = effectiveInvestersShareCount;
     const investorsProfitShareTotal = useMemo(() => {
         const profit = Number(findIds?.profit_amount || 0);
-        const investers = Number(findIds?.investers_share_count || 0);
         if (!totalShareCount) return 0;
-        const value = (profit * investers) / totalShareCount;
-        return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
-    }, [findIds?.profit_amount, findIds?.investers_share_count, totalShareCount]);
+        // Literal per-investor sum from the actual investor list.
+        const perInvestorSum = (Array.isArray(MemDetails) ? MemDetails : [])
+            .filter((inv) => inv?.action !== false)   // ignore inactive rows
+            .reduce((acc, inv) => acc + (profit * Number(inv?.share_count || 0)) / totalShareCount, 0);
+        // Defensive fallback: if the investor list hasn't loaded yet,
+        // use the aggregate column so the row is never blank.
+        if (!perInvestorSum && findIds?.investers_share_count) {
+            const fallback = (profit * Number(findIds?.investers_share_count || 0)) / totalShareCount;
+            return Number.isFinite(fallback) ? Number(fallback.toFixed(2)) : 0;
+        }
+        return Number.isFinite(perInvestorSum) ? Number(perInvestorSum.toFixed(2)) : 0;
+    }, [findIds?.profit_amount, findIds?.investers_share_count, totalShareCount, MemDetails]);
 
     // Management Amount = Profit Amount − Σ (Profit Share of each investor member)
     // Equivalently: profit_amount × management_share_count / total_share_count.
