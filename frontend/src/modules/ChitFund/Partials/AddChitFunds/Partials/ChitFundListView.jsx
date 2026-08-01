@@ -197,12 +197,18 @@ const ChitFundListView = () => {
     // ======================================================================
     const totalShareCount = effectiveInvestersShareCount;
 
+    // NOTE: The backend field is `set_profit_percent` (see chit_fund/models.py
+    // and serializers). The previous alias `management_profit_precent` did not
+    // exist on the API payload, so `pct` was always 0 -> Management Profit
+    // Share came out as 0 and every member share was inflated to a slice of
+    // the full profit instead of the 90 % remainder. Reading the correct
+    // field fixes the entire Step 1 → Step 3 chain.
     const managementAmount = useMemo(() => {
         const profit = Number(findIds?.profit_amount || 0);
-        const pct = Number(findIds?.management_profit_precent || 0);
+        const pct = Number(findIds?.set_profit_percent || 0);
         const v = (profit * pct) / 100;
         return Number.isFinite(v) ? Number(v.toFixed(2)) : 0;
-    }, [findIds?.profit_amount, findIds?.management_profit_precent]);
+    }, [findIds?.profit_amount, findIds?.set_profit_percent]);
 
     const remainingAmount = useMemo(() => {
         const profit = Number(findIds?.profit_amount || 0);
@@ -323,6 +329,30 @@ const ChitFundListView = () => {
                                 <span>:</span>&nbsp;
                                 <span style={{ fontWeight: 600 }} data-testid="remaining-amount-value">
                                     ₹ {remainingAmount.toFixed(2)}
+                                </span>
+                            </div>
+                            {/*
+                              Step-3 reconciliation banner.
+                              Green when Σ (Member share amounts, incl. Member 0
+                              Management) + Management Profit Share == Profit
+                              (within a 1-paisa rounding tolerance). Red when
+                              the totals drift — indicates a data-entry issue
+                              on chit_fund_chitfundsdetails (share counts,
+                              profit amount, set_profit_percent).
+                            */}
+                            <div className="info-row" data-testid="reconciliation-row">
+                                <h3 className="info-label">Verification (Σ Members + Mgmt) </h3>
+                                <span>:</span>&nbsp;
+                                <span
+                                    data-testid="reconciliation-value"
+                                    style={{
+                                        fontWeight: 700,
+                                        color: Math.abs(reconciliationDelta) < 0.02 ? '#0F5132' : '#b91c1c',
+                                    }}
+                                >
+                                    {Math.abs(reconciliationDelta) < 0.02
+                                        ? `✓ Matches Profit ₹ ${Number(findIds?.profit_amount || 0).toFixed(2)}`
+                                        : `✗ Off by ₹ ${reconciliationDelta.toFixed(2)} — check DB data entry`}
                                 </span>
                             </div>
                         </Totalstyle>
