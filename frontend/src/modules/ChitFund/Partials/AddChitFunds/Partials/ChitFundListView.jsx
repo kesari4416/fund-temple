@@ -331,30 +331,6 @@ const ChitFundListView = () => {
                                     ₹ {remainingAmount.toFixed(2)}
                                 </span>
                             </div>
-                            {/*
-                              Step-3 reconciliation banner.
-                              Green when Σ (Member share amounts, incl. Member 0
-                              Management) + Management Profit Share == Profit
-                              (within a 1-paisa rounding tolerance). Red when
-                              the totals drift — indicates a data-entry issue
-                              on chit_fund_chitfundsdetails (share counts,
-                              profit amount, set_profit_percent).
-                            */}
-                            <div className="info-row" data-testid="reconciliation-row">
-                                <h3 className="info-label">Verification (Σ Members + Mgmt) </h3>
-                                <span>:</span>&nbsp;
-                                <span
-                                    data-testid="reconciliation-value"
-                                    style={{
-                                        fontWeight: 700,
-                                        color: Math.abs(reconciliationDelta) < 0.02 ? '#0F5132' : '#b91c1c',
-                                    }}
-                                >
-                                    {Math.abs(reconciliationDelta) < 0.02
-                                        ? `✓ Matches Profit ₹ ${Number(findIds?.profit_amount || 0).toFixed(2)}`
-                                        : `✗ Off by ₹ ${reconciliationDelta.toFixed(2)} — check DB data entry`}
-                                </span>
-                            </div>
                         </Totalstyle>
                     </Col>
                     <Col span={24} md={12}>
