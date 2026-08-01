@@ -240,21 +240,21 @@ def public_member_statement_pdf(request, token: str):
     # LAST report row that predates the 1-year window. Previously we
     # seeded `prev_balance = 0` which made the first Pre-Balance column
     # falsely read 0.00 even when the member had years of history behind
-    # them (making credits look like they *reduced* balance into
-    # negative territory). Now the ledger tells the full story:
-    #    Pre Balance → Credit → Debit → New Balance   is arithmetically
-    # correct on every row, and negative balances only appear when the
-    # member has genuinely overpaid.
+    # them. Owner rule (Aug 2026): the STATEMENT MUST NEVER SHOW A
+    # NEGATIVE BALANCE — historical overpayments are hidden from the
+    # printable report (they only make sense internally). We therefore
+    # clamp any negative carry-over to 0.
     prev_report_before_window = (
         TempleMemberReport.objects
         .filter(members=member, reportdate__lt=since)
         .order_by("reportdate", "created_at", "id")
         .last()
     )
-    opening_balance = (
+    raw_opening_balance = (
         float(prev_report_before_window.balance_amt or 0)
         if prev_report_before_window else 0.0
     )
+    opening_balance = max(raw_opening_balance, 0.0)
 
     bs_rows = []
     total_credit = 0.0
@@ -286,10 +286,14 @@ def public_member_statement_pdf(request, token: str):
             "date": r.reportdate.isoformat() if r.reportdate else "-",
             "particulars": particulars,
             "name": name or "-",
-            "pre_balance": prev_balance,
+            # Owner rule (Aug 2026): never expose a negative running
+            # balance on the printable statement. Historical overpayments
+            # are hidden from the display; internal ledger math is
+            # unaffected.
+            "pre_balance": max(prev_balance, 0.0),
             "credit": credit,
             "debit": debit,
-            "balance": balance,
+            "balance": max(balance, 0.0),
         })
         total_credit += credit
         total_debit += debit
@@ -309,6 +313,9 @@ def public_member_statement_pdf(request, token: str):
         .last()
     )
     total_pending_portal = float(last_report.balance_amt or 0) if last_report else 0.0
+    # Owner rule (Aug 2026): never surface a negative pending balance on
+    # the printable statement — overpayments are hidden from members.
+    total_pending_portal = max(total_pending_portal, 0.0)
 
     # Category-scoped pending (for the highlighted chip beneath the receipt)
     full_pending = _serialize_pending(member) or {}
