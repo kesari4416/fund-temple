@@ -235,10 +235,31 @@ def public_member_statement_pdf(request, token: str):
         .select_related("sub_tariff", "festivals", "marriage", "death_tariff", "collection")
         .order_by("reportdate", "created_at", "id")
     )
+
+    # Carry-forward opening balance — pick up the running balance from the
+    # LAST report row that predates the 1-year window. Previously we
+    # seeded `prev_balance = 0` which made the first Pre-Balance column
+    # falsely read 0.00 even when the member had years of history behind
+    # them (making credits look like they *reduced* balance into
+    # negative territory). Now the ledger tells the full story:
+    #    Pre Balance → Credit → Debit → New Balance   is arithmetically
+    # correct on every row, and negative balances only appear when the
+    # member has genuinely overpaid.
+    prev_report_before_window = (
+        TempleMemberReport.objects
+        .filter(members=member, reportdate__lt=since)
+        .order_by("reportdate", "created_at", "id")
+        .last()
+    )
+    opening_balance = (
+        float(prev_report_before_window.balance_amt or 0)
+        if prev_report_before_window else 0.0
+    )
+
     bs_rows = []
     total_credit = 0.0
     total_debit = 0.0
-    prev_balance = 0.0
+    prev_balance = opening_balance
     for idx, r in enumerate(reports, start=1):
         credit = float(r.credit_amt or 0)
         debit = float(r.debit_amt or 0)
@@ -420,6 +441,21 @@ def public_member_statement_pdf(request, token: str):
     else:
         headers = ["Sl", "Date", "Particulars", "Name", "Pre Balance", "Credit", "Debit", "Balance"]
         data = [headers]
+        # If the member carries an opening balance from BEFORE this
+        # 1-year window, surface it as row 0 so operators see where the
+        # first-visible-row's balance came from (avoids the "why is
+        # balance −₹2,425 after a ₹100 credit?" confusion).
+        if abs(opening_balance) > 0.005:
+            data.append([
+                "0",
+                since.strftime("%Y-%m-%d"),
+                "Opening Balance",
+                "brought forward",
+                f"{0.0:,.2f}",
+                f"{0.0:,.2f}",
+                f"{0.0:,.2f}",
+                f"{opening_balance:,.2f}",
+            ])
         for r in bs_rows:
             data.append([
                 str(r["sl"]),
