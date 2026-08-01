@@ -183,66 +183,69 @@ const ChitFundListView = () => {
         setFindIds(FindId)
     }, [AllDetails]);
 
-    // Per-member PROFIT SHARE — the slice of `profit_amount` each member
-    // (Management + every investor) is entitled to based on their
-    // share_count. Rule locked with owner:
+    // ======================================================================
+    // NEW MANAGEMENT-AMOUNT RULE (locked with owner, Aug 2026)
+    //   Step 1: Management Profit Share = Profit × management_profit_precent%
+    //           Remaining Amount        = Profit − Management Profit Share
+    //   Step 2: Every member's Share Amount (Member 0 == Management + all
+    //           investors) = (Remaining × member.share_count) / Investers Share Count
+    //           where "Investers Share Count" is the effective count shown
+    //           on the page = management_share_count + investers_share_count
+    //   Step 3: Σ Members + Management Profit Share = Profit Amount   (verified)
     //
-    //   Profit Amount = Σ Share Amount(Member 0..N)
-    //
-    // So EVERY card renders `profit × share_count / total_share_count`
-    // via this helper, guaranteeing the sum reconciles exactly.
-    const getProfitShare = (share_count) => {
+    // The old (`Profit × share_count / total`) helper is replaced below.
+    // ======================================================================
+    const totalShareCount = effectiveInvestersShareCount;
+
+    const managementAmount = useMemo(() => {
         const profit = Number(findIds?.profit_amount || 0);
+        const pct = Number(findIds?.management_profit_precent || 0);
+        const v = (profit * pct) / 100;
+        return Number.isFinite(v) ? Number(v.toFixed(2)) : 0;
+    }, [findIds?.profit_amount, findIds?.management_profit_precent]);
+
+    const remainingAmount = useMemo(() => {
+        const profit = Number(findIds?.profit_amount || 0);
+        const v = profit - managementAmount;
+        return Number.isFinite(v) ? Number(v.toFixed(2)) : 0;
+    }, [findIds?.profit_amount, managementAmount]);
+
+    // Per-member share amount uses REMAINING (not profit) as the pool and
+    // divides by the "Investers Share Count" displayed on the page.
+    const getProfitShare = (share_count) => {
         const sc = Number(share_count || 0);
         if (!totalShareCount) return 0;
-        const value = (profit * sc) / totalShareCount;
+        const value = (remainingAmount * sc) / totalShareCount;
         return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
     };
 
     const getMemberShareAmount = (m) => getProfitShare(m?.share_count);
 
-    // Per-investor PROFIT SHARE — computed as a LITERAL SUM over every
-    // active investor row (not the aggregate `investers_share_count`
-    // column) so any data drift between the two is caught here.
-    // Formula matches owner spec exactly:
-    //     Σ Investor Profit Shares = Σ (profit × investor.share_count / total_share_count)
-    // and therefore:
-    //     Management Amount = Profit − Σ Investor Profit Shares
-    //                       = Profit × management_share_count / total_share_count   (equivalent)
-    const totalShareCount = effectiveInvestersShareCount;
+    // Kept for backward-compat with any other card that reads it.
+    // Now equals `Σ (remaining × investor.share_count / total)` over
+    // *active investor* rows only — i.e., Remaining × (investers_share_count / total).
     const investorsProfitShareTotal = useMemo(() => {
-        const profit = Number(findIds?.profit_amount || 0);
         if (!totalShareCount) return 0;
-        // Literal per-investor sum from the actual investor list.
         const perInvestorSum = (Array.isArray(MemDetails) ? MemDetails : [])
-            .filter((inv) => inv?.action !== false)   // ignore inactive rows
-            .reduce((acc, inv) => acc + (profit * Number(inv?.share_count || 0)) / totalShareCount, 0);
-        // Defensive fallback: if the investor list hasn't loaded yet,
-        // use the aggregate column so the row is never blank.
+            .filter((inv) => inv?.action !== false)
+            .reduce((acc, inv) => acc + (remainingAmount * Number(inv?.share_count || 0)) / totalShareCount, 0);
         if (!perInvestorSum && findIds?.investers_share_count) {
-            const fallback = (profit * Number(findIds?.investers_share_count || 0)) / totalShareCount;
+            const fallback = (remainingAmount * Number(findIds?.investers_share_count || 0)) / totalShareCount;
             return Number.isFinite(fallback) ? Number(fallback.toFixed(2)) : 0;
         }
         return Number.isFinite(perInvestorSum) ? Number(perInvestorSum.toFixed(2)) : 0;
-    }, [findIds?.profit_amount, findIds?.investers_share_count, totalShareCount, MemDetails]);
+    }, [remainingAmount, findIds?.investers_share_count, totalShareCount, MemDetails]);
 
-    // Management Amount = Profit Amount − Σ (Profit Share of each investor member)
-    // Equivalently: profit_amount × management_share_count / total_share_count.
-    // Sum-check enforced below via `reconciliationDelta` so any rounding
-    // drift is surfaced to the operator instead of silently hidden.
-    const managementAmount = useMemo(() => {
-        const profit = Number(findIds?.profit_amount || 0);
-        const value = profit - investorsProfitShareTotal;
-        return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
-    }, [findIds?.profit_amount, investorsProfitShareTotal]);
-
-    // Reconciliation: (Σ Investor Profit Shares + Management Amount) − Profit.
-    // Should be ≈ 0. Anything above ₹1 indicates a data issue and is shown
-    // to the operator as a red warning.
+    // Reconciliation: (Σ Member Share Amounts + Management Profit Share) − Profit.
+    // Should be ≈ 0 (paisa rounding). Any drift means data-entry issue.
     const reconciliationDelta = useMemo(() => {
         const profit = Number(findIds?.profit_amount || 0);
-        return Number((investorsProfitShareTotal + managementAmount - profit).toFixed(2));
-    }, [findIds?.profit_amount, investorsProfitShareTotal, managementAmount]);
+        const sumMembers = (Array.isArray(MemDetails) ? MemDetails : [])
+            .filter((inv) => inv?.action !== false)
+            .reduce((acc, inv) => acc + getMemberShareAmount(inv), 0);
+        const mgmtMemberShare = getProfitShare(findIds?.management_share_count);
+        return Number((sumMembers + mgmtMemberShare + managementAmount - profit).toFixed(2));
+    }, [findIds?.profit_amount, findIds?.management_share_count, MemDetails, managementAmount, remainingAmount, totalShareCount]);
 
     const handlebondClick = (values) => {
         setModelwith(900)
@@ -313,6 +316,13 @@ const ChitFundListView = () => {
                                 <span>:</span>&nbsp;
                                 <span style={{ fontWeight: 600, color: '#0F5132' }} data-testid="management-amount-value">
                                     ₹ {managementAmount.toFixed(2)}
+                                </span>
+                            </div>
+                            <div className="info-row" data-testid="remaining-amount-row">
+                                <h3 className="info-label">Remaining Amount </h3>
+                                <span>:</span>&nbsp;
+                                <span style={{ fontWeight: 600 }} data-testid="remaining-amount-value">
+                                    ₹ {remainingAmount.toFixed(2)}
                                 </span>
                             </div>
                         </Totalstyle>
