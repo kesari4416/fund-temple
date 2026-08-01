@@ -71,7 +71,17 @@ export const InterestTabSheet = ({ManagementProfile}) => {
         },
         {
             title: 'Balance',
-            dataIndex: 'balance_amt'
+            dataIndex: 'balance_amt',
+            // Clamp any negative running balance to 0 for display only.
+            // A negative value means the borrower over-paid vs. the ledger's
+            // running total; per owner rule the customer-facing sheet must
+            // never show negatives (same policy as the 1-Year PDF Balance
+            // Sheet). Underlying `balance_amt` in the DB is untouched.
+            render: (value) => {
+                const n = Number(value ?? 0);
+                if (!Number.isFinite(n) || n < 0) return '0.00';
+                return n.toFixed(2);
+            },
         },
 
     ]
