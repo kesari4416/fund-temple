@@ -693,14 +693,26 @@ export const Interest = ({ RecordData, ClosUpdaForm, manageTrigger }) => {
         formData.append('fix_interest_rate_percent', data?.fix_interest_rate_percent);
         formData.append('interest_type_new', data?.interest_type_new);
         formData.append('interest_amt', categoryChoose === "Installment Interest" ? (boxChecked ? data?.installment_amt : data?.interest_amt) : data?.interest_amt);
-        formData.append('penalty_amount', data?.penalty_amount || 0);
+        // Penalty rate is now a fixed 3 % (see initialValues). We keep
+        // the payload contract intact so the backend serializer / overdue
+        // job continue to read `penalty_amount` and `penalty_type` as
+        // before.
+        formData.append('penalty_amount', data?.penalty_amount || 3);
 
         if (data?.penalty_type === undefined) {
             console.log('penaltyType');
+            formData.append('penalty_type', 'percentage');
         }
         else {
             formData.append('penalty_type', data?.penalty_type);
         }
+        // Apply-Penalty toggle — only relevant for Installment-Interest
+        // records but always submitted (defaults to true) so re-saves of
+        // legacy records keep the previous behaviour.
+        formData.append(
+            'penalty_enabled',
+            data?.penalty_enabled === false ? 'false' : 'true'
+        );
         // formData.append('interest_period', data?.interest_period === undefined ? null : data?.interest_period);
         // formData.append('interest_period_type', data?.interest_period_type === undefined ? null : data?.interest_period_type);
         // formData.append('apply_first_interest', data?.apply_first_interest === undefined ? 'fasle' : data?.apply_first_interest);
@@ -904,6 +916,10 @@ export const Interest = ({ RecordData, ClosUpdaForm, manageTrigger }) => {
                 // fields stay editable so the operator can override.
                 penalty_amount: 3,
                 penalty_type: 'percentage',
+                // Apply Penalty checkbox — checked by default for new
+                // Installment-Interest records. When unchecked the
+                // overdue penalty accrual is skipped for this loan.
+                penalty_enabled: true,
             }}
         >
             <CustomCardView>
@@ -1116,32 +1132,16 @@ export const Interest = ({ RecordData, ClosUpdaForm, manageTrigger }) => {
                             suffix={'₹'} />
                     </Col>
 
-                    {categoryChoose === 'Interest with capital' ? null :
-                        <Col span={24} md={12}>
-                            <CustomInputNumber addonAfter={SelectSide} label={'Penalty'}
-                                onChange={handlePenalty}
-                                name={'penalty_amount'} rules={[
-                                    {
-                                        required: true,
-                                        message: 'This is Required Field!',
-                                    },
-                                    {
-                                        validator: (_, value) => {
-                                            if (
-                                                penalty === 'percentage' &&
-                                                value !== undefined &&
-                                                value !== null &&
-                                                Number(value) > 100
-                                            ) {
-                                                return Promise.reject(
-                                                    new Error('Penalty percentage cannot exceed 100%')
-                                                );
-                                            }
-                                            return Promise.resolve();
-                                        },
-                                    },
-                                ]} />
-                        </Col>}
+                    {/*
+                      Penalty input removed (Feb 2026). Prior to this the form
+                      exposed a manual "Penalty" number field + %/₹ selector
+                      (`penalty_amount` + `penalty_type`). Per owner rule the
+                      penalty is now a fixed 3 % applied automatically to every
+                      *overdue installment* — turned on via the "Apply
+                      Penalty" checkbox inside the Installment-Interest block
+                      below. `penalty_amount` and `penalty_type` are still
+                      submitted (3 / 'percentage') for backend compatibility.
+                    */}
 
                     {categoryChoose === 'Installment Interest' ?
                         <>
@@ -1169,6 +1169,23 @@ export const Interest = ({ RecordData, ClosUpdaForm, manageTrigger }) => {
                             </Col>
                             <Col span={24} md={12}>
                                 <CustomInputNumber label={'Installment Amt'} name={'installment_amt'} disabled
+                                />
+                            </Col>
+                            <Col span={24} md={12}>
+                                {/*
+                                  Apply Penalty checkbox — Installment Interest only.
+                                  Default: CHECKED (see initialValues -> penalty_enabled:true).
+                                  When checked: backend applies 3 % of installment_amt
+                                    for every missed due date after the schedule
+                                    date (see `overdue_views._apply_for_installment`).
+                                  When unchecked: `penalty_enabled=false` is saved and
+                                    the overdue job skips this loan entirely
+                                    ("skipped: penalty disabled").
+                                */}
+                                <CustomCheckBox
+                                    label={'Apply Penalty (3% × missed due dates)'}
+                                    name={'penalty_enabled'}
+                                    onChange={() => { }}
                                 />
                             </Col>
                         </> : null}
