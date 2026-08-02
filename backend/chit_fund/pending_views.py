@@ -194,9 +194,19 @@ def chit_fund_pending_borrowers(request, chit_id: int):
         penalty_balance_acc = float(b.penalty_balance_amt or 0)  # ledger accumulated
         ledger_balance_amt = float(b.balance_amt or 0)
 
+        # Owner rule (Feb 2026):
+        #   * Hide fully-settled borrowers (balance_derived == 0) from
+        #     the "Pending borrowers" list.
+        #   * "Total outstanding" summary card = Σ balance_derived
+        #     across the visible rows (so the header math reconciles
+        #     with what the user actually sees).
+        if round(balance_derived, 2) == 0.0:
+            # Skip — nothing pending for this borrower any more.
+            continue
+
         total_principal += principal_col_value
         total_interest += interest_col_value
-        total_balance += ledger_balance_amt + penalty_balance_acc
+        total_balance += balance_derived
 
         borrowers.append({
             "id": b.id,

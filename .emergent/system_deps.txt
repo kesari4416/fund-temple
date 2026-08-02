@@ -3,4 +3,3 @@ libmariadb-dev=1:10.11.18-0+deb12u1
 libmariadb3=1:10.11.18-0+deb12u1
 mariadb-client=1:10.11.18-0+deb12u1
 mariadb-server=1:10.11.18-0+deb12u1
-pkg-config=1.8.1-1
