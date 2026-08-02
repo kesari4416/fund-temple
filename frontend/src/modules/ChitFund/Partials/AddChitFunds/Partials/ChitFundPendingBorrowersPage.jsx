@@ -288,10 +288,10 @@ const ChitFundPendingBorrowersPage = () => {
                 <th className="num" onClick={() => toggleSort("weeks_from_start")} style={{ cursor: "pointer" }} title="Weeks since loan started">Weeks (start)</th>
                 <th className="num" onClick={() => toggleSort("weeks_from_last_payment")} style={{ cursor: "pointer" }} title="Weeks since the borrower's most recent payment (only starts counting after the first collection)">Weeks (since last pay)</th>
                 <th className="num" title="Principal only">Principal</th>
-                <th className="num">Principal paid</th>
+                <th className="num" title="From interest master: final_amt_given">Final amount given</th>
                 <th className="num" title="Interest charged on the loan">Interest</th>
                 <th className="num">Interest paid</th>
-                <th className="num">Penalty bal</th>
+                <th className="num" title="Per-cycle penalty amount (installment_amt × penalty %)">Penalty bal</th>
                 <th className="num" onClick={() => toggleSort("balance_amt")} style={{ cursor: "pointer" }}>Balance</th>
                 <th>Action</th>
               </tr>
@@ -312,7 +312,7 @@ const ChitFundPendingBorrowersPage = () => {
                   <td className="num">{b.weeks_from_start ?? "-"}</td>
                   <td className="num">{b.weeks_from_last_payment ?? "-"}</td>
                   <td className="num">₹ {fmt(b.principal_amt)}</td>
-                  <td className="num">₹ {fmt(b.principal_paid)}</td>
+                  <td className="num">₹ {fmt(b.final_amt_given)}</td>
                   <td className="num">₹ {fmt(b.interest_amt)}</td>
                   <td className="num">₹ {fmt(b.interest_paid)}</td>
                   <td className="num">₹ {fmt(b.penalty_balance_amt)}</td>
