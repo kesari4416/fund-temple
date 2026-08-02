@@ -284,15 +284,14 @@ const ChitFundPendingBorrowersPage = () => {
                 <th onClick={() => toggleSort("name")} style={{ cursor: "pointer" }}>Borrower ▲▼</th>
                 <th>Interest type</th>
                 <th onClick={() => toggleSort("start_date")} style={{ cursor: "pointer" }}>Start</th>
-                <th>End</th>
                 <th className="num" onClick={() => toggleSort("weeks_from_start")} style={{ cursor: "pointer" }} title="Weeks since loan started">Weeks (start)</th>
                 <th className="num" onClick={() => toggleSort("weeks_from_last_payment")} style={{ cursor: "pointer" }} title="Weeks since the borrower's most recent payment (only starts counting after the first collection)">Weeks (since last pay)</th>
-                <th className="num" title="Principal only">Principal</th>
+                <th className="num" title="Principal + Interest from interest master">Principal+Interest</th>
                 <th className="num" title="From interest master: final_amt_given">Final amount given</th>
                 <th className="num" title="Interest charged on the loan">Interest</th>
-                <th className="num">Interest paid</th>
-                <th className="num" title="Per-cycle penalty amount (installment_amt × penalty %)">Penalty bal</th>
-                <th className="num" onClick={() => toggleSort("balance_amt")} style={{ cursor: "pointer" }}>Balance</th>
+                <th className="num" title="installment_amt × paid_counts">Interest paid</th>
+                <th className="num" title="Accumulated: missed_cycles × 3% × interest_amt">Penalty bal</th>
+                <th className="num" onClick={() => toggleSort("balance_amt")} style={{ cursor: "pointer" }} title="0 when nothing paid, else (Principal+Interest) − Interest Paid">Balance</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -308,7 +307,6 @@ const ChitFundPendingBorrowersPage = () => {
                   </td>
                   <td>{b.interest_type || "-"}</td>
                   <td>{b.start_date || "-"}</td>
-                  <td>{b.end_date || "-"}</td>
                   <td className="num">{b.weeks_from_start ?? "-"}</td>
                   <td className="num">{b.weeks_from_last_payment ?? "-"}</td>
                   <td className="num">₹ {fmt(b.principal_amt)}</td>
