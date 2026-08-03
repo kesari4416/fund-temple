@@ -282,16 +282,18 @@ const ChitFundPendingBorrowersPage = () => {
               <tr>
                 <th>#</th>
                 <th onClick={() => toggleSort("name")} style={{ cursor: "pointer" }}>Borrower ▲▼</th>
-                <th>Interest type</th>
                 <th onClick={() => toggleSort("start_date")} style={{ cursor: "pointer" }}>Start</th>
                 <th className="num" onClick={() => toggleSort("weeks_from_start")} style={{ cursor: "pointer" }} title="Weeks since loan started">Weeks (start)</th>
-                <th className="num" onClick={() => toggleSort("weeks_from_last_payment")} style={{ cursor: "pointer" }} title="Weeks since the borrower's most recent payment (only starts counting after the first collection)">Weeks (since last pay)</th>
-                <th className="num" title="Principal + Interest from interest master">Principal+Interest</th>
-                <th className="num" title="From interest master: final_amt_given">Final amount given</th>
-                <th className="num" title="Interest charged on the loan">Interest</th>
-                <th className="num" title="installment_amt × paid_counts">Interest paid</th>
-                <th className="num" title="Accumulated: missed_cycles × 3% × interest_amt">Penalty bal</th>
-                <th className="num" onClick={() => toggleSort("balance_amt")} style={{ cursor: "pointer" }} title="0 when nothing paid, else (Principal+Interest) − Interest Paid">Balance</th>
+                <th className="num" onClick={() => toggleSort("weeks_from_last_payment")} style={{ cursor: "pointer" }} title="Weeks since the borrower's most recent payment">Weeks (since last pay)</th>
+                <th className="num" title="balancesheet.principal_amt">Principal</th>
+                <th className="num" title="balancesheet.principal_paid">Paid principal</th>
+                <th className="num" title="balancesheet.principal_balance">Principal Balance</th>
+                <th className="num" title="balancesheet.intrest_amt">Interest</th>
+                <th className="num" title="balancesheet.intrest_paid_amt">Interest paid</th>
+                <th className="num" title="balancesheet.intrest_balance_amt">Interest Balance</th>
+                <th className="num" title="balancesheet.penalty_amt">Penalty</th>
+                <th className="num" title="balancesheet.penalty_balance_amt">Penalty bal</th>
+                <th className="num" onClick={() => toggleSort("total_balance")} style={{ cursor: "pointer" }} title="principal_balance + intrest_balance_amt + penalty_balance_amt">Total Balance</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -305,17 +307,19 @@ const ChitFundPendingBorrowersPage = () => {
                       <div style={{ fontSize: 11, color: "#64748b" }}>{b.mobile}</div>
                     ) : null}
                   </td>
-                  <td>{b.interest_type || "-"}</td>
                   <td>{b.start_date || "-"}</td>
                   <td className="num">{b.weeks_from_start ?? "-"}</td>
                   <td className="num">{b.weeks_from_last_payment ?? "-"}</td>
                   <td className="num">₹ {fmt(b.principal_amt)}</td>
-                  <td className="num">₹ {fmt(b.final_amt_given)}</td>
+                  <td className="num">₹ {fmt(b.principal_paid)}</td>
+                  <td className="num">₹ {fmt(b.principal_balance)}</td>
                   <td className="num">₹ {fmt(b.interest_amt)}</td>
                   <td className="num">₹ {fmt(b.interest_paid)}</td>
+                  <td className="num">₹ {fmt(b.interest_balance)}</td>
+                  <td className="num">₹ {fmt(b.penalty_amt)}</td>
                   <td className="num">₹ {fmt(b.penalty_balance_amt)}</td>
                   <td className="num bal" data-testid={`pending-borrowers-row-${b.id}-balance`}>
-                    ₹ {fmt(b.balance_amt)}
+                    ₹ {fmt(b.total_balance)}
                   </td>
                   <td>
                     <button
@@ -340,6 +344,30 @@ const ChitFundPendingBorrowersPage = () => {
                 </tr>
               ))}
             </tbody>
+            {/*
+              Grand-total footer — sums Cols 7-15 across every borrower
+              currently in the list. Sourced from d.totals which the
+              backend computes over the same filtered rows.
+            */}
+            {d.totals ? (
+              <tfoot data-testid="pending-borrowers-grand-total">
+                <tr style={{ background: "#fee2e2", fontWeight: 700 }}>
+                  <td colSpan={5} style={{ textAlign: "right" }}>Grand Total</td>
+                  <td className="num">₹ {fmt(d.totals.principal_amt)}</td>
+                  <td className="num">₹ {fmt(d.totals.principal_paid)}</td>
+                  <td className="num">₹ {fmt(d.totals.principal_balance)}</td>
+                  <td className="num">₹ {fmt(d.totals.interest_amt)}</td>
+                  <td className="num">₹ {fmt(d.totals.interest_paid)}</td>
+                  <td className="num">₹ {fmt(d.totals.interest_balance)}</td>
+                  <td className="num">₹ {fmt(d.totals.penalty_amt)}</td>
+                  <td className="num">₹ {fmt(d.totals.penalty_balance_amt)}</td>
+                  <td className="num bal" data-testid="pending-borrowers-grand-total-value">
+                    ₹ {fmt(d.totals.total_balance)}
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            ) : null}
           </Table>
         )}
       </Card>

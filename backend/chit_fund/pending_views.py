@@ -100,146 +100,106 @@ def chit_fund_pending_borrowers(request, chit_id: int):
 
     today = date.today()
     borrowers = []
-    total_principal = 0.0
-    total_interest = 0.0
-    total_balance = 0.0
+    # Grand-total accumulators for Cols 7-15 (owner rule, Feb 2026).
+    tot_principal = 0.0
+    tot_principal_paid = 0.0
+    tot_principal_balance = 0.0
+    tot_interest = 0.0
+    tot_interest_paid = 0.0
+    tot_interest_balance = 0.0
+    tot_penalty = 0.0
+    tot_penalty_balance = 0.0
+    tot_total_balance = 0.0
+
     for b in rows:
         interest = b.interest
         # ------------------------------------------------------------------
-        # Owner-locked column-to-source map (Feb 2026) for the "Pending
-        # borrowers — <chit_name>" table on the "View details" screen:
+        # Owner-locked column map (Feb 2026 — v3):
+        # Every column is now sourced STRICTLY from
+        #   balancesheet_peopleinterestbalancesheet  (join .interest_id = interest.id)
+        # except Col 1 (Borrower name) which stays on interest master.
         #
-        #   Col 3  Start        <- balancesheet.interest_apply_date  (STRICT — no fallback)
-        #   Col 4  End          <- start + interest.interest_period      periods of
-        #                          interest.interest_period_type          {days|week|month}
-        #   Col 7  Principal    <- interest.principal_amt + interest.interest_amt
-        #   Col 8  Final amt    <- interest.final_amt_given          (renamed column)
-        #   Col 9  Interest     <- interest.interest_amt             (from master, NOT balance sheet)
-        #   Col 10 Interest paid<- balancesheet.intrest_paid_amt
-        #   Col 11 Penalty bal  <- per-cycle penalty amount, i.e.
-        #                          installment_amt × penalty_amount%  (or flat penalty_amount)
-        #                          (single cycle, NOT the accumulated balance)
+        #  Col 1  Borrower           <- interest.people_name
+        #  Col 2  (Interest type)    <- REMOVED
+        #  Col 3  Start              <- balancesheet.interest_apply_date
+        #  Col 7  Principal          <- balancesheet.principal_amt
+        #  Col 8  Paid principal     <- balancesheet.principal_paid
+        #  Col 9  Principal Balance  <- balancesheet.principal_balance
+        #  Col 10 Interest           <- balancesheet.intrest_amt
+        #  Col 11 Interest paid      <- balancesheet.intrest_paid_amt
+        #  Col 12 Interest Balance   <- balancesheet.intrest_balance_amt
+        #  Col 13 Penalty            <- balancesheet.penalty_amt
+        #  Col 14 Penalty bal        <- balancesheet.penalty_balance_amt
+        #  Col 15 Total Balance      <- principal_balance + intrest_balance_amt
+        #                              + penalty_balance_amt  (per row)
+        #
+        # Row filter: hide borrowers with total_balance = 0 (owner rule).
         # ------------------------------------------------------------------
 
-        # Start: STRICT — read only from balance sheet, no fallback to
-        # interest_date. If the balance sheet has no apply-date the cell
-        # renders '-' in the UI (owner directive).
         start = b.interest_apply_date
-
-        # End: interest_apply_date + interest_period (of the given
-        # period type). Falls back to null when either is missing.
-        end = None
-        if start and interest and interest.interest_period:
-            try:
-                from dateutil.relativedelta import relativedelta
-                p = int(interest.interest_period)
-                t = (interest.interest_period_type or "").lower()
-                if t == "days":
-                    end = start + relativedelta(days=p)
-                elif t == "week":
-                    end = start + relativedelta(weeks=p)
-                elif t == "month":
-                    end = start + relativedelta(months=p)
-            except Exception:
-                end = None
-
         last_payment = b.updated_at.date() if b.updated_at else None
-        # Column-mapped values from the interest master record:
-        principal_master = float(interest.principal_amt or 0) if interest else 0.0
-        interest_master = float(interest.interest_amt or 0) if interest else 0.0
-        # Col 7 "Principal+Interest" = principal_amt + interest_amt (owner rule).
-        principal_col_value = principal_master + interest_master
-        # Col 8 "Final amount given" (rename of legacy "Principal paid").
-        final_amt_given = float(interest.final_amt_given or 0) if interest else 0.0
-        # Col 9 "Interest" comes strictly from the interest master row.
-        interest_col_value = interest_master
 
-        # Col 10 "Interest Paid" = installment_amt × paid_counts (owner rule).
-        installment_amt_master = float(interest.installment_amt or 0) if interest else 0.0
-        paid_counts_master = int(interest.paid_counts or 0) if interest else 0
-        interest_paid = installment_amt_master * paid_counts_master
+        # Pull every column straight from the balance sheet row.
+        row_principal          = float(b.principal_amt or 0)
+        row_principal_paid     = float(b.principal_paid or 0)
+        row_principal_balance  = float(b.principal_balance or 0)
+        row_interest           = float(b.intrest_amt or 0)
+        row_interest_paid      = float(b.intrest_paid_amt or 0)
+        row_interest_balance   = float(b.intrest_balance_amt or 0)
+        row_penalty            = float(b.penalty_amt or 0)
+        row_penalty_balance    = float(b.penalty_balance_amt or 0)
+        # Col-15 Total Balance = principal_balance + intrest_balance + penalty_balance
+        row_total_balance = (
+            row_principal_balance + row_interest_balance + row_penalty_balance
+        )
 
-        # Derived Balance column per owner spec:
-        #   if Interest Paid == 0  -> balance = 0
-        #   else                   -> balance = (Principal+Interest) - Interest Paid
-        if interest_paid == 0:
-            balance_derived = 0.0
-        else:
-            balance_derived = principal_col_value - interest_paid
-
-        # Col 11 "Penalty bal" — accumulated:
-        #   cycles_elapsed = floor((today - start).days / period_days)
-        #   missed_cycles  = max(0, cycles_elapsed - paid_counts)
-        #   penalty_bal    = missed_cycles × 3 % × interest_amt
-        #                    (0 when penalty_enabled=False OR missed_cycles=0)
-        penalty_bal_accum = 0.0
-        if interest and start and interest.interest_period and interest.interest_period_type:
-            pen_on = True if interest.penalty_enabled is None else bool(interest.penalty_enabled)
-            if pen_on:
-                _period_days_by_unit = {"days": 1, "week": 7, "month": 30}
-                unit_days = _period_days_by_unit.get(
-                    (interest.interest_period_type or "").lower(), 30
-                )
-                period_days = unit_days * max(1, int(interest.interest_period or 1))
-                days_elapsed = (today - start).days
-                if days_elapsed > 0 and period_days > 0:
-                    cycles_elapsed = days_elapsed // period_days
-                    missed_cycles = max(0, cycles_elapsed - paid_counts_master)
-                    penalty_bal_accum = missed_cycles * 0.03 * interest_master
-
-        # Other ledger figures kept for downstream reports (unchanged).
-        principal_paid = float(b.principal_paid or 0)
-        principal_balance = float(b.principal_balance or 0)
-        interest_balance = float(b.intrest_balance_amt or 0)
-        penalty_balance_acc = float(b.penalty_balance_amt or 0)  # ledger accumulated
-        ledger_balance_amt = float(b.balance_amt or 0)
-
-        # Owner rule (Feb 2026):
-        #   * Hide fully-settled borrowers (balance_derived == 0) from
-        #     the "Pending borrowers" list.
-        #   * "Total outstanding" summary card = Σ balance_derived
-        #     across the visible rows (so the header math reconciles
-        #     with what the user actually sees).
-        if round(balance_derived, 2) == 0.0:
-            # Skip — nothing pending for this borrower any more.
+        # Owner rule: hide fully-settled borrowers.
+        if round(row_total_balance, 2) == 0.0:
             continue
 
-        total_principal += principal_col_value
-        total_interest += interest_col_value
-        total_balance += balance_derived
+        # Accumulate grand totals for the footer.
+        tot_principal          += row_principal
+        tot_principal_paid     += row_principal_paid
+        tot_principal_balance  += row_principal_balance
+        tot_interest           += row_interest
+        tot_interest_paid      += row_interest_paid
+        tot_interest_balance   += row_interest_balance
+        tot_penalty            += row_penalty
+        tot_penalty_balance    += row_penalty_balance
+        tot_total_balance      += row_total_balance
 
         borrowers.append({
             "id": b.id,
             "interest_id": interest.id if interest else None,
             "name": interest.people_name if interest else None,
             "mobile": interest.people_mobile if interest else None,
+            # Kept for backward compat (frontend may hide the column).
             "interest_type": interest.interest_type if interest else None,
             "start_date": start.isoformat() if start else None,
-            "end_date": end.isoformat() if end else None,
             "days_from_start": _days_between(start, today),
             "days_from_last_payment": _days_between(last_payment, today),
-            # TC_CHITFUND_005 — weeks (floor).
             "weeks_from_start": _weeks_between(start, today),
             "weeks_from_last_payment": _weeks_between(last_payment, today),
-            # Col-7 "Principal+Interest" per owner map.
-            "principal_amt": round(principal_col_value, 2),
-            "principal_paid": round(principal_paid, 2),
-            "principal_balance": round(principal_balance, 2),
-            # Col-8 "Final amount given" — from interest master.
-            "final_amt_given": round(final_amt_given, 2),
-            # Col-9 "Interest" — from interest master, NOT ledger.
-            "interest_amt": round(interest_col_value, 2),
-            # Col-10 "Interest paid" — installment_amt × paid_counts (owner rule).
-            "interest_paid": round(interest_paid, 2),
-            "interest_balance": round(interest_balance, 2),
-            # Balance — derived per owner rule (0 when nothing paid yet).
-            "balance_amt": round(balance_derived, 2),
-            # Col-11 "Penalty bal" — accumulated (missed_cycles × 3 % × interest_amt).
-            "penalty_balance_amt": round(penalty_bal_accum, 2),
-            "penalty_balance_accumulated": round(penalty_balance_acc, 2),
-            # Raw fields still exposed for any downstream report.
-            "principal_only": principal_master,
-            "interest_charged": interest_master,
+            # Col-7 Principal
+            "principal_amt": round(row_principal, 2),
+            # Col-8 Paid principal
+            "principal_paid": round(row_principal_paid, 2),
+            # Col-9 Principal Balance
+            "principal_balance": round(row_principal_balance, 2),
+            # Col-10 Interest
+            "interest_amt": round(row_interest, 2),
+            # Col-11 Interest paid
+            "interest_paid": round(row_interest_paid, 2),
+            # Col-12 Interest Balance
+            "interest_balance": round(row_interest_balance, 2),
+            # Col-13 Penalty
+            "penalty_amt": round(row_penalty, 2),
+            # Col-14 Penalty bal
+            "penalty_balance_amt": round(row_penalty_balance, 2),
+            # Col-15 Total Balance (per row)
+            "total_balance": round(row_total_balance, 2),
+            # Legacy alias so ChitFundListView.jsx's Pending header still works.
+            "balance_amt": round(row_total_balance, 2),
         })
 
     return Response({
@@ -248,8 +208,23 @@ def chit_fund_pending_borrowers(request, chit_id: int):
         "principal_given_amount": float(chit.principal_given_amount or 0),
         "collected_principal_amount": float(chit.collected_principal_amount or 0),
         "count": len(borrowers),
-        "total_pending_principal": round(total_principal, 2),
-        "total_pending_interest": round(total_interest, 2),
-        "total_pending_balance": round(total_balance, 2),
+        # Grand totals for the footer of the table (Cols 7-15).
+        "totals": {
+            "principal_amt":     round(tot_principal, 2),
+            "principal_paid":    round(tot_principal_paid, 2),
+            "principal_balance": round(tot_principal_balance, 2),
+            "interest_amt":      round(tot_interest, 2),
+            "interest_paid":     round(tot_interest_paid, 2),
+            "interest_balance":  round(tot_interest_balance, 2),
+            "penalty_amt":       round(tot_penalty, 2),
+            "penalty_balance_amt": round(tot_penalty_balance, 2),
+            "total_balance":     round(tot_total_balance, 2),
+        },
+        # Legacy top-summary keys — kept so the header cards on the
+        # "View details" page keep rendering. total_pending_balance now
+        # equals the Grand Total of Col-15 (owner rule).
+        "total_pending_principal": round(tot_principal, 2),
+        "total_pending_interest":  round(tot_interest, 2),
+        "total_pending_balance":   round(tot_total_balance, 2),
         "borrowers": borrowers,
     })
