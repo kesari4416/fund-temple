@@ -85,6 +85,36 @@ def chit_fund_pending_borrowers(request, chit_id: int):
     except ChitFundsDetails.DoesNotExist:
         return Response({"detail": "chit fund not found"}, status=status.HTTP_404_NOT_FOUND)
 
+    # ---------------------------------------------------------------
+    # Owner rule (Feb 2026): "the penalty should apply and update in
+    # the expected column correctly after the due date — no penalty
+    # should be missed."
+    #
+    # We backfill missing penalty rows *live* every time this endpoint
+    # is hit, so the operator never has to remember to run the
+    # `apply_overdue_interest_and_penalty` cron. Runs are idempotent
+    # (see `InterestPeopleReport.exists()` guard in the accrual job).
+    # Scoped to this chit fund only — cheap enough (< a few hundred
+    # rows) and keeps the accrual close to the view that consumes it.
+    # ---------------------------------------------------------------
+    try:
+        from interest.overdue_views import _apply_for_record
+        from interest.models import PeopleInterestDetails as _PID
+        _active_records = _PID.objects.filter(
+            chitt_fund=chit,
+            interest_type="Chit fund Interest",
+            action=True,
+        )
+        for _rec in _active_records:
+            try:
+                _apply_for_record(_rec)
+            except Exception:
+                # One bad row should never take down the page — swallow
+                # per-record errors and keep going.
+                pass
+    except Exception:
+        pass
+
     rows = (
         PeopleInterestBalanceSheet.objects
         .filter(

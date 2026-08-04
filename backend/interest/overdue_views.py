@@ -174,19 +174,34 @@ def _apply_for_installment(
 ) -> dict:
     """Penalty accrual for Installment-Interest loans.
 
-    Rule (Feb 2026, per owner):
-        * Cadence follows `interest_period_type` (weekly / monthly).
-        * Every due date past today with UNPAID interest triggers one
-          penalty row of `installment_amt × penalty_amount%`
-          (default 3 %).  Base is the installment amount, NOT the
-          principal balance.
-        * Interest rows are NOT auto-created for installment loans —
-          they carry a fixed installment_amt schedule instead.
+    Rule (Feb 2026 — v2, owner-locked):
+        * Cadence follows `interest_period_type` (days / week / month).
+        * For EVERY due date that has already passed and was NOT paid
+          on-time (unpaid OR paid late — treated the same because we
+          only have per-installment counters, not per-cycle payment
+          timestamps), append ONE penalty row of:
+
+              penalty_per_cycle = balancesheet.intrest_amt × 3 % × 1
+                                = (intrest_amt × 3) / 100
+
+          i.e. 3 % of the interest amount already recorded on the
+          balance sheet at loan-creation time (populated by
+          `add_interest_given_details`). The base is the *interest*,
+          not `installment_amt` and not `principal_amt`.
+        * Missed cycles accumulate — the *total* penalty on the ledger
+          equals `penalty_per_cycle × missed_due_dates`.
+        * The `Apply Penalty` checkbox (`penalty_enabled=False`) still
+          disables the whole thing — owner override.
+        * No gate on `intrest_balance_amt` (owner rule: "no penalty
+          should be missed" — even loans whose interest was cleared
+          keep their historical missed penalties).
+        * Idempotent — an existing `Penalty` row with the same
+          `reportdate` is never duplicated.
     """
     today = datetime.date.today()
     applied = []
 
-    # Skip when owner has toggled penalty off for this loan.
+    # Skip when owner has toggled the "Apply Penalty" checkbox off.
     penalty_on = True if record.penalty_enabled is None else bool(record.penalty_enabled)
     if not penalty_on:
         return {"interest_id": record.id, "applied_months": [], "skipped": "penalty disabled"}
@@ -196,31 +211,28 @@ def _apply_for_installment(
         return {"interest_id": record.id, "applied_months": [], "skipped": "no interest_date"}
 
     delta = _installment_delta(record)
-    installment_amt = float(record.installment_amt or 0)
-    if installment_amt <= 0:
-        return {"interest_id": record.id, "applied_months": [], "skipped": "installment_amt missing"}
 
-    # Only apply penalty when unpaid interest exists on this loan
-    # (owner rule: penalty is gated on interest not being cleared).
-    if float(bal.intrest_balance_amt or 0) <= 0:
-        return {"interest_id": record.id, "applied_months": [], "skipped": "no unpaid interest"}
+    # Owner-locked base = balancesheet.intrest_amt (which is now populated
+    # at loan-creation time from Fix-Interest-Rate — see the sibling fix
+    # in `add_interest_given_details`).  Fall back to the interest master
+    # value if the ledger row was created before that fix landed.
+    intrest_amt = float(bal.intrest_amt or 0)
+    if intrest_amt <= 0:
+        intrest_amt = float(record.interest_amt or 0)
+    if intrest_amt <= 0:
+        return {"interest_id": record.id, "applied_months": [], "skipped": "no intrest_amt on ledger"}
 
-    # Penalty per installment cycle: pct% × installment_amt.
-    if (record.penalty_type or "").lower() == "amount":
-        pen_per_cycle = float(record.penalty_amount or 0)
-    else:  # percentage (default 3 %)
-        pen_per_cycle = installment_amt * float(record.penalty_amount or 0) / 100.0
+    # Fixed 3 % rate per owner spec.
+    pen_per_cycle = round(intrest_amt * 3.0 / 100.0, 2)
     if pen_per_cycle <= 0:
         return {"interest_id": record.id, "applied_months": [], "skipped": "penalty rate 0"}
 
-    # Walk every due date from `start + delta` to today. Skip cycles the
-    # borrower has already paid — `paid_counts` tracks how many
-    # installments were settled.
+    # Walk every due date from `start + delta` to today. Cycles the
+    # borrower has already paid do NOT receive a penalty row.
     paid_counts = int(record.paid_counts or 0)
     cycle = 1
     due_date = start + delta
     while due_date <= today:
-        # Cycles already paid do not receive a penalty row.
         if cycle > paid_counts:
             already = InterestPeopleReport.objects.filter(
                 interest=record,
@@ -247,9 +259,10 @@ def _apply_for_installment(
         cycle += 1
         due_date = start + (delta * cycle)
 
-    # Stamp the last processed due date so re-runs are cheap.
-    bal.interest_apply_date = start + (delta * (cycle - 1))
-    bal.save()
+    # NOTE: previously stamped `bal.interest_apply_date` here to short-
+    # circuit re-runs. Removed — it was corrupting the "Start" column on
+    # the Pending Borrowers page. Idempotency is enforced above via
+    # `InterestPeopleReport.exists()` per due date.
     return {"interest_id": record.id, "applied_months": applied}
 
 
