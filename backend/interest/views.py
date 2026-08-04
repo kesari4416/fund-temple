@@ -162,6 +162,35 @@ def add_interest_given_details(request):
                     bal_sheet.first_interest_apply = True
                     bal_sheet.save()
 
+                # ------------------------------------------------------------
+                # Owner bug-fix (Feb 2026):
+                # On EVERY new Chit-fund Interest submission, populate
+                #   balancesheet_peopleinterestbalancesheet.intrest_amt
+                # from the Fix-Interest-Rate the operator entered.
+                # Previously this field was only written when
+                # `apply_first_interest = True`, which left the ledger
+                # showing 0 interest for most freshly-created loans
+                # (regression flagged during QA on the "chitfund interest"
+                # form).
+                #
+                # Rule (from owner spec):
+                #   Fix Interest Rate "%"  -> intrest_amt =
+                #       (fix_interest_rate_percent × principal_amt) / 100
+                #   Fix Interest Rate "₹"  -> intrest_amt =
+                #       fix_interest_rate_percent   (flat rupee value)
+                #
+                # Scoped strictly to interest_type == "Chit fund Interest"
+                # (Management Interest untouched — different flow).
+                # ------------------------------------------------------------
+                if temp_family.interest_type == "Chit fund Interest":
+                    fix_rate  = float(temp_family.fix_interest_rate_percent or 0)
+                    principal = float(bal_sheet.principal_amt or 0)
+                    if (temp_family.interest_type_new or "").lower() == "percentage":
+                        bal_sheet.intrest_amt = round((fix_rate * principal) / 100.0, 2)
+                    else:  # "amount"  ->  flat ₹ value
+                        bal_sheet.intrest_amt = round(fix_rate, 2)
+                    bal_sheet.save()
+
                 if temp_family.nominee_apply == False and rejin.is_superuser == False and rejin.member != None:
                     mem_obj= Member_Details.objects.get(id=rejin.member.id)
                     temp_family.nominee_member_name=mem_obj.member_name
