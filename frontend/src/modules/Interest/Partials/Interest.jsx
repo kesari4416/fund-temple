@@ -42,7 +42,7 @@ export const Interest = ({ RecordData, ClosUpdaForm, manageTrigger }) => {
     const [disablePenalty, setDisablePenalty] = useState(false);
     const [disableRate, setDisableRate] = useState(false);
     const [penalty, setpenalty] = useState("percentage");
-    const [rateType, setRateType] = useState("percentage");
+    const [rateType, setRateType] = useState("amount");   // Feb 2026 — ₹ only
     const [fixAmtType, setFixAmtType] = useState("percentage");
     const [finalAmt, setFinalAmt] = useState(0);
     const [MonthDays, setMonthDays] = useState({});
@@ -818,6 +818,19 @@ export const Interest = ({ RecordData, ClosUpdaForm, manageTrigger }) => {
         }
     ]
 
+    // Feb 2026 owner rule — the "Fix Interest Rate" input only accepts
+    // rupee (flat ₹) amounts now. Percentage was removed to prevent
+    // operator confusion and to match the balance-sheet formula:
+    //   intrest_amt = fix_interest_rate_percent      (₹ mode only)
+    // Kept as a separate array so `AmtType` above (still used by other
+    // dropdowns, e.g. penalty type) stays untouched.
+    const FixRateOptionsRupeeOnly = [
+        {
+            label: '₹',
+            value: 'amount'
+        }
+    ]
+
     const amttypes = [
         {
             label: '%',
@@ -885,8 +898,8 @@ export const Interest = ({ RecordData, ClosUpdaForm, manageTrigger }) => {
 
 
     const SelectFixRate = (
-        <CustomSelect options={AmtType}
-            initialValue={rateType}
+        <CustomSelect options={FixRateOptionsRupeeOnly}
+            initialValue={'amount'}
             name={'interest_type_new'}
             width={'70px'}
             // disabled={disableRate}
@@ -920,6 +933,10 @@ export const Interest = ({ RecordData, ClosUpdaForm, manageTrigger }) => {
                 // Installment-Interest records. When unchecked the
                 // overdue penalty accrual is skipped for this loan.
                 penalty_enabled: true,
+                // Feb 2026 owner rule — Fix Interest Rate is now
+                // rupee-only. Locking the type here prevents the form
+                // from resurrecting the legacy "percentage" default.
+                interest_type_new: 'amount',
             }}
         >
             <CustomCardView>
