@@ -285,12 +285,8 @@ const ChitFundPendingBorrowersPage = () => {
                 <th onClick={() => toggleSort("start_date")} style={{ cursor: "pointer" }}>Start</th>
                 <th className="num" onClick={() => toggleSort("weeks_from_start")} style={{ cursor: "pointer" }} title="Weeks since loan started">Weeks (start)</th>
                 <th className="num" onClick={() => toggleSort("weeks_from_last_payment")} style={{ cursor: "pointer" }} title="Weeks since the borrower's most recent payment">Weeks (since last pay)</th>
-                <th className="num" title="balancesheet.principal_amt">Principal</th>
+                <th className="num" title="balancesheet.principal_amt + balancesheet.intrest_amt">Principal+Interest</th>
                 <th className="num" title="balancesheet.principal_paid">Paid principal</th>
-                <th className="num" title="balancesheet.principal_balance">Principal Balance</th>
-                <th className="num" title="balancesheet.intrest_amt">Interest</th>
-                <th className="num" title="balancesheet.intrest_paid_amt">Interest paid</th>
-                <th className="num" title="balancesheet.intrest_balance_amt">Interest Balance</th>
                 <th className="num" title="balancesheet.penalty_amt">Penalty</th>
                 <th className="num" title="balancesheet.penalty_balance_amt">Penalty bal</th>
                 <th className="num" onClick={() => toggleSort("total_balance")} style={{ cursor: "pointer" }} title="principal_balance + intrest_balance_amt + penalty_balance_amt">Total Balance</th>
@@ -310,12 +306,20 @@ const ChitFundPendingBorrowersPage = () => {
                   <td>{b.start_date || "-"}</td>
                   <td className="num">{b.weeks_from_start ?? "-"}</td>
                   <td className="num">{b.weeks_from_last_payment ?? "-"}</td>
-                  <td className="num">₹ {fmt(b.principal_amt)}</td>
+                  {/*
+                    Owner rule (Feb 2026 v4): the previous "Principal"
+                    column is now displayed as "Principal+Interest" and
+                    its value is derived on the fly:
+                        b.principal_amt + b.interest_amt
+                    Both come from balancesheet_peopleinterestbalancesheet.
+                    Columns "Principal Balance", "Interest",
+                    "Interest paid", "Interest Balance" were removed per
+                    owner directive.
+                  */}
+                  <td className="num">
+                    ₹ {fmt((Number(b.principal_amt) || 0) + (Number(b.interest_amt) || 0))}
+                  </td>
                   <td className="num">₹ {fmt(b.principal_paid)}</td>
-                  <td className="num">₹ {fmt(b.principal_balance)}</td>
-                  <td className="num">₹ {fmt(b.interest_amt)}</td>
-                  <td className="num">₹ {fmt(b.interest_paid)}</td>
-                  <td className="num">₹ {fmt(b.interest_balance)}</td>
                   <td className="num">₹ {fmt(b.penalty_amt)}</td>
                   <td className="num">₹ {fmt(b.penalty_balance_amt)}</td>
                   <td className="num bal" data-testid={`pending-borrowers-row-${b.id}-balance`}>
@@ -345,20 +349,19 @@ const ChitFundPendingBorrowersPage = () => {
               ))}
             </tbody>
             {/*
-              Grand-total footer — sums Cols 7-15 across every borrower
-              currently in the list. Sourced from d.totals which the
-              backend computes over the same filtered rows.
+              Grand-total footer — sums only the currently visible
+              columns (Principal+Interest, Paid principal, Penalty,
+              Penalty bal, Total Balance). Removed columns are no longer
+              summed here.
             */}
             {d.totals ? (
               <tfoot data-testid="pending-borrowers-grand-total">
                 <tr style={{ background: "#fee2e2", fontWeight: 700 }}>
                   <td colSpan={5} style={{ textAlign: "right" }}>Grand Total</td>
-                  <td className="num">₹ {fmt(d.totals.principal_amt)}</td>
+                  <td className="num">
+                    ₹ {fmt((Number(d.totals.principal_amt) || 0) + (Number(d.totals.interest_amt) || 0))}
+                  </td>
                   <td className="num">₹ {fmt(d.totals.principal_paid)}</td>
-                  <td className="num">₹ {fmt(d.totals.principal_balance)}</td>
-                  <td className="num">₹ {fmt(d.totals.interest_amt)}</td>
-                  <td className="num">₹ {fmt(d.totals.interest_paid)}</td>
-                  <td className="num">₹ {fmt(d.totals.interest_balance)}</td>
                   <td className="num">₹ {fmt(d.totals.penalty_amt)}</td>
                   <td className="num">₹ {fmt(d.totals.penalty_balance_amt)}</td>
                   <td className="num bal" data-testid="pending-borrowers-grand-total-value">
