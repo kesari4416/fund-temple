@@ -191,6 +191,26 @@ def add_interest_given_details(request):
                         bal_sheet.intrest_amt = round(fix_rate, 2)
                     bal_sheet.save()
 
+                # ------------------------------------------------------------
+                # Owner rule (Feb 2026): initialise the rolling
+                # `installment_date` pointer on the master row for every
+                # newly-created Installment-Interest loan. Value = one
+                # full cadence step past the loan start date (i.e. the
+                # first upcoming installment due date).  Collection
+                # views advance / reverse this pointer on payment.
+                # ------------------------------------------------------------
+                if (temp_family.interest_type == "Chit fund Interest"
+                        and temp_family.interest_category == "Installment Interest"
+                        and temp_family.interest_date):
+                    try:
+                        from interest.overdue_views import _installment_delta
+                        _delta = _installment_delta(temp_family)
+                        if _delta:
+                            temp_family.installment_date = temp_family.interest_date + _delta
+                            temp_family.save(update_fields=["installment_date"])
+                    except Exception as _e:  # pragma: no cover
+                        print("init installment_date failed:", _e)
+
                 if temp_family.nominee_apply == False and rejin.is_superuser == False and rejin.member != None:
                     mem_obj= Member_Details.objects.get(id=rejin.member.id)
                     temp_family.nominee_member_name=mem_obj.member_name

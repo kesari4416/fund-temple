@@ -87,6 +87,13 @@ class PeopleInterestDetails(models.Model):
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at = models.DateTimeField(auto_now=True,null=True,blank=True)
     interest_date = models.DateField(null=True,blank=True)
+    # Feb 2026 owner rule — rolling pointer to the NEXT installment due
+    # date. Initialised at loan-creation to (interest_date + one cadence
+    # step). Advances by (interest_period × interest_period_type) on
+    # every installment payment and reverses on collection edit/delete.
+    # Used by the overdue-penalty walker so late-payment counters stay
+    # accurate no matter how many edits happen on the collection ledger.
+    installment_date = models.DateField(null=True, blank=True)
     
 
     

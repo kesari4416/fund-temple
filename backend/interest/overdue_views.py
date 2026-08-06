@@ -212,28 +212,33 @@ def _apply_for_installment(
 
     delta = _installment_delta(record)
 
-    # Owner-locked base = balancesheet.intrest_amt (which is now populated
-    # at loan-creation time from Fix-Interest-Rate — see the sibling fix
-    # in `add_interest_given_details`).  Fall back to the interest master
-    # value if the ledger row was created before that fix landed.
-    intrest_amt = float(bal.intrest_amt or 0)
-    if intrest_amt <= 0:
-        intrest_amt = float(record.interest_amt or 0)
-    if intrest_amt <= 0:
-        return {"interest_id": record.id, "applied_months": [], "skipped": "no intrest_amt on ledger"}
+    # Owner rule (Feb 2026 — v3, LATEST): base for penalty per missed
+    # cycle is `installment_amt × 3 %` (NOT `intrest_amt`).  Reflects
+    # the borrower-facing rule "3 % of what you were supposed to pay
+    # per cycle".
+    installment_amt = float(record.installment_amt or 0)
+    if installment_amt <= 0:
+        return {"interest_id": record.id, "applied_months": [], "skipped": "no installment_amt"}
 
     # Fixed 3 % rate per owner spec.
-    pen_per_cycle = round(intrest_amt * 3.0 / 100.0, 2)
+    pen_per_cycle = round(installment_amt * 3.0 / 100.0, 2)
     if pen_per_cycle <= 0:
         return {"interest_id": record.id, "applied_months": [], "skipped": "penalty rate 0"}
 
     # Walk every due date from `start + delta` to today. Cycles the
     # borrower has already paid do NOT receive a penalty row.
+    # Prefer the rolling `installment_date` pointer (owner rule Feb 2026)
+    # which tracks the next expected due date and is advanced by
+    # collection/views.py on every payment. Fallback to the legacy
+    # (start + cycle × delta) walker for rows that haven't been
+    # migrated yet.
     paid_counts = int(record.paid_counts or 0)
-    cycle = 1
-    due_date = start + delta
-    while due_date <= today:
-        if cycle > paid_counts:
+
+    if record.installment_date:
+        # Every full cadence step BEFORE today is a missed due date.
+        due_date = record.installment_date
+        cycle = paid_counts + 1
+        while due_date <= today:
             already = InterestPeopleReport.objects.filter(
                 interest=record,
                 reportdate=due_date,
@@ -255,9 +260,37 @@ def _apply_for_installment(
                     created_by=record.created_by,
                 )
                 applied.append({"due_date": due_date.isoformat(), "penalty": pen_per_cycle})
-
-        cycle += 1
-        due_date = start + (delta * cycle)
+            cycle += 1
+            due_date = due_date + delta
+    else:
+        # Legacy walker (no installment_date pointer yet).
+        cycle = 1
+        due_date = start + delta
+        while due_date <= today:
+            if cycle > paid_counts:
+                already = InterestPeopleReport.objects.filter(
+                    interest=record,
+                    reportdate=due_date,
+                    type_choice="Penalty",
+                ).exists()
+                if not already:
+                    bal.penalty_amt = float(bal.penalty_amt or 0) + pen_per_cycle
+                    bal.penalty_balance_amt = float(bal.penalty_balance_amt or 0) + pen_per_cycle
+                    bal.credit_amt = float(bal.credit_amt or 0) + pen_per_cycle
+                    bal.balance_amt = float(bal.balance_amt or 0) + pen_per_cycle
+                    bal.save()
+                    InterestPeopleReport.objects.create(
+                        management_profile=record.management_profile,
+                        interest=record,
+                        reportdate=due_date,
+                        credit_amt=pen_per_cycle,
+                        balance_amt=bal.balance_amt,
+                        type_choice="Penalty",
+                        created_by=record.created_by,
+                    )
+                    applied.append({"due_date": due_date.isoformat(), "penalty": pen_per_cycle})
+            cycle += 1
+            due_date = start + (delta * cycle)
 
     # NOTE: previously stamped `bal.interest_apply_date` here to short-
     # circuit re-runs. Removed — it was corrupting the "Start" column on
