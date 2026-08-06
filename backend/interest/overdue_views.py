@@ -331,6 +331,75 @@ def apply_overdue_interest_and_penalty(request):
 # trail. Used to heal drift from rounding / edited collections / historical
 # manual edits reported by operators (e.g. TC_TEMPLE_INTEREST_001).
 # ---------------------------------------------------------------------------
+def _recompute_report_balances(interest: PeopleInterestDetails) -> dict:
+    """
+    Rewrite ``balance_amt`` for every row of ``reports_interestpeoplereport``
+    belonging to <interest>, using the running-balance formula:
+
+        row.balance_amt = Σ credit_amt − Σ debit_amt
+                          over all rows 0..r for this interest_id
+                          (ordered by reportdate, then id)
+
+    Also mirrors the healed totals back onto
+    ``balancesheet_peopleinterestbalancesheet`` for the same interest so
+    the two tables stay in lock-step.
+
+    Owner rule (Feb 2026): overshoots are clamped at 0 — a debit that
+    exceeds the current running balance must NOT leave the ledger
+    negative (same policy as the customer-facing sheet + PDF).
+
+    Idempotent — running twice is a no-op, safe to call on every read.
+
+    Returns a small summary dict for the caller/logger.
+    """
+    try:
+        bal = PeopleInterestBalanceSheet.objects.get(interest_id=interest.id)
+    except PeopleInterestBalanceSheet.DoesNotExist:
+        bal = None
+
+    reports = list(
+        InterestPeopleReport.objects
+        .filter(interest=interest)
+        .order_by("reportdate", "id")
+    )
+    running = 0.0
+    credit_sum = 0.0
+    debit_sum = 0.0
+    row_changes = 0
+    for r in reports:
+        c = float(r.credit_amt or 0)
+        d = float(r.debit_amt or 0)
+        credit_sum += c
+        debit_sum += d
+        running = round(running + c - d, 2)
+        if running < 0:
+            running = 0.0
+        if abs(float(r.balance_amt or 0) - running) >= 0.01:
+            row_changes += 1
+            r.balance_amt = running
+            r.save(update_fields=["balance_amt"])
+
+    new_balance = round(max(0.0, credit_sum - debit_sum), 2)
+
+    # Mirror the healed totals back onto the balance-sheet aggregate
+    # row so the "Pending borrowers" summary and PDF also reconcile.
+    if bal is not None:
+        drift = round(float(bal.balance_amt or 0) - new_balance, 2)
+        if abs(drift) >= 0.01 or row_changes > 0:
+            bal.credit_amt = round(credit_sum, 2)
+            bal.debit_amt = round(debit_sum, 2)
+            bal.balance_amt = new_balance
+            bal.save()
+
+    return {
+        "interest_id": interest.id,
+        "row_balance_fixes": row_changes,
+        "credit_sum": round(credit_sum, 2),
+        "debit_sum": round(debit_sum, 2),
+        "new_balance": new_balance,
+    }
+
+
 @api_view(["POST"])
 def recompute_interest_balance(request):
     """

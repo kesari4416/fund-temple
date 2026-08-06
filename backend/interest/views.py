@@ -731,6 +731,21 @@ def interest_profile(request, pk):
         except Exception as _e:  # pragma: no cover — never block the read
             print("interest_profile: overdue apply failed:", _e)
 
+    # ------------------------------------------------------------------
+    # Owner rule (Feb 2026): rewrite balance_amt on every row of
+    # `reports_interestpeoplereport` for this loan using the running
+    # formula BEFORE serializing. Fixes drift on Principal Payment /
+    # Penalty / Interest Payment rows caused by legacy write-time
+    # bugs that copied a stale `PeopleInterestBalanceSheet.balance_amt`
+    # instead of computing Σ credit − Σ debit.
+    # Idempotent — running twice does nothing.
+    # ------------------------------------------------------------------
+    try:
+        from interest.overdue_views import _recompute_report_balances
+        _recompute_report_balances(mer)
+    except Exception as _e:  # pragma: no cover
+        print("interest_profile: report balance recompute failed:", _e)
+
     serializer1 = PeopleInterestDetailsSerializer(mer)
     coll_obj = CollectionDetails.objects.filter(management_profile=management, interest=mer)
     serializer5 = CollectionDetailsSerializer(coll_obj, many=True)
