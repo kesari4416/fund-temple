@@ -35,6 +35,13 @@ class PeopleInterestBalanceSheet(models.Model):
     
     # new
     pay_done =models.IntegerField(default=0,null=True,blank=True)
+    # Owner rule (Feb 2026): mirror of ``PeopleInterestDetails.installment_date``
+    # so reports / dashboards that already query the balance-sheet table
+    # can surface the borrower's next expected due date without a JOIN.
+    # Maintained via ``interest.signals.mirror_due_date`` — every write
+    # to ``PeopleInterestDetails.installment_date`` copies onto this
+    # column atomically.
+    due_date = models.DateField(null=True, blank=True)
     
 class FundBalanceSheet(models.Model):
     management_profile=models.ForeignKey(ManagementDetails,on_delete=models.CASCADE,null=True,blank=True,related_name='ManagementDetails_profile_link_in_FundBalanceSheetP')

@@ -284,6 +284,64 @@ Business rule clarified with the user:
 - [x] Both `buildMemberStatementLink` and `buildInterestStatementLink` now use `resolveApiBase(apiBase)` before concatenating the path.
 - [x] Recommended env var for EC2 (optional but future-proof): `VITE_BACKEND_URL=https://temple.sparkcurv.in`.
 
+## What's been implemented (2026-02 fork — Feb-2026 continuation session)
+- [x] **Issue 1 (P0) — Consolidate Penalty Accrual.** The daily
+  scheduled task in `my_tasks/views.py::subscription_delete` no longer
+  accrues Interest / Penalty rows for `PeopleInterestDetails`. The
+  interest-module section (was lines 727-1264) is now short-circuited
+  by an early `return` immediately after the `##################interest
+  module##########` marker, with a docstring explaining that
+  `interest/overdue_views.py::_apply_for_record` is the sole idempotent
+  source of truth (already invoked on every `interest_profile` GET and
+  via `manage.py apply_periodic_interest_penalty`). Sub-Tariff /
+  Festival / Death / Marriage / Rental sections still run unchanged.
+  Verified live: `subscription_delete()` call does not grow
+  `InterestPeopleReport` row count.
+- [x] **Issue 2 (P1) — "Choose Person" now respects the picked pay_date.**
+  `Collection.jsx::handleIntCategory` now sends `selected_date:
+  selectedDate` in the payload to `POST /api/collection/chitname_
+  withfiltering_category/`. Backend reads `selected_date` from
+  `request.data` (falls back to `date.today()` on missing / malformed
+  input) and uses it as `checking_date` throughout the endpoint —
+  including replacing the two `month = datetime.now().month` /
+  `year = datetime.now().year` calls with `checking_date.month/.year`
+  so the "current month" window matches the operator's picked date.
+  Post-filter step at the end of both branches (Interest / Interest
+  with capital AND Installment Interest) drops any borrower whose
+  next expected due date (`installment_date` for installment loans,
+  `interest_apply_date + 1 month` for others) is strictly greater
+  than `checking_date` AND who owes zero penalty / interest — those
+  with outstanding penalty / interest keep surfacing regardless of
+  date (owner rule "no penalty should be missed"). Verified via
+  end-to-end curl: loan 32 (installment_date 2030-04-09, penalty
+  ₹1100) → visible on all dates; same loan artificially set to
+  penalty=0 + inst_date=2099-06-15 → correctly hidden on 2020-01-01.
+- [x] **Issue 3 (P1) — `balancesheet_peopleinterestbalancesheet.due_date`
+  mirror column.** New nullable `DateField due_date` added to
+  `PeopleInterestBalanceSheet`. Migration `balancesheet/0002_
+  peopleinterestbalancesheet_due_date.py` includes a `RunPython`
+  backfill step that copies each linked loan's `installment_date`
+  onto the new column. New `mirror_due_date` signal in
+  `interest/signals.py` runs on every `post_save` of
+  `PeopleInterestDetails` and updates every linked balance-sheet row
+  atomically via `QuerySet.update(due_date=…)` (no recursion,
+  idempotent via `.exclude(due_date=new_due_date)`). Live-verified
+  against 200 records (all matched) plus a mutating round-trip
+  (change `installment_date` → refresh_from_db → `due_date` mirrors).
+- [x] **Issue 5 (P2) — Member Profile tabs now show for every member.**
+  Removed the `Memberprofile?.member_tax_eligible &&` gate in
+  `MemberProfile.jsx`. Balance Sheet + Collection History tabs are
+  now visible for non-Sangam / non-tax-eligible members as well.
+- [x] **Regression test file** `/app/backend/tests/test_penalty_fork_
+  feb2026.py` — 4 tests, all passing:
+  - `test_due_date_backfill_and_signal` — 200 rows in sync
+  - `test_signal_mirrors_on_installment_date_change` — post_save
+    signal roundtrip works
+  - `test_legacy_cron_interest_neutralized` — `subscription_delete()`
+    leaves `InterestPeopleReport` count unchanged
+  - `test_selected_date_filter_via_django_orm` — sanity check for
+    candidate data
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.

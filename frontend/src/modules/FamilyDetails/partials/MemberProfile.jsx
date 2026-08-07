@@ -235,10 +235,14 @@ const MemberProfile = () => {
                             </Flex>
                         </ImgMobileRes>
                     </Col>
-                    {Memberprofile?.member_tax_eligible &&
-                        <Col span={24} md={24}>
-                            <CustomTabs tabs={TabOptions} defaultActiveKey={initialTabKey} />
-                        </Col>}
+                    {/* Owner rule (Feb 2026): Tabs (Balance Sheet /
+                        Collection History / etc.) must be visible for
+                        every member profile, not only Sangam / tax-
+                        eligible members.  Non-Sangam members also
+                        accrue balances that admins need to inspect. */}
+                    <Col span={24} md={24}>
+                        <CustomTabs tabs={TabOptions} defaultActiveKey={initialTabKey} />
+                    </Col>
                 </CustomRow>
 
             </CustomCardView>

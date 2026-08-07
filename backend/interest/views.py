@@ -261,22 +261,33 @@ def add_interest_given_details(request):
                                     InterestPeopleReport.objects.create(management_profile=inter_check.management_profile,interest=inter_check,reportdate=checking_day,credit_amt=interest_convert,balance_amt=inter_bal.balance_amt,type_choice="Interest",created_by=inter_check.created_by)
                                     
                                 if datetime.date.today() >= checking_day_penalty:
-                                    if inter_check.penalty_type == "percentage":
-                                        per_convert=(float(inter_bal.intrest_balance_amt) * float(inter_check.penalty_amount))/100
-                                        inter_bal.penalty_balance_amt = float(inter_bal.penalty_balance_amt) + float(per_convert)
-                                        inter_bal.penalty_amt = float(inter_bal.penalty_amt) + float(per_convert)
-                                        inter_bal.credit_amt = float(inter_bal.credit_amt) + float(per_convert)
-                                        inter_bal.balance_amt = float(inter_bal.balance_amt) + float(per_convert)
-                                        inter_bal.save()
-                                        InterestPeopleReport.objects.create(management_profile=inter_check.management_profile,interest=inter_check,reportdate=datetime.date.today(),credit_amt=float(per_convert),balance_amt=inter_bal.balance_amt,type_choice="Penalty",created_by=inter_check.created_by)
-                                    elif inter_check.penalty_type== "amount":
-                                        inter_bal.penalty_balance_amt = float(inter_bal.penalty_balance_amt) + float(inter_check.penalty_amount)
-                                        inter_bal.penalty_amt = float(inter_bal.penalty_amt) + float(inter_check.penalty_amount)
-                                        inter_bal.credit_amt = float(inter_bal.credit_amt) + float(inter_check.penalty_amount)
-                                        inter_bal.balance_amt = float(inter_bal.balance_amt) + float(inter_check.penalty_amount)
-                                        inter_bal.save()
-                                        InterestPeopleReport.objects.create(management_profile=inter_check.management_profile,interest=inter_check,reportdate=datetime.date.today(),credit_amt=inter_check.penalty_amount,balance_amt=inter_bal.balance_amt,type_choice="Penalty",created_by=inter_check.created_by)
-                                
+                                    # ------------------------------------------------------------
+                                    # Fix B (Feb 2026): legacy penalty accrual disabled.
+                                    # Penalty is now applied exclusively by the
+                                    # single mechanism `_apply_for_installment`
+                                    # in overdue_views.py (fixed 3 % ×
+                                    # installment_amt × missed_due_dates).
+                                    # Leaving this block active would cause a
+                                    # DOUBLE-APPLY on interest edits/saves. If
+                                    # you ever need to revert, flip the guard.
+                                    # ------------------------------------------------------------
+                                    if False:  # legacy disabled — do not remove; kept for audit trail
+                                        if inter_check.penalty_type == "percentage":
+                                            per_convert=(float(inter_bal.intrest_balance_amt) * float(inter_check.penalty_amount))/100
+                                            inter_bal.penalty_balance_amt = float(inter_bal.penalty_balance_amt) + float(per_convert)
+                                            inter_bal.penalty_amt = float(inter_bal.penalty_amt) + float(per_convert)
+                                            inter_bal.credit_amt = float(inter_bal.credit_amt) + float(per_convert)
+                                            inter_bal.balance_amt = float(inter_bal.balance_amt) + float(per_convert)
+                                            inter_bal.save()
+                                            InterestPeopleReport.objects.create(management_profile=inter_check.management_profile,interest=inter_check,reportdate=datetime.date.today(),credit_amt=float(per_convert),balance_amt=inter_bal.balance_amt,type_choice="Penalty",created_by=inter_check.created_by)
+                                        elif inter_check.penalty_type== "amount":
+                                            inter_bal.penalty_balance_amt = float(inter_bal.penalty_balance_amt) + float(inter_check.penalty_amount)
+                                            inter_bal.penalty_amt = float(inter_bal.penalty_amt) + float(inter_check.penalty_amount)
+                                            inter_bal.credit_amt = float(inter_bal.credit_amt) + float(inter_check.penalty_amount)
+                                            inter_bal.balance_amt = float(inter_bal.balance_amt) + float(inter_check.penalty_amount)
+                                            inter_bal.save()
+                                            InterestPeopleReport.objects.create(management_profile=inter_check.management_profile,interest=inter_check,reportdate=datetime.date.today(),credit_amt=inter_check.penalty_amount,balance_amt=inter_bal.balance_amt,type_choice="Penalty",created_by=inter_check.created_by)
+
                                 inter_bal.interest_apply_date=checking_day
                                 inter_bal.save() 
                             # elif checking_day < datetime.date.today():
@@ -363,22 +374,27 @@ def add_interest_given_details(request):
                                     InterestPeopleReport.objects.create(management_profile=inter_check.management_profile,interest=inter_check,reportdate=checking_day,credit_amt=interest_convert,balance_amt=inter_bal.balance_amt,type_choice="Interest",created_by=inter_check.created_by)
                                 
                                 if datetime.date.today() >= checking_day_penalty:
-                                    if inter_check.penalty_type == "percentage":
-                                        per_convert=(float(inter_bal.intrest_balance_amt) * float(inter_check.penalty_amount))/100
-                                        inter_bal.penalty_balance_amt = float(inter_bal.penalty_balance_amt) + float(per_convert)
-                                        inter_bal.penalty_amt = float(inter_bal.penalty_amt) + float(per_convert)
-                                        inter_bal.credit_amt = float(inter_bal.credit_amt) + float(per_convert)
-                                        inter_bal.balance_amt = float(inter_bal.balance_amt) + float(per_convert)
-                                        inter_bal.save()
-                                        InterestPeopleReport.objects.create(management_profile=inter_check.management_profile,interest=inter_check,reportdate=datetime.date.today(),credit_amt=float(per_convert),balance_amt=inter_bal.balance_amt,type_choice="Penalty",created_by=inter_check.created_by)
-                                    elif inter_check.penalty_type== "amount":
-                                        inter_bal.penalty_balance_amt = float(inter_bal.penalty_balance_amt) + float(inter_check.penalty_amount)
-                                        inter_bal.penalty_amt = float(inter_bal.penalty_amt) + float(inter_check.penalty_amount)
-                                        inter_bal.credit_amt = float(inter_bal.credit_amt) + float(inter_check.penalty_amount)
-                                        inter_bal.balance_amt = float(inter_bal.balance_amt) + float(inter_check.penalty_amount)
-                                        inter_bal.save()
-                                        InterestPeopleReport.objects.create(management_profile=inter_check.management_profile,interest=inter_check,reportdate=datetime.date.today(),credit_amt=inter_check.penalty_amount,balance_amt=inter_bal.balance_amt,type_choice="Penalty",created_by=inter_check.created_by)
-                                    
+                                    # Fix B (Feb 2026) — legacy penalty
+                                    # accrual disabled. See earlier
+                                    # sibling block in this file for
+                                    # rationale (single-source rule).
+                                    if False:  # legacy disabled — kept for audit
+                                        if inter_check.penalty_type == "percentage":
+                                            per_convert=(float(inter_bal.intrest_balance_amt) * float(inter_check.penalty_amount))/100
+                                            inter_bal.penalty_balance_amt = float(inter_bal.penalty_balance_amt) + float(per_convert)
+                                            inter_bal.penalty_amt = float(inter_bal.penalty_amt) + float(per_convert)
+                                            inter_bal.credit_amt = float(inter_bal.credit_amt) + float(per_convert)
+                                            inter_bal.balance_amt = float(inter_bal.balance_amt) + float(per_convert)
+                                            inter_bal.save()
+                                            InterestPeopleReport.objects.create(management_profile=inter_check.management_profile,interest=inter_check,reportdate=datetime.date.today(),credit_amt=float(per_convert),balance_amt=inter_bal.balance_amt,type_choice="Penalty",created_by=inter_check.created_by)
+                                        elif inter_check.penalty_type== "amount":
+                                            inter_bal.penalty_balance_amt = float(inter_bal.penalty_balance_amt) + float(inter_check.penalty_amount)
+                                            inter_bal.penalty_amt = float(inter_bal.penalty_amt) + float(inter_check.penalty_amount)
+                                            inter_bal.credit_amt = float(inter_bal.credit_amt) + float(inter_check.penalty_amount)
+                                            inter_bal.balance_amt = float(inter_bal.balance_amt) + float(inter_check.penalty_amount)
+                                            inter_bal.save()
+                                            InterestPeopleReport.objects.create(management_profile=inter_check.management_profile,interest=inter_check,reportdate=datetime.date.today(),credit_amt=inter_check.penalty_amount,balance_amt=inter_bal.balance_amt,type_choice="Penalty",created_by=inter_check.created_by)
+
                                 inter_bal.interest_apply_date=checking_day
                                 inter_bal.save()
                     

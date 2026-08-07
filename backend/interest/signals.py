@@ -67,3 +67,36 @@ def sync_installment_date(sender, instance, created, update_fields, **kwargs):
     PeopleInterestDetails.objects.filter(pk=instance.pk).update(
         installment_date=target
     )
+
+    # Mirror the new pointer onto the balance-sheet convenience column
+    # ``due_date`` so downstream reports can query without a JOIN.
+    _mirror_due_date_to_balancesheet(instance.pk, target)
+
+
+@receiver(post_save, sender=PeopleInterestDetails)
+def mirror_due_date(sender, instance, created, update_fields, **kwargs):
+    """Keep ``PeopleInterestBalanceSheet.due_date`` == parent
+    ``PeopleInterestDetails.installment_date``.
+
+    Runs on every save (including the initial create) so the mirror
+    column tracks any write to ``installment_date`` — signal-driven
+    (``sync_installment_date``) or direct (edit paths, migrations,
+    admin, tests).  The mirror is idempotent (``.exclude(due_date=…)``
+    short-circuits) so running it twice is free.
+    """
+    _mirror_due_date_to_balancesheet(instance.pk, instance.installment_date)
+
+
+def _mirror_due_date_to_balancesheet(interest_id, new_due_date):
+    """Copy ``installment_date`` onto every ``PeopleInterestBalanceSheet``
+    row linked to this loan. ``QuerySet.update()`` bypasses save() so no
+    signals are re-triggered on the balancesheet side."""
+    if not interest_id:
+        return
+    try:
+        from balancesheet.models import PeopleInterestBalanceSheet
+    except Exception:
+        return
+    PeopleInterestBalanceSheet.objects.filter(
+        interest_id=interest_id
+    ).exclude(due_date=new_due_date).update(due_date=new_due_date)

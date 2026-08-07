@@ -725,6 +725,17 @@ def subscription_delete():
      
 
     ##################interest module##########
+    #
+    # DEPRECATED (Feb 2026 — locked): the entire Interest / Interest-with-
+    # Capital / Installment-Interest accrual block below has been superseded
+    # by ``interest/overdue_views.py::_apply_for_record`` which is idempotent
+    # and invoked on every ``interest_profile`` GET as well as via
+    # ``manage.py apply_periodic_interest_penalty``. Running BOTH paths
+    # caused double-accrual of interest and penalty rows (see PRD Bug 1 —
+    # "Consolidate Penalty Accrual"). Neutralized with an early return so
+    # the surrounding non-interest logic (Sub-Tariff / Festival / Death /
+    # Marriage / Rental) still runs on the daily scheduler.
+    return
 
     # month_end =date(year, month, calendar.monthrange(year, month)[1])
     interest=PeopleInterestDetails.objects.all()

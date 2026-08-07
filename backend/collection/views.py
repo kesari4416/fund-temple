@@ -572,6 +572,30 @@ def add_collection_details(request):
                                 0.0,
                                 float(festival_get.principal_balance) - float(temp_family.amount),
                             )
+                            # Owner rule (Feb 2026): if the collection
+                            # includes a penalty portion (Chit-fund
+                            # borrower paying overdue penalty alongside
+                            # principal — Apply-Penalty checkbox ON),
+                            # flow it into penalty_paid_amt / drain from
+                            # penalty_balance_amt on the SAME balance
+                            # sheet row. Previously this only ran when
+                            # the "Interest" checkbox was ticked, which
+                            # caused principal+penalty collections to
+                            # silently drop the penalty payment.
+                            _pen = float(temp_family.penalty_amount or 0)
+                            if _pen > 0:
+                                festival_get.penalty_paid_amt = (
+                                    float(festival_get.penalty_paid_amt) + _pen
+                                )
+                                festival_get.penalty_balance_amt = max(
+                                    0.0,
+                                    float(festival_get.penalty_balance_amt) - _pen,
+                                )
+                                festival_get.balance_amt = max(
+                                    0.0,
+                                    float(festival_get.balance_amt) - _pen,
+                                )
+                                festival_get.debit_amt = float(festival_get.debit_amt) + _pen
                             festival_get.save()
                             if interest_obj.interest_category == "Installment Interest":
                                 try:
@@ -1295,6 +1319,20 @@ def edit_collections_details(request, pk):
                             festival_get.debit_amt = float(festival_get.debit_amt) - float(temp_family.amount)
                             festival_get.balance_amt = float(festival_get.balance_amt) + float(temp_family.amount)
 
+                            # Fix C (Feb 2026): reverse the penalty
+                            # portion of the collection being edited /
+                            # deleted so penalty_paid_amt and
+                            # penalty_balance_amt reflect the new state.
+                            _pen_prev = float(temp_family.penalty_amount or 0)
+                            if _pen_prev > 0:
+                                festival_get.penalty_paid_amt = max(
+                                    0.0,
+                                    float(festival_get.penalty_paid_amt) - _pen_prev,
+                                )
+                                festival_get.penalty_balance_amt = (
+                                    float(festival_get.penalty_balance_amt) + _pen_prev
+                                )
+
                             festival_get.save()
 
 
@@ -1593,6 +1631,20 @@ def edit_collections_details(request, pk):
                             festival_get.credit_amt = float(festival_get.credit_amt) + float(temp_family.amount)
                             festival_get.debit_amt = float(festival_get.debit_amt) - float(temp_family.amount)
                             festival_get.balance_amt = float(festival_get.balance_amt) + float(temp_family.amount)
+
+                            # Fix C (Feb 2026): reverse the penalty
+                            # portion of the collection being edited /
+                            # deleted so penalty_paid_amt and
+                            # penalty_balance_amt reflect the new state.
+                            _pen_prev = float(temp_family.penalty_amount or 0)
+                            if _pen_prev > 0:
+                                festival_get.penalty_paid_amt = max(
+                                    0.0,
+                                    float(festival_get.penalty_paid_amt) - _pen_prev,
+                                )
+                                festival_get.penalty_balance_amt = (
+                                    float(festival_get.penalty_balance_amt) + _pen_prev
+                                )
 
                             festival_get.save()
 
@@ -3906,7 +3958,18 @@ def chitname_withfiltering_category(request):
             type1 = request.data['type']
             chit_name = request.data['chit_name']
 
+        # Owner rule (Feb 2026): honour the collection form's selected
+        # `pay_date` so the "Choose Person" dropdown only lists borrowers
+        # whose installment is due on-or-before that date. Falls back to
+        # today when the frontend doesn't send `selected_date` (legacy
+        # callers / cron jobs).
+        _sel = request.data.get('selected_date')
         checking_date = date.today()
+        if _sel:
+            try:
+                checking_date = datetime.strptime(_sel, "%Y-%m-%d").date()
+            except (TypeError, ValueError):
+                checking_date = date.today()
 
         checking_date_month = checking_date.month
         checking_date_year = checking_date.year
@@ -3982,6 +4045,27 @@ def chitname_withfiltering_category(request):
                     print(f"Error processing fund {fund.id}: {e}")
                     continue
 
+            # -------------------------------------------------------------
+            # Owner rule (Feb 2026): Date-scoped post-filter for
+            # non-installment interest (Interest / Interest with capital).
+            # A row stays visible if the next expected interest apply
+            # date is on-or-before the operator's selected date, OR the
+            # borrower owes penalty / interest right now.
+            _filtered = []
+            for _f in fund_mem_list:
+                try:
+                    _bs = PeopleInterestBalanceSheet.objects.filter(interest_id=_f.id).first()
+                    _pen = float(_bs.penalty_balance_amt or 0) if _bs else 0.0
+                    _int = float(_bs.intrest_balance_amt or 0) if _bs else 0.0
+                    if not (_pen > 0 or _int > 0) and _bs and _bs.interest_apply_date:
+                        _next_due = _bs.interest_apply_date + relativedelta(months=1)
+                        if _next_due > checking_date:
+                            continue
+                except Exception:
+                    pass
+                _filtered.append(_f)
+            fund_mem_list = _filtered
+
             serializer = PeopleInterestDetailsSerializer(fund_mem_list, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         elif interest_category == "Installment Interest":
@@ -4010,8 +4094,13 @@ def chitname_withfiltering_category(request):
 
                         current_date = checking_date
 
-                        month = datetime.now().month
-                        year = datetime.now().year
+                        # Owner rule (Feb 2026): use the operator's
+                        # selected `checking_date` for the current
+                        # month/year window so the "Choose Person"
+                        # dropdown reflects the picked pay_date, not
+                        # today.
+                        month = checking_date.month
+                        year = checking_date.year
                         number_of_days = calendar.monthrange(year, month)[1]
                         first_date = date(year, month, 1)
                         last_date = date(year, month, number_of_days)
@@ -4299,8 +4388,13 @@ def chitname_withfiltering_category(request):
 
                         current_date = checking_date
 
-                        month = datetime.now().month
-                        year = datetime.now().year
+                        # Owner rule (Feb 2026): use the operator's
+                        # selected `checking_date` for the current
+                        # month/year window so the "Choose Person"
+                        # dropdown reflects the picked pay_date, not
+                        # today.
+                        month = checking_date.month
+                        year = checking_date.year
                         number_of_days = calendar.monthrange(year, month)[1]
                         first_date = date(year, month, 1)
                         last_date = date(year, month, number_of_days)
@@ -4556,6 +4650,36 @@ def chitname_withfiltering_category(request):
                                         weeks=mem_obj.interest.paid_counts)) not in dates) and mem_obj.interest.interest_date != checking_date and mem_obj.interest.paid_counts != mem_obj.interest.interest_period:
                                     # if checking_date == i and ((mem_obj.interest_apply_date + relativedelta(weeks=mem_obj.interest.paid_counts)) != i):
                                     fund_mem_list.append(mem_obj.interest)
+
+            # -------------------------------------------------------------
+            # Owner rule (Feb 2026): Date-scoped post-filter.
+            # After the legacy branches build `fund_mem_list`, drop any
+            # borrower whose next installment isn't due yet on
+            # `checking_date` (the operator's selected pay_date). A row
+            # stays visible if EITHER:
+            #   - `installment_date` (rolling due-date pointer maintained
+            #     by the interest.signals sync) <= checking_date, OR
+            #   - the borrower owes penalty  (penalty_balance_amt > 0), OR
+            #   - the borrower owes interest (intrest_balance_amt > 0).
+            # Rows whose `installment_date` isn't populated (legacy /
+            # non-installment sources) are left in-place — the older
+            # month/week/day branches already filter them.
+            _filtered = []
+            for _f in fund_mem_list:
+                try:
+                    _bs = PeopleInterestBalanceSheet.objects.filter(interest_id=_f.id).first()
+                    _pen = float(_bs.penalty_balance_amt or 0) if _bs else 0.0
+                    _int = float(_bs.intrest_balance_amt or 0) if _bs else 0.0
+                    if _f.installment_date and not (_pen > 0 or _int > 0):
+                        if _f.installment_date > checking_date:
+                            # Not yet due on the selected date and no
+                            # outstanding penalty/interest — hide.
+                            continue
+                except Exception:
+                    pass
+                _filtered.append(_f)
+            fund_mem_list = _filtered
+
             serializer = PeopleInterestDetailsSerializer(fund_mem_list, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 

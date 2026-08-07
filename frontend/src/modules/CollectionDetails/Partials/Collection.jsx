@@ -292,11 +292,17 @@ export const Collection = ({ trigger }) => {
     // setprinChecked(false);
     // setIntChecked(false);
 
+    // Owner rule (Feb 2026): the "Choose Person" list must reflect only
+    // borrowers whose next installment / interest is due on or before the
+    // date the operator picked at the top of the form (`selectedDate` →
+    // `pay_date`). Previously the backend hard-coded `date.today()`, so
+    // every borrower showed up regardless of the selected date.
     const NewValues = {
       interest_category: value,
       interest_type: collectionType,
       interest_principle: prinChecked,
       interest_field: intChecked,
+      selected_date: selectedDate,
       ...(collectionType === "Chit Interest" && { chit_name: manageInterestId.chit_name }),
       ...(collectionType === "Chit Interest" && { type: manageInterestId?.id })
       // type: manageInterestId?.id
