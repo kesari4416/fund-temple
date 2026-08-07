@@ -151,22 +151,23 @@ def _apply_for_record(record: PeopleInterestDetails) -> dict:
 
 
 def _installment_delta(record: PeopleInterestDetails):
-    """Timedelta between two installment due dates.
+    """Timedelta between two consecutive installment due dates.
 
-    Reads `interest_period` (n) + `interest_period_type` (week / month /
-    days) from the loan and returns a `relativedelta`.  Defaults to a
-    monthly cadence when either is missing so legacy records still tick.
+    Reads ``interest_period_type`` (week / month / days) from the loan
+    and returns a ``relativedelta`` for ONE installment cycle. Defaults
+    to monthly when the field is missing.
+
+    Note: ``interest_period`` is the TOTAL count of installments in the
+    loan (e.g. ``20`` weekly installments), NOT the delta multiplier.
+    The cadence between two consecutive due dates is a single unit of
+    the period-type (1 week / 1 month / 1 day).
     """
-    try:
-        period = int(record.interest_period or 1)
-    except (TypeError, ValueError):
-        period = 1
     ptype = (record.interest_period_type or "month").lower()
     if ptype in ("day", "days"):
-        return relativedelta(days=period)
+        return relativedelta(days=1)
     if ptype in ("week", "weeks"):
-        return relativedelta(weeks=period)
-    return relativedelta(months=period)
+        return relativedelta(weeks=1)
+    return relativedelta(months=1)
 
 
 def _apply_for_installment(
@@ -233,12 +234,23 @@ def _apply_for_installment(
     # (start + cycle × delta) walker for rows that haven't been
     # migrated yet.
     paid_counts = int(record.paid_counts or 0)
+    # Owner rule (Feb 2026 — v4): stop accruing penalty once every
+    # scheduled installment has been walked. Without this bound the
+    # walker keeps appending penalties forever past the loan's
+    # terminating date. When ``interest_period`` is 0/None the bound
+    # is disabled (legacy open-ended records).
+    try:
+        max_cycle = int(record.interest_period or 0)
+    except (TypeError, ValueError):
+        max_cycle = 0
 
     if record.installment_date:
         # Every full cadence step BEFORE today is a missed due date.
         due_date = record.installment_date
         cycle = paid_counts + 1
         while due_date <= today:
+            if max_cycle and cycle > max_cycle:
+                break
             already = InterestPeopleReport.objects.filter(
                 interest=record,
                 reportdate=due_date,
@@ -267,6 +279,8 @@ def _apply_for_installment(
         cycle = 1
         due_date = start + delta
         while due_date <= today:
+            if max_cycle and cycle > max_cycle:
+                break
             if cycle > paid_counts:
                 already = InterestPeopleReport.objects.filter(
                     interest=record,

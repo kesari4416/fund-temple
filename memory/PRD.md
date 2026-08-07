@@ -342,6 +342,39 @@ Business rule clarified with the user:
   - `test_selected_date_filter_via_django_orm` — sanity check for
     candidate data
 
+## What's been implemented (2026-02 fork — HOTFIX: installment_delta bug)
+- [x] **Penalty was silently ₹0 on every Installment Interest loan.** The
+  ``interest/overdue_views.py::_installment_delta`` helper was treating
+  ``PeopleInterestDetails.interest_period`` as the delta multiplier
+  (i.e. "20 weeks between two due dates" for a 20-week loan). In
+  reality ``interest_period`` is the TOTAL COUNT of installments (a
+  20-week loan means 20 weekly installments, each cycle = 1 week).
+  Result: ``installment_date`` computed by the signal jumped years
+  into the future (loan 102 = C.Subash: 2029-10-23 instead of
+  2025-01-28), the penalty walker's ``while due_date <= today`` loop
+  never fired, and the "Chit Fund → Pending Amount → View details"
+  table always showed ``Penalty ₹0.00``.
+- [x] **Fixed** ``_installment_delta`` to return a single-cycle
+  ``relativedelta`` (1 day / 1 week / 1 month) regardless of
+  ``interest_period``.
+- [x] **Added a safety bound** in ``_apply_for_installment``: the
+  penalty walker now stops once ``cycle > interest_period`` so the
+  ledger never accrues past the loan's terminating date (when
+  ``interest_period > 0``).
+- [x] **Recomputed installment_date for 199 existing loans** using the
+  corrected helper. Sample verifications:
+  - Loan 32 (10-month term, paid_counts=6): 2030-04-09 → 2025-01-09 ✓
+  - Loan 102 C.Subash (20-week term, paid_counts=12): 2029-10-23 →
+    2025-01-28 ✓
+- [x] **Backfilled missing penalty rows for 69 installment loans**
+  totalling **₹50,973.36** of previously-missed penalty accrual.
+  Sample: C.Subash id=102 → 8 missed weekly cycles × ₹15 (3 % of
+  ₹500 installment) = ₹120 now shown in Penalty / Penalty bal.
+- [x] **Verified end-to-end** via ``GET /api/chit_fund/pending_borrowers/1/``:
+  AMMAN FINANCE totals now report ``penalty_amt = ₹1,62,455`` (was
+  ₹0 before the fix) and C.Subash row correctly shows
+  ``penalty_amt=₹120, penalty_balance_amt=₹120``.
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.
