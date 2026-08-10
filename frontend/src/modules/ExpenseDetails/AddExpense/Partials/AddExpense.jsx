@@ -76,6 +76,22 @@ export const AddExpenseForm = ({
     UpdateRecord?.expense_subcategory || null
   );
   const showExpenseCategory = expenseSubcategory === "Temple Expense";
+  // Chit Fund selector state (Feb 2026 owner rule): populated whenever
+  // Subcategory === "Chit Fund Expense". Fetched via existing
+  // /api/chit_fund/get_active_chitfunds/ endpoint.
+  const showChitFundSelector = expenseSubcategory === "Chit Fund Expense";
+  const [chitFundList, setChitFundList] = useState([]);
+  useEffect(() => {
+    if (!showChitFundSelector) return;
+    request
+      .get(APIURLS.PROFIT_CHITFUND_DETAILS)
+      .then((res) => setChitFundList(res?.data || []))
+      .catch(() => setChitFundList([]));
+  }, [showChitFundSelector]);
+  const chitFundOptions = chitFundList?.map((c) => ({
+    label: c.chit_name,
+    value: c.id,
+  }));
   // ======  Modal Open ========
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -107,6 +123,13 @@ export const AddExpenseForm = ({
       setExpenseDate(expenseDate);
       setTransactionDate(TODateDOB);
       setExpenseSubcategory(UpdateRecord?.expense_subcategory || null);
+      // Pre-fill chit fund selector on Edit (Feb 2026 owner rule)
+      if (UpdateRecord?.chitt_fund) {
+        form.setFieldsValue({
+          chitt_fund: UpdateRecord.chitt_fund,
+          chit_fund_name: UpdateRecord.chit_fund_name,
+        });
+      }
       form.setFieldsValue({expense_name:UpdateRecord?.expense_name})
     }
   }, [UpdateRecord, Expensetrigr]);
@@ -528,6 +551,32 @@ export const AddExpenseForm = ({
                   },
                 ]}
               />
+              <CustomInput name={"category_name"} display={"none"} />
+            </Col>
+          ) : showChitFundSelector ? (
+            /* Feb 2026 owner rule: link the Chit Fund Expense to a
+               specific chit fund so its profit_amount + cash_inhand_amount
+               are debited atomically on Add / Edit / Delete. */
+            <Col span={24} md={12}>
+              <CustomSelect
+                label={"Chit Fund"}
+                name={"chitt_fund"}
+                options={chitFundOptions}
+                placeholder={"Choose Chit Fund"}
+                onChange={(val) => {
+                  const c = chitFundList?.find((x) => x.id === val);
+                  form.setFieldsValue({ chit_fund_name: c?.chit_name });
+                }}
+                rules={[
+                  {
+                    required: true,
+                    message: "Please Select a Chit Fund !",
+                  },
+                ]}
+                data-testid={"expense-chitfund-select"}
+              />
+              <CustomInput name={"chit_fund_name"} display={"none"} />
+              <CustomInput name={"category"} display={"none"} />
               <CustomInput name={"category_name"} display={"none"} />
             </Col>
           ) : (

@@ -216,6 +216,15 @@ const ExpenseList = () => {
       },
     },
     {
+      // Feb 2026 owner rule: expose the chit-fund tag on the list so
+      // operators can spot which chit fund every Chit-Fund-Expense hit.
+      title: "Chit Fund",
+      dataIndex: "chit_fund_name",
+      width: 140,
+      render: (val, rec) =>
+        rec?.expense_subcategory === "Chit Fund Expense" ? (val || "-") : "-",
+    },
+    {
       title: "Date",
       dataIndex: "date",
       width: 120,
@@ -291,6 +300,12 @@ const ExpenseList = () => {
     {
       title: "Expense Category",
       dataIndex: "category_name",
+    },
+    {
+      title: "Chit Fund",
+      dataIndex: "chit_fund_name",
+      render: (val, rec) =>
+        rec?.expense_subcategory === "Chit Fund Expense" ? (val || "-") : "-",
     },
     {
       title: "Date",

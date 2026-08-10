@@ -375,6 +375,48 @@ Business rule clarified with the user:
   ₹0 before the fix) and C.Subash row correctly shows
   ``penalty_amt=₹120, penalty_balance_amt=₹120``.
 
+## What's been implemented (2026-02 fork — Chit Fund Expense Deduction)
+- [x] **Chit Fund Expense now atomically debits ``profit_amount`` and
+  ``cash_inhand_amount`` on the linked chit fund** (owner rule Feb 2026).
+- [x] **``ADDExpenseDetails`` gained a ``chitt_fund`` FK + ``chit_fund_name``**
+  string mirror (migration ``expense/0003_addexpensedetails_chit_fund_
+  name_and_more.py``). Every ``expense_subcategory == "Chit Fund
+  Expense"`` row now points to the owning ``ChitFundsDetails`` record.
+- [x] **``expense/chit_fund_hooks.py``** — three helpers:
+  ``check_chit_fund_cash`` (guards against negative cash-in-hand),
+  ``apply_chit_fund_expense`` (debit), ``reverse_chit_fund_expense``
+  (credit-back). All operate on ``Decimal`` to avoid float drift.
+- [x] **``expense/views.py``**
+  - **POST** ``add_expen_details``: guard cash before save, debit chit
+    fund after save.
+  - **PUT** ``edit_expen_details``: reverse-then-reapply with
+    ``refresh_from_db()`` on both objects so same-chit-fund amount
+    tweaks don't stomp each other's writes.
+  - **PATCH**: same reverse-then-reapply pattern.
+  - **DELETE**: credit-back before ``customer.delete()``.
+  - Cross-flow rejection ``HTTP 302`` with friendly message:
+    ``"Insufficient chit-fund cash. Only Rs. 726000 available in
+    AMMAN FINANCE"``.
+- [x] **Frontend AddExpense form** (``AddExpense.jsx``): new **Chit
+  Fund** dropdown, visible + required only when Subcategory =
+  "Chit Fund Expense". Options fetched from
+  ``/api/chit_fund/get_active_chitfunds/``. Included in POST + PUT
+  payload as ``chitt_fund`` (id) + ``chit_fund_name`` (string).
+  Update-mode pre-fills both fields on Edit.
+- [x] **ExpenseList** — new "Chit Fund" column on main + print tables
+  (renders "-" for Temple Expense rows).
+- [x] **ViewExpensePage** — new "Chit Fund" row, shown only for Chit
+  Fund Expense records.
+- [x] **Balance Sheet payload** — ``dic1['Chit_Fund_Expense']['details']``
+  now includes ``chit_fund_name`` + ``chit_fund_id`` per row so the
+  eventual UI table can group by chit fund.
+- [x] **End-to-end verified**:
+  - START chit AMMAN FINANCE profit=₹9,75,550 cash=₹7,25,500
+  - ADD ₹500 → 9,75,050 / 7,25,000 (both -500) ✓
+  - EDIT 500→200 → 9,75,350 / 7,25,300 (net -200 from start) ✓
+  - DELETE → back to 9,75,550 / 7,25,500 ✓
+  - Overspend guard: rejected with "Insufficient chit-fund cash" ✓
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.

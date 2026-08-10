@@ -50,6 +50,16 @@ class ADDExpenseNames(models.Model):
 class ADDExpenseDetails(models.Model):
     management_profile=models.ForeignKey(ManagementDetails,on_delete=models.CASCADE,null=True,blank=True,related_name='ManagementDetails_EXPENSE_LINK')
     expense_subcategory=models.CharField(max_length=255,choices=EXPENSE_SUBCATEGORY_CHOICES,null=True,blank=True)
+    # Chit-Fund link (Feb 2026): populated ONLY when
+    # ``expense_subcategory == "Chit Fund Expense"``. Adding / editing /
+    # deleting an expense that carries this FK atomically debits or
+    # credits the linked chit fund's ``profit_amount`` and
+    # ``cash_inhand_amount`` — kept in sync by ``expense/views.py``.
+    chitt_fund=models.ForeignKey(
+        'chit_fund.ChitFundsDetails', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='expenses',
+    )
+    chit_fund_name=models.CharField(max_length=255, null=True, blank=True)
     category=models.ForeignKey(ADDExpenseCategory,on_delete=models.CASCADE,null=True,blank=True,related_name='ADDExpenseCategory_EXPENSE_LINK')
     category_name = models.CharField(max_length=255,null=True)
     expense_from=models.CharField(max_length=255,choices=EXPENSE_FROM_TYPE_CHOICES,null=True,blank=True)

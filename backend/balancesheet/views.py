@@ -6227,6 +6227,8 @@ def balancesheet_chitfundview(request):
                     chit_expense_details.append({
                         'id': exp.id,
                         'category_name': exp.category_name,
+                        'chit_fund_name': exp.chit_fund_name,
+                        'chit_fund_id': exp.chitt_fund_id,
                         'expense_name': exp.expense_name,
                         'amount': exp.expense_amt,
                         'date': exp.date,
@@ -6464,6 +6466,8 @@ def balancesheet_chitfundview(request):
                     chit_expense_details.append({
                         'id': exp.id,
                         'category_name': exp.category_name,
+                        'chit_fund_name': exp.chit_fund_name,
+                        'chit_fund_id': exp.chitt_fund_id,
                         'expense_name': exp.expense_name,
                         'amount': exp.expense_amt,
                         'date': exp.date,

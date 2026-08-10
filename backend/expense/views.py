@@ -3,6 +3,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from.serializers import ADDExpenseCategorySerializer,ADDExpenseNamesSerializer,ADDExpenseDetailsSerializer
 from .models import ADDExpenseCategory,ADDExpenseNames,ADDExpenseDetails
+from .chit_fund_hooks import (
+    check_chit_fund_cash,
+    apply_chit_fund_expense,
+    reverse_chit_fund_expense,
+)
+from chit_fund.models import ChitFundsDetails
 from token_app.views import *
 from management.models import ManagementDetails
 from permisions.models import Permisions
@@ -263,6 +269,32 @@ def add_expen_details(request):
             serializer876 = ADDExpenseDetailsSerializer(data=request.data)
             if serializer876.is_valid():
                 print(request.data)
+
+                # ----------------------------------------------------------
+                # Owner rule (Feb 2026): if this is a "Chit Fund Expense"
+                # linked to a specific chit fund, guard against negative
+                # cash-in-hand BEFORE saving.  The debit itself happens
+                # AFTER save() so we operate on the persisted row.
+                # ----------------------------------------------------------
+                _sub = (request.data.get('expense_subcategory') or '').strip()
+                _chit_id = request.data.get('chitt_fund') or None
+                _chit_obj = None
+                if _sub == 'Chit Fund Expense' and _chit_id:
+                    try:
+                        _chit_obj = ChitFundsDetails.objects.get(
+                            id=_chit_id, management_profile=management
+                        )
+                    except ChitFundsDetails.DoesNotExist:
+                        return Response(
+                            {'message': 'Selected chit fund not found'},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                    _ok, _msg = check_chit_fund_cash(
+                        _chit_obj, request.data.get('expense_amt') or 0
+                    )
+                    if not _ok:
+                        return Response({'message': _msg}, status.HTTP_302_FOUND)
+
                 try:
                     bank=request.data['bank']
                 except:
@@ -302,7 +334,13 @@ def add_expen_details(request):
                 temp_family.created_by=rejin.id
                 temp_family.management_profile=management
                 temp_family.save()
-                
+
+                # Chit-Fund debit (Feb 2026 owner rule): apply the
+                # profit_amount + cash_inhand_amount deduction on the
+                # linked chit fund now that the expense row is persisted.
+                if _chit_obj is not None:
+                    apply_chit_fund_expense(_chit_obj, temp_family.expense_amt)
+
                 Report.objects.create(banks=temp_family.bank,type_choice="Reduction",management_profile=temp_family.management_profile,expenses=temp_family,amount=temp_family.expense_amt,created_by=rejin.id)                
                 return Response(serializer876.data,status=status.HTTP_201_CREATED)
             else:
@@ -352,6 +390,50 @@ def edit_expen_details(request,pk):
                 return Response({'message':"Cannot be edited"},status.HTTP_302_FOUND)   
             serializer876 = ADDExpenseDetailsSerializer(customer,data=request.data)
             if serializer876.is_valid():
+                # ----------------------------------------------------------
+                # Owner rule (Feb 2026): reverse-then-reapply chit-fund
+                # debit on edit. Handles category switch (Chit Fund →
+                # Temple), amount change, chit-fund switch, etc.
+                # ----------------------------------------------------------
+                _prev_chit = customer.chitt_fund
+                _prev_amt = customer.expense_amt
+                _prev_was_chit = (customer.expense_subcategory == 'Chit Fund Expense') and (_prev_chit is not None)
+
+                _new_sub = (request.data.get('expense_subcategory') or '').strip()
+                _new_chit_id = request.data.get('chitt_fund') or None
+                _new_chit_obj = None
+                if _new_sub == 'Chit Fund Expense' and _new_chit_id:
+                    try:
+                        _new_chit_obj = ChitFundsDetails.objects.get(
+                            id=_new_chit_id, management_profile=management
+                        )
+                    except ChitFundsDetails.DoesNotExist:
+                        return Response(
+                            {'message': 'Selected chit fund not found'},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                    # Preview: available cash on target chit AFTER reversing
+                    # the previous debit (if the same chit-fund) so a same-
+                    # chit amount-tweak doesn't false-flag.
+                    _new_amt = request.data.get('expense_amt') or 0
+                    _preview_avail = None
+                    if _prev_was_chit and _prev_chit and _prev_chit.id == _new_chit_obj.id:
+                        _preview_avail = (
+                            float(_new_chit_obj.cash_inhand_amount or 0)
+                            + float(_prev_amt or 0)
+                        )
+                        if _preview_avail < float(_new_amt or 0):
+                            return Response(
+                                {'message': 'Insufficient chit-fund cash. Only Rs. '
+                                            + f'{_preview_avail:.2f}' + ' available in '
+                                            + f'{_new_chit_obj.chit_name}'},
+                                status.HTTP_302_FOUND,
+                            )
+                    else:
+                        _ok, _msg = check_chit_fund_cash(_new_chit_obj, _new_amt)
+                        if not _ok:
+                            return Response({'message': _msg}, status.HTTP_302_FOUND)
+
                 if customer.payment_mode == "Online":
                     customer.bank=None
                     customer.transaction_no=None
@@ -433,6 +515,18 @@ def edit_expen_details(request,pk):
                 temp_family.created_by=rejin.id
                 temp_family.management_profile=management
                 temp_family.save()
+
+                # Chit-Fund reverse-then-reapply (Feb 2026 owner rule).
+                if _prev_was_chit:
+                    # Refresh so reverse writes against the latest
+                    # in-DB balances (avoids stale ORM instance stomping
+                    # the row when prev + new point to the same chit).
+                    _prev_chit.refresh_from_db()
+                    reverse_chit_fund_expense(_prev_chit, _prev_amt)
+                if _new_chit_obj is not None:
+                    _new_chit_obj.refresh_from_db()
+                    apply_chit_fund_expense(_new_chit_obj, temp_family.expense_amt)
+
                 report_check=Report.objects.filter(expenses=pk)
                 if report_check:
                     report_checks=Report.objects.filter(expenses=pk).first()
@@ -452,10 +546,24 @@ def edit_expen_details(request,pk):
         if get_role=="User" and perm.expense_edit ==True or get_role=="Admin" or rejin.is_superuser == True:  
             serializer876 = ADDExpenseDetailsSerializer(customer,data=request.data,partial=True)
             if serializer876.is_valid():
+                # Chit-Fund reverse-then-reapply (partial edit).
+                _prev_chit = customer.chitt_fund
+                _prev_amt = customer.expense_amt
+                _prev_was_chit = (customer.expense_subcategory == 'Chit Fund Expense') and (_prev_chit is not None)
+
                 temp_family=serializer876.save()
                 temp_family.created_by=rejin.id
                 temp_family.management_profile=management
                 temp_family.save()
+
+                _new_was_chit = (temp_family.expense_subcategory == 'Chit Fund Expense') and (temp_family.chitt_fund is not None)
+                if _prev_was_chit:
+                    _prev_chit.refresh_from_db()
+                    reverse_chit_fund_expense(_prev_chit, _prev_amt)
+                if _new_was_chit:
+                    temp_family.chitt_fund.refresh_from_db()
+                    apply_chit_fund_expense(temp_family.chitt_fund, temp_family.expense_amt)
+
                 manage=ManagementTreasure.objects.filter(management_profile=management)
                 if manage:
                     manage_get=ManagementTreasure.objects.filter(management_profile=management).first()
@@ -471,6 +579,14 @@ def edit_expen_details(request,pk):
             date_check=  (customer.date.month != datetime.now().month and customer.date.year != datetime.now().year)  or  (customer.date.month != datetime.now().month and customer.date.year == datetime.now().year)   or (customer.date.month == datetime.now().month and customer.date.year != datetime.now().year)     
             if date_check:
                 return Response({'message':"Cannot be deleted"},status.HTTP_302_FOUND) 
+
+            # Chit-Fund credit-back (Feb 2026 owner rule): if the deleted
+            # row was a Chit Fund Expense linked to a chit fund, restore
+            # profit_amount + cash_inhand_amount before the row vanishes.
+            if (customer.expense_subcategory == 'Chit Fund Expense'
+                    and customer.chitt_fund is not None):
+                reverse_chit_fund_expense(customer.chitt_fund, customer.expense_amt)
+
             manage1=ManagementTreasure.objects.filter(management_profile=management)
             if manage1:
                 manage_get=ManagementTreasure.objects.filter(management_profile=management).first()

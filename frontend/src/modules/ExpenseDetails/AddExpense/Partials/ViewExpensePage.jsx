@@ -31,6 +31,9 @@ const ViewExpensePage = ({ ViewRecord }) => {
 
                         <h4>Subcategory: <span>{ViewRecord?.expense_subcategory}</span></h4>
                         <h4>Category Name: <span>{ViewRecord?.category_name}</span></h4>
+                        {ViewRecord?.expense_subcategory === "Chit Fund Expense" && (
+                          <h4>Chit Fund: <span>{ViewRecord?.chit_fund_name || "-"}</span></h4>
+                        )}
                         <h4>Date: <span>{ViewRecord?.date}</span></h4>
                         <h4>Expense Name: <span>{ViewRecord?.expense_name}</span></h4>
                         <h4>Expense Amt: <span>{ViewRecord?.expense_amt}</span></h4>
