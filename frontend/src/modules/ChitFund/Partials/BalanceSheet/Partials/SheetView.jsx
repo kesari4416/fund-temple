@@ -80,6 +80,43 @@ export const CFProfitDistributionView = ({ datas }) => {
     )
 }
 
+// Feb 2026 owner rule: line-item breakdown for the "Chit Fund Expense"
+// entry on the Debit column of the Chit-Fund Balance Sheet. Uses the
+// same column layout as Interest Given / Profit Distribution so the
+// section reads consistently. Backend payload (dic1['Chit_Fund_Expense'])
+// already includes `chit_fund_name`, `expense_name`, and `amount` for
+// each row.
+export const ChitFundExpenseView = ({ datas }) => {
+
+    const ValuesData = datas?.Chit_Fund_Expense?.details || []
+
+    const ColumnTable = [
+        {
+            title: 'Sl No',
+            render: (value, item, index) => index + 1,
+        },
+        {
+            title: 'Chit Fund',
+            dataIndex: 'chit_fund_name',
+            render: (val) => val || '-',
+        },
+        {
+            title: 'Expense Name',
+            dataIndex: 'expense_name'
+        },
+        {
+            title: 'Amount',
+            dataIndex: 'amount'
+        },
+    ]
+
+    return (
+        <div>
+            <CustomStandardTable columns={ColumnTable} data={ValuesData} pagination={false} />
+        </div>
+    )
+}
+
 export const FromCollectionView = ({ datas }) => {
 
     const ValuesData = datas?.From_Collection?.details || []

@@ -417,6 +417,28 @@ Business rule clarified with the user:
   - DELETE → back to 9,75,550 / 7,25,500 ✓
   - Overspend guard: rejected with "Insufficient chit-fund cash" ✓
 
+## What's been implemented (2026-02 fork — Chit Fund Expense Row on Balance Sheet)
+- [x] **Chit Fund Balance Sheet Debit column now surfaces the "Chit
+  Fund Expense" total as an expandable line-item row.** Fixes the
+  ₹100 mismatch where the Debit Total silently included Chit-Fund
+  Expenses but no visible row explained the number.
+- [x] **`SheetView.jsx`** — new ``ChitFundExpenseView`` component
+  renders a 4-column table (``Sl No | Chit Fund | Expense Name |
+  Amount``), matching the existing "Interest Given / Profit
+  Distribution" styling.
+- [x] **`SheetPage.jsx`** — new expand/collapse state
+  (``chitFundExpenseModal``), toggle handler
+  (``ChitFundExpenseToggle``), and a rendered row placed right after
+  "Profit Distribution" in the Debit column. Uses the same
+  ``MdOutlineKeyboardArrowDown / MdKeyboardArrowRight`` chevron
+  affordance as the other rows.
+- [x] **Backend verified**: ``POST /api/balancesheet/balancesheet_
+  chitfundview/`` returns ``Debit.Chit_Fund_Expense.total_amount`` +
+  ``details[]`` containing ``chit_fund_name``, ``expense_name``,
+  ``amount`` per row. Confirmed with live curl on a fresh row
+  (Rs 250 UI Sheet Test, AMMAN FINANCE) — payload contains matching
+  entry and the ``total_debit_amount`` scales up accordingly.
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.

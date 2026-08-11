@@ -8,7 +8,7 @@ import dayjs from 'dayjs'
 import React, { Fragment, useRef, useState } from 'react'
 import { MdKeyboardArrowRight, MdOutlineKeyboardArrowDown } from 'react-icons/md'
 import styled from 'styled-components'
-import { CFProfitDistributionView, ChitfundInterestGivenView, ChitfundInvesView, FromCollectionView } from './SheetView'
+import { CFProfitDistributionView, ChitfundInterestGivenView, ChitfundInvesView, ChitFundExpenseView, FromCollectionView } from './SheetView'
 import { CustomPageTitle } from '@components/others/CustomPageTitle'
 import { IoPrint } from 'react-icons/io5'
 import { useReactToPrint } from 'react-to-print'
@@ -28,6 +28,9 @@ export const SheetPage = () => {
     const [chitfundInvestmant, setChitfundInvestmant] = useState([]);
     const [interestGivenModal, setInterestGivenModal] = useState(false);  // ------ Used Interest Given Modal
     const [profitDistritnModal, setProfitDistritnModal] = useState(false);  // ------Used Profit Distribution Modal
+    // Feb 2026 owner rule: expand/collapse toggle for the new "Chit
+    // Fund Expense" row in the Debit column.
+    const [chitFundExpenseModal, setChitFundExpenseModal] = useState(false);
     const [fromCollectionModal, setFromCollectionModal] = useState(false); // ------Used From CollectionModal Modal
 
     const CreditDetails = dataSource?.Credit;
@@ -77,6 +80,9 @@ export const SheetPage = () => {
 
     const ChitFundProfitDistri = () => {
         setProfitDistritnModal(!profitDistritnModal)
+    }
+    const ChitFundExpenseToggle = () => {
+        setChitFundExpenseModal(!chitFundExpenseModal)
     };
 
     const FromCollectionFunctn = () => {
@@ -366,6 +372,26 @@ export const SheetPage = () => {
                                         </Flex>
                                         {profitDistritnModal ?
                                             <CFProfitDistributionView datas={DebitDetails} /> : null
+                                        }
+                                    </>
+                                ) : null}
+
+                                {/* Feb 2026 owner rule: line-item breakdown for
+                                    Chit Fund Expense on the Debit column, so
+                                    the Total no longer includes an "invisible"
+                                    amount and operators can drill into which
+                                    expenses hit which chit fund. */}
+                                {DebitDetails && DebitDetails.Chit_Fund_Expense ? (
+                                    <>
+                                        <Flex spacebetween={true} margin={'20px 5px'} onClick={() => ChitFundExpenseToggle()} data-testid="chitfund-expense-row">
+                                            <div className='flexClass'>
+                                                <h3 className='NameHead'>Chit Fund Expense</h3>
+                                                {chitFundExpenseModal ? <MdOutlineKeyboardArrowDown fontSize={22} /> : <MdKeyboardArrowRight fontSize={22} />}
+                                            </div>
+                                            <div className='NameHead'>{formatIndianNumber(DebitDetails.Chit_Fund_Expense?.total_amount)} </div>
+                                        </Flex>
+                                        {chitFundExpenseModal ?
+                                            <ChitFundExpenseView datas={DebitDetails} /> : null
                                         }
                                     </>
                                 ) : null}
