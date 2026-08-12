@@ -439,6 +439,34 @@ Business rule clarified with the user:
   (Rs 250 UI Sheet Test, AMMAN FINANCE) — payload contains matching
   entry and the ``total_debit_amount`` scales up accordingly.
 
+## What's been implemented (2026-02 fork — Live Principal Amt Preview)
+- [x] **Collection form now shows a live "remaining Principal Amt"
+  as the operator increases "No of Count".** Formula:
+  ``displayed principal_amt = _original_principal_amt −
+  (installment_amt × no_count_install)``, clamped at 0.
+- [x] **Purely UI arithmetic — DB never touched.** Verified against
+  ``collection/views.py`` lines 418-420 / 467-469 / 571-573 —
+  backend reads ``principal_balance`` straight from the DB and
+  subtracts ``temp_family.amount`` (the paid instalment amount).
+  The form's ``principal_amt`` is display-only and is disregarded
+  when computing the actual debit.
+- [x] **Frontend (only file touched)**:
+  ``/app/frontend/src/modules/CollectionDetails/Partials/Collection.jsx``
+  - Hidden ``_original_principal_amt`` mirror field added to the
+    JSX under the "Principal Amt" input.
+  - Seeded from ``PlaceFindMem?.principal_balance`` on borrower
+    pick, and from ``record?.principal_amt`` on Edit.
+  - Included in every ``form.resetFields([...])`` call (category
+    switch, principal/interest checkbox toggles) so the mirror
+    matches the visible field.
+  - ``handlePricipalPay`` extended: for Installment Interest branch
+    only, subtracts the computed ``PrincipalAmount`` from the hidden
+    original and pushes the result into the visible
+    ``principal_amt``.  When No of Count is cleared / 0, the field
+    restores to the pristine original balance.
+- [x] **Regression-safe**: Non-Installment branch, Edit / Delete /
+  Insufficient-cash flows all untouched.
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.

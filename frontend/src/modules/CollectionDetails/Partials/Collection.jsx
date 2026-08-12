@@ -287,7 +287,7 @@ export const Collection = ({ trigger }) => {
     // console.log(prinChecked, '12345');
     setIntCategory(value);
     form.resetFields(["personId", "principal_amt", "installment_amt", "no_count_install",
-      "amount", "interst_amt", "penalty_amt", "interst_amount", "penalty_amount"]);
+      "amount", "interst_amt", "penalty_amt", "interst_amount", "penalty_amount", "_original_principal_amt"]);
     // setChitDetails([]);
     // setprinChecked(false);
     // setIntChecked(false);
@@ -948,7 +948,7 @@ export const Collection = ({ trigger }) => {
   const handlepricipalChecked = (e) => {
     setprinChecked(!prinChecked);
     form.resetFields(["personId", "principal_amt", "installment_amt", "no_count_install",
-      "amount", "interst_amt", "penalty_amt", "interst_amount", "penalty_amount","interest_category"]);
+      "amount", "interst_amt", "penalty_amt", "interst_amount", "penalty_amount","interest_category","_original_principal_amt"]);
 
   };
   //------------ Handle Interest Checked Function--------------
@@ -956,7 +956,7 @@ export const Collection = ({ trigger }) => {
   const handleInterestChecked = (e) => {
     setIntChecked(!intChecked);
     form.resetFields(["personId", "principal_amt", "installment_amt", "no_count_install",
-      "amount", "interst_amt", "penalty_amt", "interst_amount", "penalty_amount","interest_category"]);
+      "amount", "interst_amt", "penalty_amt", "interst_amount", "penalty_amount","interest_category","_original_principal_amt"]);
   };
   //--------------- Handle Management Interest Person onChange fn--------------
 
@@ -1024,6 +1024,22 @@ export const Collection = ({ trigger }) => {
 
       PrincipalAmount = InterestAmt * NoCount || 0;
       form.setFieldsValue({ amount: PrincipalAmount });
+
+      // Feb 2026 owner rule: dynamically reduce the displayed
+      // Principal Amt as No of Count grows so operators see the
+      // remaining balance in real time.  ``_original_principal_amt``
+      // is a hidden mirror of the picked borrower's principal_balance
+      // — used ONLY for this UI arithmetic; backend still reads the
+      // authoritative balance from the DB.
+      const original = Number(form.getFieldValue("_original_principal_amt") || 0);
+      const remaining = Math.max(original - Number(PrincipalAmount || 0), 0);
+      // When No of Count is cleared / zeroed, restore the pristine
+      // original so the user sees the full outstanding balance again.
+      if (!NoCount || Number(NoCount) <= 0) {
+        form.setFieldsValue({ principal_amt: original });
+      } else {
+        form.setFieldsValue({ principal_amt: remaining });
+      }
     }
     // if (Amount > principalAmt || PrincipalAmount > principalAmt) {
     //   toast.warn("Principal Pay Amount cannot be greater than Principal Amount !");
@@ -1141,6 +1157,13 @@ export const Collection = ({ trigger }) => {
     form.setFieldsValue({
       credit_amt: PlaceFindMem?.credit_amt, //Lease Collcetion
       principal_amt: PlaceFindMem?.principal_balance, // Management Interest Select member name/Int No
+      // Feb 2026 owner rule: stash the original picked-borrower
+      // principal balance in a hidden field so `handlePricipalPay`
+      // can compute the DISPLAYED remaining balance as the operator
+      // increases "No of Count". Purely UI arithmetic — backend
+      // (collection/views.py) reads principal_balance from the DB,
+      // never from this payload.
+      _original_principal_amt: PlaceFindMem?.principal_balance,
       interst_amt: intCategory === "Interest" ? PlaceFindMem?.interest_current_month : PlaceFindMem?.intrest_balance_amt,
       penalty_amt: PlaceFindMem?.penalty_balance_amt, //          ""
       TotalAmt: PlaceFindMem?.amount, //   Death tariff amount       ""
@@ -1403,6 +1426,10 @@ export const Collection = ({ trigger }) => {
       interest_field: intChecked || false,
       interest: record?.interest || null,
       principal_amt: record?.principal_amt || 0,
+      // Feb 2026: on Edit, seed the hidden mirror with the record's
+      // principal_amt so any No-of-Count tweak still computes against
+      // the original outstanding balance.
+      _original_principal_amt: record?.principal_amt || 0,
       no_count_install: record?.no_count_install || 0,
       interst_amount: record?.interst_amount || 0,
       penalty_amount: record?.penalty_amount || 0,
@@ -2006,6 +2033,11 @@ export const Collection = ({ trigger }) => {
                       name={"principal_amt"}
                       disabled
                     />
+                    {/* Feb 2026 owner rule: hidden mirror of the picked
+                        borrower's original principal_balance.  Used by
+                        handlePricipalPay to compute the DISPLAYED
+                        remaining balance without ever hitting the DB. */}
+                    <CustomInput name={"_original_principal_amt"} display={"none"} />
                   </Col>
                   {intCategory === "Installment Interest" ?
                     <>
