@@ -297,12 +297,32 @@ export const AddChitFund = ({ trigger, ChitFundRecord, chitTrigger, chitClose, F
 
 
     setFixedAmt(FixedChitfundAmt);
-    let GetCashInHandAmt = cashInAmt?.cash_in_hand;
-    if (ManagentAmt > GetCashInHandAmt) {
-      toast.warn(`Enter an amount equivalent to the Cash In hand Amount, which is ${GetCashInHandAmt}`)
-    }
-    else {
-      GetCashInHandAmt = ManagentAmt
+    // Feb 2026 UX polish: refetch the cash-in-hand right when the
+    // operator starts typing the Management Amount so a stale
+    // `useState({})` initial or a value that changed in another tab
+    // never sneaks through. The compare below then reads the just-
+    // arrived value from state instead of the empty initial map.
+    GetCashInHandAmt();
+
+    const rawCash = cashInAmt?.cash_in_hand;
+    const GetCashInHandAmtVal = (rawCash === null || rawCash === undefined || rawCash === '')
+      ? null
+      : Number(rawCash);
+
+    if (GetCashInHandAmtVal === null) {
+      // No treasure record yet OR the field is NULL. Guide the
+      // operator to seed cash first — friendlier than the old
+      // "which is null" message.
+      toast.warn(
+        'Cash-In-Hand is not yet set for this temple. Please add an ' +
+        'Income entry (opening balance) before creating a chit fund.'
+      );
+    } else if (ManagentAmt > GetCashInHandAmtVal) {
+      toast.warn(
+        `Management Amount (Rs. ${ManagentAmt}) exceeds current ` +
+        `Cash-In-Hand (Rs. ${GetCashInHandAmtVal}). Please reduce the ` +
+        `Share Count or top up the treasury first.`
+      );
     }
 
   }
@@ -626,6 +646,14 @@ export const AddChitFund = ({ trigger, ChitFundRecord, chitTrigger, chitClose, F
                 }
               ]}
             />
+            {/* Feb 2026 UX polish: surface the current Cash-In-Hand
+                directly under the Management Amount input so operators
+                immediately see the upper bound they can allocate. */}
+            <div style={{ fontSize: '12px', marginTop: '4px', color: (cashInAmt?.cash_in_hand === null || cashInAmt?.cash_in_hand === undefined) ? '#c00' : '#555' }}>
+              {(cashInAmt?.cash_in_hand === null || cashInAmt?.cash_in_hand === undefined)
+                ? 'Cash-In-Hand not yet set — add an Income entry first.'
+                : `Cash-In-Hand available: ₹ ${cashInAmt?.cash_in_hand}`}
+            </div>
           </Col>
 
           <AddChitFundMembers SetDynamicTable={SetDynamicTable} MemberDynamicEdit={MemberDynamicEdit}
@@ -642,16 +670,26 @@ export const AddChitFund = ({ trigger, ChitFundRecord, chitTrigger, chitClose, F
         {isloading ? <Flex center style={{ marginTop: '30px' }}><Spin /></Flex> :
 
           <Flex center gap={'20px'} style={{ margin: '30px' }}>
-            {ChitFundRecord ?
-              <>
-                <Button.Danger text={'Update'} htmlType={'submit'} />
-                <Button.Success text={'Cancel'} onClick={chitClose} />
-              </> :
-              <>
-                <Button.Danger text={'Add'} htmlType={'submit'} />
-                <Button.Success text={'Reset'} onClick={onReset} />
-              </>
-            }
+            {/* Feb 2026 UX polish: disable Add / Update while
+                Cash-In-Hand is either not loaded yet or the entered
+                Management Amount exceeds it, so the operator cannot
+                submit a chit fund the treasury cannot fund. */}
+            {(() => {
+              const raw = cashInAmt?.cash_in_hand;
+              const cashKnown = !(raw === null || raw === undefined || raw === '');
+              const mgmtVal = Number(form.getFieldValue('management_amt') || 0);
+              const overspend = cashKnown && mgmtVal > Number(raw);
+              const disableSave = !cashKnown || overspend;
+              return ChitFundRecord ?
+                <>
+                  <Button.Danger text={'Update'} htmlType={'submit'} disabled={disableSave} />
+                  <Button.Success text={'Cancel'} onClick={chitClose} />
+                </> :
+                <>
+                  <Button.Danger text={'Add'} htmlType={'submit'} disabled={disableSave} />
+                  <Button.Success text={'Reset'} onClick={onReset} />
+                </>;
+            })()}
           </Flex>
         }
       </CustomCardView>

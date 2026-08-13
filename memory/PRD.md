@@ -467,6 +467,32 @@ Business rule clarified with the user:
 - [x] **Regression-safe**: Non-Installment branch, Edit / Delete /
   Insufficient-cash flows all untouched.
 
+## What's been implemented (2026-02 fork — Add Chit Fund UX Polish)
+- [x] **"Cash-In-Hand which is null" warn replaced with actionable
+  guidance.** The old toast printed the raw string ``${GetCashInHandAmt}``
+  which rendered as *"which is null"* whenever the treasury
+  ``ManagementTreasure.cash_in_hand`` field was NULL or the row
+  didn't exist. Now three distinct messages fire:
+  - No treasure record / null cash → *"Cash-In-Hand is not yet set
+    for this temple. Please add an Income entry (opening balance)
+    before creating a chit fund."*
+  - Cash exists but management amount exceeds it → *"Management
+    Amount (Rs. X) exceeds current Cash-In-Hand (Rs. Y). Please
+    reduce the Share Count or top up the treasury first."*
+- [x] **Auto-refetch cash-in-hand** on every ``handleManagementCalculation``
+  call so a stale ``useState({})`` initial value or a tab-side
+  change never sneaks through.
+- [x] **Live Cash-In-Hand hint under Management Amount field** —
+  ``"Cash-In-Hand available: ₹ X"`` in grey, or the red *"not yet
+  set — add an Income entry first"* when the value is missing.
+- [x] **Add / Update buttons now disabled** while cash-in-hand is
+  either not loaded or the entered Management Amount exceeds
+  available cash — the operator can no longer submit an
+  under-funded chit fund.
+- [x] **File touched (only 1)**:
+  ``/app/frontend/src/modules/ChitFund/Partials/AddChitFunds/Partials/AddChitFund.jsx``
+- [x] **Bundle rebuilt + supervisor restarted.**
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.
