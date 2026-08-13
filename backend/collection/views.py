@@ -408,7 +408,16 @@ def add_collection_details(request):
                             print(float(temp_family.discount_amount))
                             print(festival_get.principal_paid)
 
-                            festival_get.principal_paid = float(festival_get.principal_paid) + float(temp_family.amount)
+                            # Feb 2026 owner rule — WAIVER mode.
+                            # ``discount_amount`` is a bookkept waiver:
+                            # the borrower pays ``amount`` in cash, but
+                            # the DEBT drops by ``amount + discount``
+                            # (the discount is treated as if paid).
+                            _discount = float(temp_family.discount_amount or 0)
+                            _pay = float(temp_family.amount or 0)
+                            _settled = _pay + _discount
+
+                            festival_get.principal_paid = float(festival_get.principal_paid) + _settled
                             print(festival_get.principal_paid)
 
                             # Clamp the running balances at 0 – a payment
@@ -417,13 +426,13 @@ def add_collection_details(request):
                             # TC_TEMPLE_INTEREST_001).
                             festival_get.principal_balance = max(
                                 0.0,
-                                float(festival_get.principal_balance) - float(temp_family.amount),
+                                float(festival_get.principal_balance) - _settled,
                             )
                             festival_get.balance_amt = max(
                                 0.0,
-                                float(festival_get.balance_amt) - float(temp_family.amount),
+                                float(festival_get.balance_amt) - _settled,
                             )
-                            festival_get.debit_amt = float(festival_get.debit_amt) + float(temp_family.amount)
+                            festival_get.debit_amt = float(festival_get.debit_amt) + _settled
                             festival_get.save()
                             # InterestPeopleReport.objects.create(management_profile=festival_get.management_profile,interest_id=festival_get.interest.id,reportdate=datetime.date(),debit_amt=temp_family.amount,balance_amt=festival_get.balance_amt,type_choice="Payment",created_by =rejin.id)
 
@@ -438,26 +447,33 @@ def add_collection_details(request):
 
                         elif temp_family.interest_field == True and temp_family.interest_principle == False:
 
-                            festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + float(
-                                temp_family.interst_amount)
+                            # Feb 2026 owner rule — WAIVER mode on
+                            # penalty. Discount here bookkeeps a waiver
+                            # of Penalty: cash-in = penalty_amount, but
+                            # penalty balance drops by
+                            # penalty_amount + discount.
+                            _discount = float(temp_family.discount_amount or 0)
+                            _pen_pay = float(temp_family.penalty_amount or 0)
+                            _int_pay = float(temp_family.interst_amount or 0)
+                            _pen_settled = _pen_pay + _discount
+
+                            festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + _int_pay
                             festival_get.intrest_balance_amt = max(
                                 0.0,
-                                float(festival_get.intrest_balance_amt) - float(temp_family.interst_amount),
+                                float(festival_get.intrest_balance_amt) - _int_pay,
                             )
-                            festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) + float(
-                                temp_family.penalty_amount)
+                            festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) + _pen_settled
                             festival_get.penalty_balance_amt = max(
                                 0.0,
-                                float(festival_get.penalty_balance_amt) - float(temp_family.penalty_amount),
+                                float(festival_get.penalty_balance_amt) - _pen_settled,
                             )
                             festival_get.balance_amt = max(
                                 0.0,
                                 float(festival_get.balance_amt)
-                                - float(temp_family.interst_amount)
-                                - float(temp_family.penalty_amount),
+                                - _int_pay
+                                - _pen_settled,
                             )
-                            festival_get.debit_amt = float(festival_get.debit_amt) + float(
-                                temp_family.interst_amount) + float(temp_family.penalty_amount)
+                            festival_get.debit_amt = float(festival_get.debit_amt) + _int_pay + _pen_settled
                             festival_get.save()
                             # InterestPeopleReport.objects.create(management_profile=festival_get.management_profile,interest_id=festival_get.interest.id,reportdate=datetime.date(),debit_amt=temp_family.amount,balance_amt=festival_get.balance_amt,type_choice="Payment",created_by =rejin.id)
 

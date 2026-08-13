@@ -287,7 +287,7 @@ export const Collection = ({ trigger }) => {
     // console.log(prinChecked, '12345');
     setIntCategory(value);
     form.resetFields(["personId", "principal_amt", "installment_amt", "no_count_install",
-      "amount", "interst_amt", "penalty_amt", "interst_amount", "penalty_amount", "_original_principal_amt"]);
+      "amount", "interst_amt", "penalty_amt", "interst_amount", "penalty_amount", "_original_principal_amt", "_original_amount", "_original_penalty_amt"]);
     // setChitDetails([]);
     // setprinChecked(false);
     // setIntChecked(false);
@@ -948,7 +948,7 @@ export const Collection = ({ trigger }) => {
   const handlepricipalChecked = (e) => {
     setprinChecked(!prinChecked);
     form.resetFields(["personId", "principal_amt", "installment_amt", "no_count_install",
-      "amount", "interst_amt", "penalty_amt", "interst_amount", "penalty_amount","interest_category","_original_principal_amt"]);
+      "amount", "interst_amt", "penalty_amt", "interst_amount", "penalty_amount","interest_category","_original_principal_amt","_original_amount","_original_penalty_amt"]);
 
   };
   //------------ Handle Interest Checked Function--------------
@@ -956,7 +956,7 @@ export const Collection = ({ trigger }) => {
   const handleInterestChecked = (e) => {
     setIntChecked(!intChecked);
     form.resetFields(["personId", "principal_amt", "installment_amt", "no_count_install",
-      "amount", "interst_amt", "penalty_amt", "interst_amount", "penalty_amount","interest_category","_original_principal_amt"]);
+      "amount", "interst_amt", "penalty_amt", "interst_amount", "penalty_amount","interest_category","_original_principal_amt","_original_amount","_original_penalty_amt"]);
   };
   //--------------- Handle Management Interest Person onChange fn--------------
 
@@ -1024,6 +1024,10 @@ export const Collection = ({ trigger }) => {
 
       PrincipalAmount = InterestAmt * NoCount || 0;
       form.setFieldsValue({ amount: PrincipalAmount });
+      // Feb 2026 owner rule: keep the hidden "_original_amount" mirror
+      // in sync so the Discount helper sees the LATEST principal-pay
+      // amount as its base whenever No of Count changes.
+      form.setFieldsValue({ _original_amount: PrincipalAmount });
 
       // Feb 2026 owner rule: dynamically reduce the displayed
       // Principal Amt as No of Count grows so operators see the
@@ -1164,6 +1168,13 @@ export const Collection = ({ trigger }) => {
       // (collection/views.py) reads principal_balance from the DB,
       // never from this payload.
       _original_principal_amt: PlaceFindMem?.principal_balance,
+      // Feb 2026 owner rule: hidden mirrors of the original `amount`
+      // (principal pay amt) and `penalty_amt` — used by
+      // `handleDiscountInstallAmt` to compute the LIVE remaining
+      // amount as the operator types Discount. Backend uses DB values,
+      // never these.
+      _original_amount: (collectionType === "Chit Interest" || collectionType === "Management Interest") ? 0 : (PlaceFindMem?.balance_amt || PlaceFindMem?.total_bal_amt || 0),
+      _original_penalty_amt: PlaceFindMem?.penalty_balance_amt || 0,
       interst_amt: intCategory === "Interest" ? PlaceFindMem?.interest_current_month : PlaceFindMem?.intrest_balance_amt,
       penalty_amt: PlaceFindMem?.penalty_balance_amt, //          ""
       TotalAmt: PlaceFindMem?.amount, //   Death tariff amount       ""
@@ -1222,16 +1233,49 @@ export const Collection = ({ trigger }) => {
 
   //--------------Handle Discount amount Interest install amt 
   const handleDiscountInstallAmt = (value) => {
-    const Discount = value || 0;
-    const PrincipalPayAmt = form.getFieldValue("amount") || 0;
+    // Feb 2026 owner rule (WAIVER mode + auto-cap):
+    // -  Installment Interest chosen → discount reduces the DISPLAYED
+    //    Principal Pay Amt (form field ``amount``).
+    // -  Penalty is being paid → discount reduces the DISPLAYED
+    //    Penalty Amt (form field ``penalty_amt``).
+    // -  Auto-cap at the target field's original value so the operator
+    //    can never enter a discount larger than what's actually owed.
+    // -  Purely UI arithmetic — the backend applies the real ledger
+    //    waiver (see collection/views.py).
+    const Discount = Number(value) || 0;
 
-    // if (Discount > PrincipalPayAmt) {
-    //   toast.warn("Discount amount cannot be greater than Principal Payment Amount!");
-    //   setDiscountMax(0);
-    // }
-    // else {
-    //   setDiscountMax("")
-    // }
+    // Discount applies to Penalty when interest_field is ticked and a
+    // penalty balance is loaded; otherwise it applies to the principal
+    // pay amount.
+    const origAmount = Number(form.getFieldValue("_original_amount") || 0);
+    const origPenalty = Number(form.getFieldValue("_original_penalty_amt") || 0);
+    const payingPenalty = origPenalty > 0 && intChecked === true;
+
+    // Auto-cap
+    let cappedDiscount = Discount;
+    let overflowed = false;
+    if (payingPenalty && Discount > origPenalty) {
+      cappedDiscount = origPenalty;
+      overflowed = true;
+    } else if (!payingPenalty && Discount > origAmount) {
+      cappedDiscount = origAmount;
+      overflowed = true;
+    }
+    if (overflowed) {
+      toast.warn(
+        `Discount capped at Rs. ${cappedDiscount} — cannot exceed the ${payingPenalty ? "Penalty Amt" : "Principal Pay Amt"}.`
+      );
+      form.setFieldsValue({ discount_amount: cappedDiscount });
+    }
+
+    // Live-reduce the displayed target field.
+    if (payingPenalty) {
+      const remaining = Math.max(origPenalty - cappedDiscount, 0);
+      form.setFieldsValue({ penalty_amt: remaining });
+    } else {
+      const remaining = Math.max(origAmount - cappedDiscount, 0);
+      form.setFieldsValue({ amount: remaining });
+    }
   }
   //------------ Handle Select Bank Fn------------------------------
   const handleBankOptions = (e) => {
@@ -2231,12 +2275,20 @@ export const Collection = ({ trigger }) => {
                 ]}
               />
             </Col>}
-          {intCategory === "Installment Interest" &&
+          {/* Feb 2026 owner rule: Discount is now available for both
+              Installment Interest (waives Principal Pay Amt) and any
+              collection where a Penalty is being paid (waives Penalty
+              Amt). Auto-cap prevents exceeding either bucket. */}
+          {(intCategory === "Installment Interest" || (intChecked === true && Number(form.getFieldValue('_original_penalty_amt') || 0) > 0)) &&
             <Col span={24} md={12}>
               <CustomInputNumber label={"Discount Amount"} name={"discount_amount"}
-                // max={discountMax}
                 suffix={"₹"}
-                onChange={handleDiscountInstallAmt} />
+                onChange={handleDiscountInstallAmt}
+                data-testid={"discount-amount-input"} />
+              {/* Hidden mirrors used by handleDiscountInstallAmt for
+                  live UI arithmetic; never persisted anywhere. */}
+              <CustomInput name={"_original_amount"} display={"none"} />
+              <CustomInput name={"_original_penalty_amt"} display={"none"} />
             </Col>
           }
           {(collectionType !== "Fund" && collectionType !== "Management Interest" && collectionType !== "Chit Interest" && balanceType !== "Interest Balance") && moveassetShow &&

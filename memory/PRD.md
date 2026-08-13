@@ -493,6 +493,49 @@ Business rule clarified with the user:
   ``/app/frontend/src/modules/ChitFund/Partials/AddChitFunds/Partials/AddChitFund.jsx``
 - [x] **Bundle rebuilt + supervisor restarted.**
 
+## What's been implemented (2026-02 fork — Discount in Collection Form)
+- [x] **Discount input now works and is available for BOTH scenarios**:
+  - **Installment Interest** picked → discount reduces the DISPLAYED
+    "Principal Pay Amt" (form field ``amount``).
+  - **Penalty** being paid (``intChecked === true`` and borrower has
+    ``penalty_balance_amt > 0``) → discount reduces the DISPLAYED
+    "Penalty Amt" (form field ``penalty_amt``).
+- [x] **WAIVER mode (owner rule 1a)** — the debt is settled by the
+  FULL amount (cash + discount), even though the borrower physically
+  pays less. Backend now applies the waiver to both:
+  - Principal branch (``interest_principle=True, interest_field=False``):
+    ``principal_paid += amount + discount``,
+    ``principal_balance -= amount + discount``,
+    ``balance_amt -= amount + discount``.
+  - Penalty branch (``interest_field=True, interest_principle=False``):
+    ``penalty_paid_amt += penalty_amount + discount``,
+    ``penalty_balance_amt -= penalty_amount + discount``,
+    ``balance_amt -= interest_amount + penalty_amount + discount``.
+- [x] **Auto-cap (owner rule 3a)** — if the operator types a discount
+  larger than the target field, a ``toast.warn`` fires and the
+  ``discount_amount`` is truncated to the max. Prevents backend
+  underflow / negative math.
+- [x] **Hidden mirrors ``_original_amount`` + ``_original_penalty_amt``**
+  seeded on borrower pick (``PlaceFindMem`` useEffect) and kept in
+  sync inside ``handlePricipalPay`` so the Discount helper always
+  sees the LATEST amount as its base whenever No of Count / borrower
+  changes. Never sent to the backend.
+- [x] **Reset lists updated** for category switch + principal /
+  interest checkbox toggles so the hidden mirrors match the visible
+  fields after a category change.
+- [x] **Existing "Discount" ledger row** (``InterestPeopleReport
+  type_choice="Discount"``, L544-550) already fires whenever
+  ``discount_amount > 0`` — no change needed there; it now correctly
+  reflects the waiver for both branches.
+- [x] **Existing self-healer** (``_recompute_report_balances`` in
+  ``overdue_views.py``) keeps the ledger's running balance column in
+  sync after WAIVER-mode debits.
+- [x] **Files touched (only 2)**:
+  - ``/app/backend/collection/views.py`` (principal + penalty branch)
+  - ``/app/frontend/src/modules/CollectionDetails/Partials/Collection.jsx``
+- [x] **No DB schema changes**, no new columns, no migration —
+  ``discount_amount`` column already existed on the collection model.
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.
