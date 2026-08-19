@@ -331,6 +331,19 @@ const ChitFundListView = () => {
                                     ₹ {remainingAmount.toFixed(2)}
                                 </span>
                             </div>
+                            {/* Feb 2026 owner rule: Loss of Pay =
+                                Σ discounts (Discount ledger rows) across
+                                every loan in this chit fund.  Populated
+                                by chit_fund/views.py::get_active_chitfunds
+                                on the fly — always in-sync with the
+                                ledger; no schema / signals involved. */}
+                            <div className="info-row" data-testid="loss-of-pay-row">
+                                <h3 className="info-label">Loss of Pay </h3>
+                                <span>:</span>&nbsp;
+                                <span style={{ fontWeight: 600, color: '#c00' }} data-testid="loss-of-pay-value">
+                                    ₹ {Number(findIds?.loss_of_pay || 0).toFixed(2)}
+                                </span>
+                            </div>
                         </Totalstyle>
                     </Col>
                     <Col span={24} md={12}>

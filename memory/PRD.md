@@ -536,6 +536,37 @@ Business rule clarified with the user:
 - [x] **No DB schema changes**, no new columns, no migration —
   ``discount_amount`` column already existed on the collection model.
 
+## What's been implemented (2026-02 fork — Loss of Pay + Chit-Interest WAIVER)
+- [x] **VERIFIED live**: ``Total Balance = Total Balance − discount``
+  on ``Chit Fund → Pending Amount → Pending borrowers`` table.
+  Live E2E curl: borrower id 44, principal_balance dropped from
+  ₹7,500 → **₹4,500** (drop of exactly ₹3,000 = ₹2,500 payment +
+  ₹500 discount) after posting a collection with WAIVER discount.
+- [x] **Chit Interest branch was missing WAIVER-mode** — previously
+  only the Management Interest branch of
+  ``collection/views.py::add_collection_details`` applied the
+  ``amount + discount`` waiver. All three Chit-Interest sub-branches
+  (principal-only / interest-penalty-only / combined) now compute
+  ``_settled = payment + discount`` and reduce
+  ``principal_balance / penalty_balance_amt / balance_amt`` by the
+  full settled amount, matching the Management Interest logic.
+- [x] **"Loss of Pay" on Chit Fund View page** — new red-tinted row
+  right below "Remaining Amount":
+  ``Loss of Pay = Σ (InterestPeopleReport.debit_amt WHERE
+  type_choice='Discount' AND interest.chitt_fund_id = chit.id)``.
+- [x] **No schema change** — aggregation on-the-fly against the
+  authoritative ledger; always in-sync with any Discount waiver
+  posted / edited / deleted; safe on live server (no migration
+  needed for this fix).
+- [x] **Files touched (3)**:
+  - Backend ``/app/backend/collection/views.py`` — Chit-Interest
+    branches (principal, penalty, combined) now WAIVER-safe.
+  - Backend ``/app/backend/chit_fund/views.py`` — extended
+    ``get_active_chitfunds`` to include ``loss_of_pay`` per chit.
+  - Frontend ``/app/frontend/src/modules/ChitFund/Partials/
+    AddChitFunds/Partials/ChitFundListView.jsx`` — new "Loss of
+    Pay" info-row (data-testid ``loss-of-pay-row``).
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.

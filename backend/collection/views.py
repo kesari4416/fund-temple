@@ -479,33 +479,41 @@ def add_collection_details(request):
 
                         elif temp_family.interest_field == True and temp_family.interest_principle == True:
 
-                            festival_get.principal_paid = float(festival_get.principal_paid) + float(temp_family.amount)
+                            # Feb 2026 owner rule — WAIVER mode when
+                            # both principal AND interest/penalty are
+                            # paid in one collection. The ``discount``
+                            # applies to the PRINCIPAL side (matches
+                            # test-case 1: Installment Interest chosen +
+                            # discount => reduce Installment Amount).
+                            _discount = float(temp_family.discount_amount or 0)
+                            _pay = float(temp_family.amount or 0)
+                            _pen_pay = float(temp_family.penalty_amount or 0)
+                            _int_pay = float(temp_family.interst_amount or 0)
+                            _prin_settled = _pay + _discount
+
+                            festival_get.principal_paid = float(festival_get.principal_paid) + _prin_settled
                             festival_get.principal_balance = max(
                                 0.0,
-                                float(festival_get.principal_balance) - float(temp_family.amount),
+                                float(festival_get.principal_balance) - _prin_settled,
                             )
-                            festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + float(
-                                temp_family.interst_amount)
+                            festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + _int_pay
                             festival_get.intrest_balance_amt = max(
                                 0.0,
-                                float(festival_get.intrest_balance_amt) - float(temp_family.interst_amount),
+                                float(festival_get.intrest_balance_amt) - _int_pay,
                             )
-                            festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) + float(
-                                temp_family.penalty_amount)
+                            festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) + _pen_pay
                             festival_get.penalty_balance_amt = max(
                                 0.0,
-                                float(festival_get.penalty_balance_amt) - float(temp_family.penalty_amount),
+                                float(festival_get.penalty_balance_amt) - _pen_pay,
                             )
                             festival_get.balance_amt = max(
                                 0.0,
                                 float(festival_get.balance_amt)
-                                - float(temp_family.interst_amount)
-                                - float(temp_family.penalty_amount)
-                                - float(temp_family.amount),
+                                - _int_pay
+                                - _pen_pay
+                                - _prin_settled,
                             )
-                            festival_get.debit_amt = float(festival_get.debit_amt) + float(
-                                temp_family.interst_amount) + float(temp_family.penalty_amount) + float(
-                                temp_family.amount)
+                            festival_get.debit_amt = float(festival_get.debit_amt) + _int_pay + _pen_pay + _prin_settled
                             festival_get.save()
 
                             if interest_obj.interest_category == "Installment Interest":
@@ -581,13 +589,26 @@ def add_collection_details(request):
                                                                               interest__interest_type="Chit fund Interest",
                                                                               management_profile=management)
                         if temp_family.interest_principle == True and temp_family.interest_field == False:
-                            festival_get.principal_paid = float(festival_get.principal_paid) + float(temp_family.amount)
+                            # Feb 2026 owner rule — WAIVER mode on the
+                            # Chit-Interest principal path.  ``discount``
+                            # is bookkept as if paid so the borrower's
+                            # DEBT drops by ``amount + discount``.
+                            _discount = float(temp_family.discount_amount or 0)
+                            _pay = float(temp_family.amount or 0)
+                            _settled = _pay + _discount
+
+                            festival_get.principal_paid = float(festival_get.principal_paid) + _settled
                             # Clamp so payments overshooting the remaining
                             # balance do NOT leave a negative on the ledger.
                             festival_get.principal_balance = max(
                                 0.0,
-                                float(festival_get.principal_balance) - float(temp_family.amount),
+                                float(festival_get.principal_balance) - _settled,
                             )
+                            festival_get.balance_amt = max(
+                                0.0,
+                                float(festival_get.balance_amt) - _settled,
+                            )
+                            festival_get.debit_amt = float(festival_get.debit_amt) + _settled
                             # Owner rule (Feb 2026): if the collection
                             # includes a penalty portion (Chit-fund
                             # borrower paying overdue penalty alongside
@@ -623,38 +644,62 @@ def add_collection_details(request):
                                 interest_obj.save()
 
                         elif temp_family.interest_field == True and temp_family.interest_principle == False:
-                            festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + float(
-                                temp_family.interst_amount)
+                            # Feb 2026 owner rule — WAIVER on penalty
+                            # for Chit-Interest. Discount waives penalty.
+                            _discount = float(temp_family.discount_amount or 0)
+                            _pen_pay = float(temp_family.penalty_amount or 0)
+                            _int_pay = float(temp_family.interst_amount or 0)
+                            _pen_settled = _pen_pay + _discount
+
+                            festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + _int_pay
                             festival_get.intrest_balance_amt = max(
                                 0.0,
-                                float(festival_get.intrest_balance_amt) - float(temp_family.interst_amount),
+                                float(festival_get.intrest_balance_amt) - _int_pay,
                             )
-                            festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) + float(
-                                temp_family.penalty_amount)
+                            festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) + _pen_settled
                             festival_get.penalty_balance_amt = max(
                                 0.0,
-                                float(festival_get.penalty_balance_amt) - float(temp_family.penalty_amount),
+                                float(festival_get.penalty_balance_amt) - _pen_settled,
                             )
+                            festival_get.balance_amt = max(
+                                0.0,
+                                float(festival_get.balance_amt) - _int_pay - _pen_settled,
+                            )
+                            festival_get.debit_amt = float(festival_get.debit_amt) + _int_pay + _pen_settled
                             festival_get.save()
 
                         elif temp_family.interest_field == True and temp_family.interest_principle == True:
-                            festival_get.principal_paid = float(festival_get.principal_paid) + float(temp_family.amount)
+                            # Feb 2026 owner rule — WAIVER on the
+                            # combined principal+penalty path. Discount
+                            # applies to PRINCIPAL (test-case 1: chosen
+                            # Installment Interest + discount => reduce
+                            # installment amount).
+                            _discount = float(temp_family.discount_amount or 0)
+                            _pay = float(temp_family.amount or 0)
+                            _pen_pay = float(temp_family.penalty_amount or 0)
+                            _int_pay = float(temp_family.interst_amount or 0)
+                            _prin_settled = _pay + _discount
+
+                            festival_get.principal_paid = float(festival_get.principal_paid) + _prin_settled
                             festival_get.principal_balance = max(
                                 0.0,
-                                float(festival_get.principal_balance) - float(temp_family.amount),
+                                float(festival_get.principal_balance) - _prin_settled,
                             )
-                            festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + float(
-                                temp_family.interst_amount)
+                            festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + _int_pay
                             festival_get.intrest_balance_amt = max(
                                 0.0,
-                                float(festival_get.intrest_balance_amt) - float(temp_family.interst_amount),
+                                float(festival_get.intrest_balance_amt) - _int_pay,
                             )
-                            festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) + float(
-                                temp_family.penalty_amount)
+                            festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) + _pen_pay
                             festival_get.penalty_balance_amt = max(
                                 0.0,
-                                float(festival_get.penalty_balance_amt) - float(temp_family.penalty_amount),
+                                float(festival_get.penalty_balance_amt) - _pen_pay,
                             )
+                            festival_get.balance_amt = max(
+                                0.0,
+                                float(festival_get.balance_amt) - _int_pay - _pen_pay - _prin_settled,
+                            )
+                            festival_get.debit_amt = float(festival_get.debit_amt) + _int_pay + _pen_pay + _prin_settled
                             festival_get.save()
 
                             if interest_obj.interest_category == "Installment Interest":

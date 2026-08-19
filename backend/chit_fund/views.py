@@ -41,7 +41,25 @@ def get_active_chitfunds(request):
     if request.method =='GET':
         chit_funds=ChitFundsDetails.objects.filter(management_profile=management,action=True)
         seial9=ChitFundsDetailsSerializer26(chit_funds,many=True)
-        return Response(seial9.data,status=status.HTTP_200_OK)
+
+        # Feb 2026 owner rule — expose per-chit-fund "Loss of Pay":
+        # the total ₹ waived (Discount ledger rows) across every loan
+        # belonging to this chit fund. Computed on-the-fly against the
+        # authoritative ledger (``reports_interestpeoplereport``) so it
+        # is always in-sync, no schema change or backfill required.
+        from django.db.models import Sum
+        from reports.models import InterestPeopleReport
+        loss_map = {
+            row['interest__chitt_fund_id']: float(row['t'] or 0)
+            for row in InterestPeopleReport.objects.filter(
+                type_choice='Discount',
+                interest__chitt_fund__isnull=False,
+            ).values('interest__chitt_fund_id').annotate(t=Sum('debit_amt'))
+        }
+        data = list(seial9.data)
+        for row in data:
+            row['loss_of_pay'] = round(loss_map.get(row.get('id'), 0.0), 2)
+        return Response(data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
