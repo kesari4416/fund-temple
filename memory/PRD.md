@@ -597,6 +597,24 @@ Business rule clarified with the user:
   subtract discount, so investors' share matches actual chit-fund
   income?  Options a/b/c presented to user; awaiting reply.
 
+## What's been implemented (2026-02 fork — Principal Pay Amt Validation)
+- [x] **Principal Pay Amt is now guarded against overpayment.** Every
+  Principal Pay Amt input on the Collection form (both the
+  auto-computed Installment version and the free-typed non-Installment
+  version) now carries an AntD ``validator`` rule that compares the
+  value against the hidden ``_original_principal_amt`` mirror.  When
+  the entered / computed value exceeds the borrower's original
+  Principal Amt, AntD renders an inline error message:
+  ``"Principal Pay Amt (Rs. X) cannot exceed Principal Amt (Rs. Y)"``
+  right under the field, AND ``Form.validateFields`` fails on
+  submit — so the request never reaches the backend.
+- [x] **File touched (1)**: ``/app/frontend/src/modules/
+  CollectionDetails/Partials/Collection.jsx`` — Installment branch
+  (L2110-2140) + non-Installment branch (L2140-2170).
+- [x] **Zero DB / backend changes.** ``_original_principal_amt`` is
+  populated by the existing borrower-pick effect + Edit-mode init.
+  ``validator`` is a stock AntD form-rule feature.
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.

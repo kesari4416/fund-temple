@@ -2114,6 +2114,27 @@ export const Collection = ({ trigger }) => {
                           suffix={"₹"}
                           disabled
                           max={installMax}
+                          rules={[
+                            /* Feb 2026 owner rule: Principal Pay Amt
+                               may never exceed the borrower's original
+                               Principal Amt.  For Installment loans
+                               this happens when No of Count ×
+                               installment_amt > outstanding balance —
+                               block submit and surface the error under
+                               the field. */
+                            ({ getFieldValue }) => ({
+                              validator(_, value) {
+                                const orig = Number(getFieldValue('_original_principal_amt') || 0);
+                                const paid = Number(value || 0);
+                                if (paid > orig) {
+                                  return Promise.reject(
+                                    new Error(`Principal Pay Amt (Rs. ${paid}) cannot exceed Principal Amt (Rs. ${orig})`)
+                                  );
+                                }
+                                return Promise.resolve();
+                              }
+                            })
+                          ]}
                         />
                       </Col>
                     </>
@@ -2124,6 +2145,24 @@ export const Collection = ({ trigger }) => {
                         name={"amount"}
                         suffix={"₹"}
                         onChange={handlePricipalPay}
+                        rules={[
+                          /* Same guardrail for non-Installment (user-
+                             typed) principal payments. Prevents form
+                             submission when the entered amount is more
+                             than the outstanding Principal Amt. */
+                          ({ getFieldValue }) => ({
+                            validator(_, value) {
+                              const orig = Number(getFieldValue('_original_principal_amt') || 0);
+                              const paid = Number(value || 0);
+                              if (paid > orig) {
+                                return Promise.reject(
+                                  new Error(`Principal Pay Amt (Rs. ${paid}) cannot exceed Principal Amt (Rs. ${orig})`)
+                                );
+                              }
+                              return Promise.resolve();
+                            }
+                          })
+                        ]}
                       // max={princpleMax}
                       />
                     </Col>}
