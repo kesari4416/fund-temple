@@ -567,6 +567,36 @@ Business rule clarified with the user:
     AddChitFunds/Partials/ChitFundListView.jsx`` — new "Loss of
     Pay" info-row (data-testid ``loss-of-pay-row``).
 
+## What's been implemented (2026-02 fork — Discount → Cash-In-Hand + Loss-of-Pay parity)
+- [x] **Point 1 verified — Loss of Pay ALREADY covers both installment
+  and penalty discount.** ``collection/views.py`` L832-838 writes a
+  ``type_choice="Discount"`` ledger row for any ``discount_amount > 0``
+  inside the ``collection_category == "Chit Interest"`` block,
+  regardless of which sub-branch (principal-only / penalty-only /
+  combined) processed the payment. ``chit_fund/views.py::
+  get_active_chitfunds`` aggregates every such row per chit.
+  **No change required.**
+- [x] **Point 2 fixed — Cash In Hand + Profit now subtract discount.**
+  Previously ``cash_inhand_amount`` was incremented by the FULL
+  ``amount + penalty`` (or ``amount + interst + penalty`` for
+  non-Installment), silently over-counting the discount as if it
+  were cash received. Now both branches subtract
+  ``temp_family.discount_amount`` so the running values on
+  ``ChitFundsDetails`` reflect only the ACTUAL cash the chit-fund
+  received. Same fix applied to ``profit_amount``.
+- [x] **File touched (1)**: ``/app/backend/collection/views.py``
+  L750-770 — two branches (Installment Interest + Non-Installment)
+  each get a ``_discount = float(temp_family.discount_amount or 0)``
+  local and subtract it once from ``cash_inhand_amount`` and once
+  from ``profit_amount``.
+- [x] **Tables affected**: NONE (no schema change); only the running
+  values on ``chit_fund_chitfundsdetails`` columns
+  ``cash_inhand_amount`` and ``profit_amount`` are now discount-aware.
+- [x] **Open question (awaiting user):** should the investor-profit
+  distribution (L773-776 ``invester_sharing_profit_amount``) also
+  subtract discount, so investors' share matches actual chit-fund
+  income?  Options a/b/c presented to user; awaiting reply.
+
 ## Backlog / Future
 - P1: Run `testing_agent_v3_fork` to verify the QA Excel bug fixes carried over from the previous session (Marriage date picker, Family Balance Sheet 500, Interest negatives, Festival dropdown). Blocked in this pod because MariaDB is not installed; user should trigger on their EC2.
 - P1: Remaining QA Excel bugs — Notification WhatsApp missing fine amounts, Agent collection list routing, Member list active/inactive logic, "Total Due" vs "Total Collected" split in Collection Details.
