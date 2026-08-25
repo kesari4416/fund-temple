@@ -633,3 +633,40 @@ Business rule clarified with the user:
 
 ## Test credentials
 See `/app/memory/test_credentials.md`.
+
+
+## What's been implemented (2026-02 fork — discount_amt persistence fix)
+- [x] **Root cause of Loss-of-Pay always reading 0.0**: the previous agent
+  added `festival_get.discount_amt += _discount` on 4 of the 5 collection
+  branches inside `/app/backend/collection/views.py`, but the "Chit Interest
+  — Principal-only" branch (lines 609-663) was silently missed. Every
+  discount taken on a Chit-fund Installment payment (the most common flow)
+  dropped its `discount_amt` update on the floor even though the debt
+  reduction (WAIVER) was applied correctly to `principal_paid /
+  principal_balance / balance_amt`.
+- [x] **Fix**: added the exact same `if _discount > 0:
+  festival_get.discount_amt = float(festival_get.discount_amt or 0)
+  + _discount` guard before `festival_get.save()` in the missing branch, so
+  all 5 code paths now increment the canonical `discount_amt` column.
+- [x] **Verified end-to-end** by direct HTTP POST via Django test client
+  across every code path (Chit principal-only, Chit penalty-only, Chit both,
+  MI principal-only, MI penalty-only, MI both). Every branch returns 201 and
+  `balancesheet_peopleinterestbalancesheet.discount_amt` increments by the
+  posted `discount_amount`.
+- [x] **Loss-of-Pay aggregation confirmed**: `chit_fund/views.py::get_chit_
+  fund_details` (`GET /api/chit_fund/all_chitfund_details/`) sums
+  `discount_amt` over every balance-sheet row joined by
+  `interest__chitt_fund_id`. Direct SQL check
+  (`SUM(discount_amt) GROUP BY chitt_fund_id`) now reflects the new
+  waivers. No investor profit-share change (user rule 2026-02 —
+  temple absorbs full discount).
+- [x] **Files touched (1)**: `/app/backend/collection/views.py` L609-671.
+- [x] **Zero DB migration / model change** — `discount_amt` column
+  already existed on `balancesheet_peopleinterestbalancesheet`.
+
+## Backlog / Future (P1/P2)
+- P1: QA Excel Bug 8 — WhatsApp Agent Collection List routing.
+- P1: QA Excel Bug 5/6 — Notification template variables (WhatsApp missing fine amounts).
+- P1: QA Excel Bug 1 — Separate "Total Due" vs "Total Collected" in Collection Details.
+- P2: Refactor `collection/views.py` (4897 lines) and `interest/views.py` into services / thinner views.
+- P2: WhatsApp `wa.me` 1-hour expiry — clarify with user (Business API vs standard `wa.me`).

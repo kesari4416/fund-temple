@@ -433,6 +433,14 @@ def add_collection_details(request):
                                 float(festival_get.balance_amt) - _settled,
                             )
                             festival_get.debit_amt = float(festival_get.debit_amt) + _settled
+                            # Feb 2026 owner rule: accumulate every
+                            # discount (installment + penalty) on the
+                            # authoritative ``discount_amt`` column so
+                            # Loss-of-Pay reports read a single source
+                            # of truth (Chit Fund view / balance sheet
+                            # / reconciliation).
+                            if _discount > 0:
+                                festival_get.discount_amt = float(festival_get.discount_amt or 0) + _discount
                             festival_get.save()
                             # InterestPeopleReport.objects.create(management_profile=festival_get.management_profile,interest_id=festival_get.interest.id,reportdate=datetime.date(),debit_amt=temp_family.amount,balance_amt=festival_get.balance_amt,type_choice="Payment",created_by =rejin.id)
 
@@ -474,6 +482,11 @@ def add_collection_details(request):
                                 - _pen_settled,
                             )
                             festival_get.debit_amt = float(festival_get.debit_amt) + _int_pay + _pen_settled
+                            # Feb 2026 owner rule: penalty-branch
+                            # discount also flows into ``discount_amt``
+                            # so Loss-of-Pay = SUM(discount_amt).
+                            if _discount > 0:
+                                festival_get.discount_amt = float(festival_get.discount_amt or 0) + _discount
                             festival_get.save()
                             # InterestPeopleReport.objects.create(management_profile=festival_get.management_profile,interest_id=festival_get.interest.id,reportdate=datetime.date(),debit_amt=temp_family.amount,balance_amt=festival_get.balance_amt,type_choice="Payment",created_by =rejin.id)
 
@@ -514,6 +527,11 @@ def add_collection_details(request):
                                 - _prin_settled,
                             )
                             festival_get.debit_amt = float(festival_get.debit_amt) + _int_pay + _pen_pay + _prin_settled
+                            # Feb 2026 owner rule: combined-branch
+                            # discount (applied to principal side)
+                            # also lands on ``discount_amt``.
+                            if _discount > 0:
+                                festival_get.discount_amt = float(festival_get.discount_amt or 0) + _discount
                             festival_get.save()
 
                             if interest_obj.interest_category == "Installment Interest":
@@ -633,6 +651,11 @@ def add_collection_details(request):
                                     float(festival_get.balance_amt) - _pen,
                                 )
                                 festival_get.debit_amt = float(festival_get.debit_amt) + _pen
+                            # Feb 2026 owner rule: principal-branch
+                            # discount also flows into ``discount_amt``
+                            # so Loss-of-Pay = SUM(discount_amt).
+                            if _discount > 0:
+                                festival_get.discount_amt = float(festival_get.discount_amt or 0) + _discount
                             festival_get.save()
                             if interest_obj.interest_category == "Installment Interest":
                                 try:
@@ -666,6 +689,11 @@ def add_collection_details(request):
                                 float(festival_get.balance_amt) - _int_pay - _pen_settled,
                             )
                             festival_get.debit_amt = float(festival_get.debit_amt) + _int_pay + _pen_settled
+                            # Feb 2026 owner rule: penalty-branch
+                            # discount also flows into ``discount_amt``
+                            # so Loss-of-Pay = SUM(discount_amt).
+                            if _discount > 0:
+                                festival_get.discount_amt = float(festival_get.discount_amt or 0) + _discount
                             festival_get.save()
 
                         elif temp_family.interest_field == True and temp_family.interest_principle == True:
@@ -700,6 +728,11 @@ def add_collection_details(request):
                                 float(festival_get.balance_amt) - _int_pay - _pen_pay - _prin_settled,
                             )
                             festival_get.debit_amt = float(festival_get.debit_amt) + _int_pay + _pen_pay + _prin_settled
+                            # Feb 2026 owner rule: combined-branch
+                            # discount (applied to principal side)
+                            # also lands on ``discount_amt``.
+                            if _discount > 0:
+                                festival_get.discount_amt = float(festival_get.discount_amt or 0) + _discount
                             festival_get.save()
 
                             if interest_obj.interest_category == "Installment Interest":
