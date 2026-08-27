@@ -670,3 +670,40 @@ See `/app/memory/test_credentials.md`.
 - P1: QA Excel Bug 1 — Separate "Total Due" vs "Total Collected" in Collection Details.
 - P2: Refactor `collection/views.py` (4897 lines) and `interest/views.py` into services / thinner views.
 - P2: WhatsApp `wa.me` 1-hour expiry — clarify with user (Business API vs standard `wa.me`).
+
+## What's been implemented (2026-02 fork — Choose Person cycle filter)
+- [x] **QA COLLECTIONS_002** — the "Choose Person" dropdown on the
+  Collection form now hides Installment-Interest borrowers who have
+  already paid the current cycle (day / week / month). Rule:
+  ``installment_date > today`` → HIDE, else SHOW.
+- [x] **Files touched (2 endpoints in 1 file)**:
+  ``/app/backend/collection/views.py`` —
+  * ``management_interest_member_details`` (L3946-3970)
+  * ``chitfund_interest_member_details`` (L4033-4076)
+  Both endpoints now short-circuit on ``fund.installment_date > today``
+  when ``interest_category == 'Installment Interest'``. Non-installment
+  categories keep the original "any outstanding balance" rule.
+- [x] **One-time repair executed on preview DB**:
+  ``scripts/repair_installment_penalty_feb2026.py`` recomputed
+  ``installment_date`` for 199 loans and back-filled 97 penalty rows
+  (Rs 56,775.36 total). Must be re-run on EC2 after code deploy.
+- [x] **Verified**: setting ``installment_date`` on interest_id=228
+  to CURDATE()+7 removes borrower from ``chitfund_interest_member_
+  details`` output (48 → 47); reverting to CURDATE()-1 restores it.
+
+## Working-as-designed (2026-02 fork)
+- [x] **QA FESTIVAL_001** — user confirmed the existing behaviour is
+  correct: only members with ``member_tax_eligible=True`` AND
+  ``death=False`` receive a festival credit on their balance sheet.
+  The historical data audit shows 106 of 106 alive-and-eligible members
+  correctly received the last festival tax; the 36 members with
+  ``member_tax_eligible=False`` are intentionally excluded.
+
+## Backlog / Future (P1/P2) — Feb 2026 fork continued
+- P1: QA Excel Bug 8 — WhatsApp Agent Collection List routing.
+- P1: QA Excel Bug 5/6 — Notification template variables (WhatsApp missing fine amounts).
+- P1: QA Excel Bug 1 — Separate "Total Due" vs "Total Collected" in Collection Details.
+- P2: Refactor ``collection/views.py`` (4900+ lines) and
+  ``interest/views.py`` into services / thinner views.
+- P2: Persist MariaDB datadir across pod restarts (env-level chore).
+

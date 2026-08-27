@@ -3950,14 +3950,28 @@ def management_interest_member_details(request):
                                                            management_profile=management)
         print(f"Filtered Fund Members: {fund_member.count()}")
 
+        # Owner rule (Feb 2026 — QA COLLECTIONS_002): same period-filter
+        # rule as Chit-Interest. A Management-Interest Installment
+        # borrower who has already paid the current cycle
+        # (installment_date > today) must not appear in the dropdown.
+        today = date.today()
         fund_mem_list = []
-        
+
         for fund in fund_member:
             mem_obj1 = PeopleInterestBalanceSheet.objects.filter(interest_id=fund.id).first()
             if mem_obj1:
                 mem_obj = PeopleInterestBalanceSheet.objects.get(interest_id=fund.id)
-                if mem_obj.penalty_balance_amt > 0 or mem_obj.intrest_balance_amt > 0 or mem_obj.principal_balance > 0:
-                    fund_mem_list.append(mem_obj.interest)
+                has_balance = (
+                    mem_obj.penalty_balance_amt > 0
+                    or mem_obj.intrest_balance_amt > 0
+                    or mem_obj.principal_balance > 0
+                )
+                if not has_balance:
+                    continue
+                if fund.interest_category == "Installment Interest":
+                    if fund.installment_date and fund.installment_date > today:
+                        continue
+                fund_mem_list.append(mem_obj.interest)
         serializer = PeopleInterestDetailsSerializer(fund_mem_list, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -4018,13 +4032,40 @@ def chitfund_interest_member_details(request):
         type = request.data['type']
         fund_member = PeopleInterestDetails.objects.filter(chitt_fund_id=type, interest_type='Chit fund Interest',
                                                            action=True, management_profile=management)
+        # Owner rule (Feb 2026 — QA COLLECTIONS_002): the "Choose Person"
+        # dropdown must list ONLY borrowers who have an installment due
+        # in the CURRENT period (day/week/month). A borrower who has
+        # already paid the current period's installment must disappear
+        # until the next due date is reached.
+        #
+        # Implementation: use ``installment_date`` (kept in sync by the
+        # ``sync_installment_date`` post_save signal — it points to the
+        # NEXT unpaid due date). If ``installment_date > today`` the
+        # borrower has paid ahead for the current cycle → HIDE. When
+        # ``installment_date <= today`` (due or overdue) → SHOW.
+        #
+        # For non-installment loans (Interest / Interest with capital)
+        # there is no cadence-tied due date, so the original balance-only
+        # rule is preserved.
+        today = date.today()
         fund_mem_list = []
         for fund in fund_member:
             mem_obj1 = PeopleInterestBalanceSheet.objects.filter(interest_id=fund.id)
             if mem_obj1:
                 mem_obj = PeopleInterestBalanceSheet.objects.get(interest_id=fund.id)
-                if mem_obj.penalty_balance_amt > 0 or mem_obj.intrest_balance_amt > 0 or mem_obj.principal_balance > 0:
-                    fund_mem_list.append(mem_obj.interest)
+                has_balance = (
+                    mem_obj.penalty_balance_amt > 0
+                    or mem_obj.intrest_balance_amt > 0
+                    or mem_obj.principal_balance > 0
+                )
+                if not has_balance:
+                    continue
+                if fund.interest_category == "Installment Interest":
+                    # Skip when borrower has paid the current cycle
+                    # (next due date is still in the future).
+                    if fund.installment_date and fund.installment_date > today:
+                        continue
+                fund_mem_list.append(mem_obj.interest)
         serializer = PeopleInterestDetailsSerializer(fund_mem_list, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
