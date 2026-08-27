@@ -65,6 +65,52 @@ from chit_fund.serializers import ChitFundsDetailssSerializer
 from decimal import Decimal
 
 
+def _installment_expected_count(record, today):
+    """How many installments the borrower should have paid by the END of
+    today's current period (day / week / month), given the loan's
+    ``interest_period_type`` cadence.
+
+    Owner rule (Feb 2026 — QA COLLECTIONS_002 v2): a borrower must appear
+    in the ``Choose Person`` dropdown WHENEVER they are behind schedule
+    for the CURRENT period, not just once the strict "next due date"
+    has arrived. Concretely:
+
+    - **Day**: expected count grows by 1 each calendar day since
+      ``interest_date`` (inclusive).
+    - **Week**: rolling 7-day windows from ``interest_date`` (matches the
+      penalty engine's ``_installment_delta = weeks=1``). Week 1 covers
+      day 0-6, week 2 day 7-13, etc.
+    - **Month**: calendar-month arithmetic — every calendar-month
+      transition after ``interest_date`` bumps the expected count by 1.
+
+    Capped at ``interest_period`` (total installments) so borrowers whose
+    loan is finished naturally drop off. Returns 0 if the loan has not
+    yet started (today < interest_date).
+    """
+    start = record.interest_date
+    if not start:
+        return 0
+    if today < start:
+        return 0
+
+    ptype = (record.interest_period_type or "month").lower()
+    if ptype in ("day", "days"):
+        expected = (today - start).days + 1
+    elif ptype in ("week", "weeks"):
+        expected = ((today - start).days // 7) + 1
+    else:  # month / months / anything else
+        expected = (today.year - start.year) * 12 + (today.month - start.month) + 1
+
+    total = 0
+    try:
+        total = int(record.interest_period or 0)
+    except (TypeError, ValueError):
+        total = 0
+    if total > 0:
+        expected = min(expected, total)
+    return max(0, expected)
+
+
 
 @api_view(['GET', 'POST'])
 def add_collection_details(request):
@@ -3950,10 +3996,11 @@ def management_interest_member_details(request):
                                                            management_profile=management)
         print(f"Filtered Fund Members: {fund_member.count()}")
 
-        # Owner rule (Feb 2026 — QA COLLECTIONS_002): same period-filter
-        # rule as Chit-Interest. A Management-Interest Installment
-        # borrower who has already paid the current cycle
-        # (installment_date > today) must not appear in the dropdown.
+        # Owner rule (Feb 2026 — QA COLLECTIONS_002 v2): only borrowers
+        # who currently owe the CURRENT-period installment appear. See
+        # ``_installment_expected_count`` for the day / week / month
+        # semantics.  A borrower whose ``paid_counts`` >= expected count
+        # is up-to-date for this period and must be hidden.
         today = date.today()
         fund_mem_list = []
 
@@ -3969,7 +4016,8 @@ def management_interest_member_details(request):
                 if not has_balance:
                     continue
                 if fund.interest_category == "Installment Interest":
-                    if fund.installment_date and fund.installment_date > today:
+                    expected = _installment_expected_count(fund, today)
+                    if int(fund.paid_counts or 0) >= expected:
                         continue
                 fund_mem_list.append(mem_obj.interest)
         serializer = PeopleInterestDetailsSerializer(fund_mem_list, many=True)
@@ -4032,21 +4080,21 @@ def chitfund_interest_member_details(request):
         type = request.data['type']
         fund_member = PeopleInterestDetails.objects.filter(chitt_fund_id=type, interest_type='Chit fund Interest',
                                                            action=True, management_profile=management)
-        # Owner rule (Feb 2026 — QA COLLECTIONS_002): the "Choose Person"
-        # dropdown must list ONLY borrowers who have an installment due
-        # in the CURRENT period (day/week/month). A borrower who has
-        # already paid the current period's installment must disappear
-        # until the next due date is reached.
+        # Owner rule (Feb 2026 — QA COLLECTIONS_002 v2): "Choose Person"
+        # must list ONLY borrowers who currently owe an installment for
+        # THIS period (day / week / month) based on their
+        # ``interest_period_type`` cadence. See
+        # ``_installment_expected_count`` for the exact semantics — the
+        # helper returns the number of installments the borrower should
+        # have PAID by end of today's period. If ``paid_counts`` >=
+        # expected, the borrower is up-to-date for this period and is
+        # hidden. If ``paid_counts`` < expected, the borrower is behind
+        # (or has just entered a new period without paying yet) and is
+        # shown.
         #
-        # Implementation: use ``installment_date`` (kept in sync by the
-        # ``sync_installment_date`` post_save signal — it points to the
-        # NEXT unpaid due date). If ``installment_date > today`` the
-        # borrower has paid ahead for the current cycle → HIDE. When
-        # ``installment_date <= today`` (due or overdue) → SHOW.
-        #
-        # For non-installment loans (Interest / Interest with capital)
-        # there is no cadence-tied due date, so the original balance-only
-        # rule is preserved.
+        # Non-installment categories (Interest / Interest with capital)
+        # keep the original "any outstanding balance" rule because there
+        # is no cadence to compare against.
         today = date.today()
         fund_mem_list = []
         for fund in fund_member:
@@ -4061,9 +4109,8 @@ def chitfund_interest_member_details(request):
                 if not has_balance:
                     continue
                 if fund.interest_category == "Installment Interest":
-                    # Skip when borrower has paid the current cycle
-                    # (next due date is still in the future).
-                    if fund.installment_date and fund.installment_date > today:
+                    expected = _installment_expected_count(fund, today)
+                    if int(fund.paid_counts or 0) >= expected:
                         continue
                 fund_mem_list.append(mem_obj.interest)
         serializer = PeopleInterestDetailsSerializer(fund_mem_list, many=True)

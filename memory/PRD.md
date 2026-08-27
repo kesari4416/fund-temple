@@ -707,3 +707,29 @@ See `/app/memory/test_credentials.md`.
   ``interest/views.py`` into services / thinner views.
 - P2: Persist MariaDB datadir across pod restarts (env-level chore).
 
+
+## What's been implemented (2026-02 fork — Choose Person cycle filter v2)
+- [x] **QA COLLECTIONS_002 v2 (Day/Week/Month period bug fix)**. The
+  previous "strict `installment_date > today` → HIDE" rule wrongly
+  hid fresh loans in the current period (Day-type didn't show at all;
+  Week/Month didn't show during their due week/month). Replaced with a
+  **cadence-aware "expected installment count"** rule:
+  * ``expected = 1 + floor((today - interest_date) / cadence)`` capped
+    at ``interest_period``.
+  * Day cadence = 1 day; Week cadence = 7 rolling days from
+    ``interest_date``; Month cadence = calendar-month arithmetic.
+  * Borrower is SHOWN when ``paid_counts < expected`` (behind for the
+    current period) and HIDDEN when ``paid_counts >= expected``.
+- [x] Helper ``_installment_expected_count`` added at
+  ``/app/backend/collection/views.py`` (top-level, before endpoints).
+- [x] Both endpoints now use the helper:
+  * ``chitfund_interest_member_details`` (POST)
+  * ``management_interest_member_details`` (GET)
+- [x] **9/9 test scenarios pass** via ``/tmp/test_choose_person_v2.py``
+  (fresh Day/Week/Month → SHOW; after 1 payment same period → HIDE;
+  next period arriving with no new payment → SHOW). Non-installment
+  categories keep the balance-only rule.
+- [x] Regression clean: existing 48 chit-fund borrowers → 43 shown
+  (5 correctly filtered as up-to-date for the current week); Loss of
+  Pay ₹2.00 unchanged.
+
