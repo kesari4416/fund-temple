@@ -39,6 +39,24 @@ export const ChitFundInvestors = () => {
 
     const AllDetails = useSelector(AllChitList);
 
+    // Feb 2026 (QA CHITFUND_001 fix): the Investor Amount must
+    // reflect the CURRENT Demand Share Amount shown on
+    // Chit Fund → List → View Details, not the static
+    // ``fixed_chitfund_amount`` seed value. Same formula as
+    // ChitFundListView.jsx:121-135.
+    const computeDemandShareAmount = (fund) => {
+        if (!fund) return 0;
+        const investerCount = Number(fund.investers_share_count || 0);
+        const mgmtCount = Number(fund.management_share_count || 0);
+        const totalShares = investerCount + mgmtCount;
+        if (!totalShares) return 0;
+        const mgmtInvested = Number(fund.management_amt || 0);
+        const outerInvest = Number(fund.outer_invest_amount || 0);
+        const profitAmount = Number(fund.profit_amount || 0);
+        const value = (mgmtInvested + outerInvest + profitAmount) / totalShares;
+        return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
+    }
+
     const handlePersonType = (value) => {
         setPersonType(value)
         const SendDetails = form.getFieldValue('chitt_fund')
@@ -57,14 +75,14 @@ export const ChitFundInvestors = () => {
                 MemberChoosepost(TotalData)
                 form.setFieldsValue({ 'invester_name': null })
                 // form.resetFields(['invested_amount']);
-                form.setFieldsValue({ invested_amount: FundIdFind?.fixed_chitfund_amount })
+                form.setFieldsValue({ invested_amount: computeDemandShareAmount(FundIdFind) })
             }
         }
         if (value === 'Other') {
             setAllChiTGet([]);
             // form.resetFields(['invested_amount']);
             // form.resetFields();
-            form.setFieldsValue({ invested_amount: FundIdFind?.fixed_chitfund_amount })
+            form.setFieldsValue({ invested_amount: computeDemandShareAmount(FundIdFind) })
             form.setFieldsValue({ 'invester_name': null, })
             form.setFieldsValue({ chitt_fund_name: FundIdFind?.chit_name, chitt_fund: FundIdFind?.id })
         }
@@ -92,7 +110,7 @@ export const ChitFundInvestors = () => {
         const FindChitFundDetails = AllDetails?.find((fId) => fId?.id === value)
         setFundIdFind(FindChitFundDetails)
         form.setFieldsValue({ chitt_fund_name: FindChitFundDetails?.chit_name })
-        form.setFieldsValue({ invested_amount: FindChitFundDetails?.fixed_chitfund_amount })
+        form.setFieldsValue({ invested_amount: computeDemandShareAmount(FindChitFundDetails) })
 
         setFundIdFindTrigger(FundIdFindTrigger + 1)
         form.resetFields(['invester_type']);
