@@ -259,7 +259,22 @@ def add_chit_fund(request):
     elif request.method == 'GET':
         our_family = ChitFundsDetails.objects.filter(management_profile=management)
         serializer = ChitFundsDetailsSerializer26(our_family,many=True)
-        return Response(serializer.data,status=status.HTTP_200_OK)
+        data = serializer.data
+        # Feb 2026 owner rule — expose per-chit-fund "Loss of Pay":
+        # SUM of ``discount_amt`` on the balance-sheet, grouped by the
+        # borrower's ``chitt_fund``. Mirrored on ``get_active_chitfunds``
+        # so both endpoints stay in sync for any frontend caller.
+        from django.db.models import Sum
+        loss_map = {
+            row['interest__chitt_fund_id']: float(row['t'] or 0)
+            for row in PeopleInterestBalanceSheet.objects
+                .filter(interest__chitt_fund__isnull=False)
+                .values('interest__chitt_fund_id')
+                .annotate(t=Sum('discount_amt'))
+        }
+        for row in data:
+            row['loss_of_pay'] = round(loss_map.get(row.get('id'), 0.0), 2)
+        return Response(data,status=status.HTTP_200_OK)
         
         
 
