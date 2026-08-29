@@ -77,6 +77,10 @@ export const CollectionUserList = () => {
   const [loading, setLoading] = useState(false);
 
   const [datePick, setDatePick] = useState(dayjs().format("YYYY-MM-DD"));
+  const ResetTrigger = () => {
+    form.resetFields();
+  };
+
   const showModal = () => {
     setIsModalOpen(true);
   };

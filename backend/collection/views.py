@@ -4410,62 +4410,19 @@ def chitname_withfiltering_category(request):
                                 print(f"Error processing interest period in months: {e}")
 
                         elif mem_obj.interest.interest_period_type == "Days":
-                            print("Processing interest period in days...")
-
-                            try:
-                                # Retrieve collection details for the interest
-                                checking_collection_date = CollectionDetails.objects.filter(
-                                    interest_id=mem_obj.interest_id
-                                )
-
-                                # Calculate the terminating date for the interest period
-                                terminating_date = mem_obj.interest.interest_date + relativedelta(
-                                    days=mem_obj.interest.interest_period
-                                )
-                                print(f"Terminating date: {terminating_date}")
-
-                                # Calculate days passed since interest start date
-                                days_passed = (date.today() - mem_obj.interest.interest_date).days
-                                print(f"Days passed since start: {days_passed}")
-
-                                # Calculate expected payment date based on paid counts
-                                next_expected_payment_date = mem_obj.interest.interest_date + relativedelta(
-                                    days=mem_obj.interest.paid_counts
-                                )
-                                print(f"Next expected payment date: {next_expected_payment_date}")
-
-                                if checking_collection_date.exists():
-                                    # Get the last collection record
-                                    last_payment_date = checking_collection_date.last().pay_date
-                                    print(f"Last payment date: {last_payment_date}")
-
-                                    # Check if payment is missing for the current day or overdue
-                                    if (
-                                            last_payment_date < next_expected_payment_date
-                                            and mem_obj.interest.paid_counts < mem_obj.interest.interest_period
-                                            and date.today() <= terminating_date
-                                    ):
-                                        print("Pending payment detected within valid period.")
-                                        fund_mem_list.append(mem_obj.interest)
-
-                                    elif terminating_date < date.today():
-                                        print("Interest period is over but payments are still pending.")
-                                        fund_mem_list.append(mem_obj.interest)
-                                else:
-                                    # Handle case where no collections exist
-                                    print("No collection records found.")
-                                    if (
-                                            mem_obj.interest.paid_counts < mem_obj.interest.interest_period
-                                            and date.today() <= terminating_date
-                                    ):
-                                        print("Adding to fund list due to missing collections and pending payments.")
-                                        fund_mem_list.append(mem_obj.interest)
-                                    elif terminating_date < date.today():
-                                        print("Interest period is over but no payments were made.")
-                                        fund_mem_list.append(mem_obj.interest)
-
-                            except Exception as e:
-                                print(f"Error processing interest period in days: {e}")
+                            # CHIT_FUND_002 fix (Feb 2026): the old logic compared
+                            # last_payment_date < next_expected_payment_date which
+                            # fails whenever the payment is made ON the expected date
+                            # (e.g. interest_date=Jan31, first payment on Feb1 →
+                            # next_expected=Feb1, last_payment=Feb1 → Feb1 < Feb1 = False).
+                            # Use the same _installment_expected_count helper already
+                            # used in chitfund_interest_member_details for consistency:
+                            # show the borrower whenever today's cumulative day-count
+                            # exceeds their paid_counts (helper caps at interest_period
+                            # so overdue borrowers with remaining installments still appear).
+                            expected = _installment_expected_count(mem_obj.interest, date.today())
+                            if int(mem_obj.interest.paid_counts or 0) < expected:
+                                fund_mem_list.append(mem_obj.interest)
 
 
                         elif mem_obj.interest.interest_period_type == "Week":

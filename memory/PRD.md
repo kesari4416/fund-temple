@@ -707,6 +707,19 @@ See `/app/memory/test_credentials.md`.
   ``interest/views.py`` into services / thinner views.
 - P2: Persist MariaDB datadir across pod restarts (env-level chore).
 
+## CHIT_FUND_002 Fix (Feb 2026)
+- **Bug**: For `installment_interest_type = Days`, after the first payment the member
+  vanished from the "Choose Person" list permanently until the terminating date.
+- **Root cause**: `chitname_withfiltering_category` / `interest_principle=True, interest_field=False`
+  block used: `last_payment_date < next_expected_payment_date`
+  where `next_expected = interest_date + paid_counts`.
+  When the payment is made ON the expected date (e.g. `interest_date=Aug27`, first payment `Aug28`,
+  `next_expected = Aug 28`), the condition `Aug28 < Aug28` is **False** so the person is hidden.
+- **Fix** (`collection/views.py` line ~4412): Replaced the brittle date comparison with the
+  same `_installment_expected_count(record, today)` helper already used in
+  `chitfund_interest_member_details`. Person is shown when `paid_counts < expected_today_count`.
+  This is consistent, handles overdue cases, and is immune to same-day payment edge cases.
+
 
 ## What's been implemented (2026-02 fork — Choose Person cycle filter v2)
 - [x] **QA COLLECTIONS_002 v2 (Day/Week/Month period bug fix)**. The
