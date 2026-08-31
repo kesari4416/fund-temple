@@ -1,12 +1,18 @@
-# Exclude vendor packages, migrations, and backup files from linting
+# Root-level ruff config - covers backend linting from project root
 exclude = [
+    "backend/venv310",
+    "backend/.venv",
     "venv310",
     ".venv",
     "**/venv310/**",
-    "*/migrations/*",
-    "__pycache__",
-    "*.pyc",
-    "*.bak",
+    "**/venv/**",
+    "**/.venv/**",
+    "backend/*/migrations",
+    "**/migrations/**",
+    "**/__pycache__/**",
+    "**/*.pyc",
+    "**/*.bak",
+    "frontend/",
 ]
 
 [lint]

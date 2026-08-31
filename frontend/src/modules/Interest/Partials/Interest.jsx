@@ -687,8 +687,12 @@ export const Interest = ({ RecordData, ClosUpdaForm, manageTrigger }) => {
         if (data?.people_email) {
             formData.append('people_email', data?.people_email);
         }
-        formData.append('people_mobile', data?.people_mobile || null);
-        formData.append('people_address', data?.people_address || null);
+        if (data?.people_mobile) {
+            formData.append('people_mobile', data?.people_mobile);
+        }
+        if (data?.people_address) {
+            formData.append('people_address', data?.people_address);
+        }
         formData.append('principal_amt', data?.principal_amt);
         formData.append('fix_interest_rate_percent', data?.fix_interest_rate_percent);
         formData.append('interest_type_new', data?.interest_type_new);
