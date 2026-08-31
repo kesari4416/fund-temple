@@ -69,25 +69,27 @@ def add_festival_details(request):
                 temp_family.save()                
                 get_tax_members = Member_Details.objects.filter(
                     management_profile=management,
-                    death=False,
-                    member_age__gt=18,
-                )
+                    member_age__gte=18,
+                ).exclude(death=True)
                 for mem_tax in get_tax_members:
-                    people_amount=PeoplesAmountDetails.objects.create(created_by=rejin.id,total_bal_amt=temp_family.tax_per_head,amount_balance=temp_family.tax_per_head,management_profile=management,member=mem_tax,festival=temp_family,amount=temp_family.tax_per_head,name='Festival')
-                    if temp_family.choice=="Amount":
-                        people_amount.penalty_amount=temp_family.penalty_amt
-                        people_amount.save()
-                    elif temp_family.choice=="Percentage":
-                        amount_cal=temp_family.tax_per_head * (temp_family.penalty_amt/100)
-                        people_amount.penalty_amount=amount_cal
-                        people_amount.save()
-                    mem_report= TempleMemberReport.objects.filter(members=mem_tax)
-                    if mem_report:
-                        mem_report_obj= TempleMemberReport.objects.filter(members=mem_tax).last()
-                        bal=float(mem_report_obj.balance_amt) + float(temp_family.tax_per_head)
-                        tem_report=TempleMemberReport.objects.create(management_profile=management,members=mem_tax,festivals=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.tax_per_head,balance_amt=bal,type_choice="Festival",created_by=rejin.id)
-                    else:
-                        tem_report=TempleMemberReport.objects.create(management_profile=management,members=mem_tax,festivals=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.tax_per_head,balance_amt=temp_family.tax_per_head,type_choice="Festival",created_by=rejin.id)
+                    try:
+                        people_amount=PeoplesAmountDetails.objects.create(created_by=rejin.id,total_bal_amt=temp_family.tax_per_head,amount_balance=temp_family.tax_per_head,management_profile=management,member=mem_tax,festival=temp_family,amount=temp_family.tax_per_head,name='Festival')
+                        if temp_family.choice=="Amount":
+                            people_amount.penalty_amount=temp_family.penalty_amt
+                            people_amount.save()
+                        elif temp_family.choice=="Percentage":
+                            amount_cal=temp_family.tax_per_head * (temp_family.penalty_amt/100)
+                            people_amount.penalty_amount=amount_cal
+                            people_amount.save()
+                        mem_report= TempleMemberReport.objects.filter(members=mem_tax)
+                        if mem_report:
+                            mem_report_obj= TempleMemberReport.objects.filter(members=mem_tax).last()
+                            bal=float(mem_report_obj.balance_amt) + float(temp_family.tax_per_head)
+                            tem_report=TempleMemberReport.objects.create(management_profile=management,members=mem_tax,festivals=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.tax_per_head,balance_amt=bal,type_choice="Festival",created_by=rejin.id)
+                        else:
+                            tem_report=TempleMemberReport.objects.create(management_profile=management,members=mem_tax,festivals=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.tax_per_head,balance_amt=temp_family.tax_per_head,type_choice="Festival",created_by=rejin.id)
+                    except Exception as e:
+                        print(f'[festival] Skipped member id={mem_tax.id} name={mem_tax.member_name}: {e}')
 
                 return Response(serializer876.data,status=status.HTTP_201_CREATED)
             else:

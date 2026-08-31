@@ -1,23 +1,29 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import *
-from .models import *
+from .serializers import (
+    ADDFundDetailsSerializer, ADDFundDetailsssssSerializer,
+    ADDFundLeaseDetailsSerializer, FundGroupDetailsSerializer,
+    FundGroupDetailsSerializer22, FundMemberDetailssSerializer,
+    FundLeaseMemberDetailssSerializer,
+)
+from .models import (
+    ADDFundDetails, FundGroupDetails, FundLeaseDetailss,
+    FundMemberDetailss, FundLeaseMemberDetailss,
+)
 from token_app.views import token_checking, generate_token
 from user.models import User
 from management.models import ManagementDetails
 import datetime
-from balancesheet.models import *
-from balancesheet.serializers import *
+from balancesheet.models import FundMembersBalanceSheet
 from permisions.models import Permisions
 from permisions.serializers import PermisionsSerializer
 from collection.models import CollectionDetails
-from collection.serializers import *
-from reports.models import Report
-from treasure.models import *
-from reports.models import *
+from collection.serializers import CollectionDetailsSerializer, coll_no
+from treasure.models import ManagementTreasure
+from reports.models import Report, FundMemberReport
 from datetime import date
-from reports.serializers import *
+from reports.serializers import FundMemberReportSerializer
 
 @api_view(['GET','POST'])
 def add_fund_name_details(request):
@@ -1284,9 +1290,8 @@ def close_fund_groups(request,pk):
             funddd_name=ADDFundDetails.objects.get(id=take_f_name_id)
             funddd_name.action=False
             funddd_name.save()
-        except:
+        except Exception:
             print('fundclose error')
-        return Response(status=status.HTTP_201_CREATED)
     
 
 @api_view(['GET'])

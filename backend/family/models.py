@@ -102,7 +102,7 @@ class Member_Details(models.Model):
             today = datetime.date.today()
             self.member_age = today.year - self.member_dob.year - ((today.month, today.day) < (self.member_dob.month, self.member_dob.day))
             # Auto-set tax eligibility: members older than 18 are eligible.
-            self.member_tax_eligible = self.member_age > 18
+            self.member_tax_eligible = self.member_age >= 18
         super(Member_Details, self).save(*args, **kwargs)
     
     # def calculate_age(self):

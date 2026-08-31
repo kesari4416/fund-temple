@@ -797,6 +797,34 @@ See `/app/memory/test_credentials.md`.
 - All F821 undefined name bugs fixed: expense/views.py (bank_check/bank variables), collection/views.py (temp_family→customer).
 - Backup file collection/views_bkp.py renamed to .bak to exclude from lint scan.
 
+## Lint and Import Cleanup (Aug 2026)
+- `fund/views.py`: Replaced all 8 star imports with explicit named imports.
+  - Resolved: `ADDFundDetailsSerializer`, `ADDFundDetailsssssSerializer`, `ADDFundLeaseDetailsSerializer`, `FundGroupDetailsSerializer`, `FundGroupDetailsSerializer22`, `FundMemberDetailssSerializer`, `FundLeaseMemberDetailssSerializer` (from fund.serializers)
+  - Resolved: `ADDFundDetails`, `FundGroupDetails`, `FundLeaseDetailss`, `FundMemberDetailss`, `FundLeaseMemberDetailss` (from fund.models)
+  - Resolved: `FundMembersBalanceSheet`, `coll_no`, `CollectionDetailsSerializer`, `ManagementTreasure`, `Report`, `FundMemberReport`, `FundMemberReportSerializer`
+  - Fixed E722 bare except on line 1293.
+- `venv310` (unused Python 2 virtualenv, 194MB) moved to `/tmp/venv310_unused` — was generating false-positive F821 errors from Python 2/3 compat code in six.py and urllib3.
+- `/app/ruff.toml` added at root level to cover project-wide scan exclusions.
+
+## Festival Tax Eligibility Fix — Age 18 Inclusive (Aug 2026)
+- Members exactly aged 18 were being skipped for festival tax (3 members confirmed skipped in production data).
+- A single member's processing failure could silently abort the entire loop.
+
+### Root causes
+1. `festival/views.py` used `member_age__gt=18` (strict greater-than), so 18-year-olds were excluded.
+2. `family/models.py` `save()` used `self.member_age > 18` for `member_tax_eligible` flag (same boundary error).
+3. No per-member try/except — a single row failure would stop all subsequent members.
+4. `death=False` filter was fragile (NullBooleanField may have NULLs in future data).
+
+### Fixes
+1. `festival/views.py` line 72–73: Changed `death=False, member_age__gt=18` → `member_age__gte=18` + `.exclude(death=True)`.
+2. `family/models.py` `save()`: Changed `self.member_age > 18` → `self.member_age >= 18`.
+3. Wrapped each member's tax-application block in `try/except Exception` with server-side log.
+
+### Verified
+- Test festival created: 211 records created (was 208 before — the 3 exactly-age-18 members now included).
+- Members S.P ABINAYAA (id=10), S. ASWIN (id=55), S.T.Priya (id=110) all correctly received ₹100 tax.
+
 ## CHIT_FUND_002 v5.1 Fix — Same-day penalty (Feb 2026)
 ### Bug
 Balance sheet shows penalty on the SAME date as the borrower's payment (SI6 penalty + SI5 payment both dated Sep5).
