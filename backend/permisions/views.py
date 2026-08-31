@@ -334,7 +334,7 @@ def assign_permissions(request):
                 dict98['moveable_asset_rent']=da['moveable_asset_rent']
                 out.append(dict98)
                 dict99['role_link']=out                
-            except:
+            except Exception:
                 return Response({"Message":"Data requirement error"},status=status.HTTP_417_EXPECTATION_FAILED)
             serializer=My_RolesSerializer(data=dict99)
             if serializer.is_valid():
@@ -578,7 +578,7 @@ def edit_role(request,pk):
 
                 out.append(dict98)
                 dict99['role_link']=out  
-        except:
+        except Exception:
                 return Response({"Message":"Data requirement error"},status=status.HTTP_417_EXPECTATION_FAILED)
         serializer = My_RolesSerializer(enquiry1,data=dict99)    
         if serializer.is_valid():

@@ -7,8 +7,8 @@ from token_app.views import token_checking, generate_token
 from user.models import User
 from management.models import ManagementDetails
 from permisions.models import Permisions
-from family.models import *
-from family.serializers import *
+from family.models import Member_Details, Fammily_Details
+from family.serializers import Member_DetailsSerializer98
 
 
 @api_view(['GET'])
@@ -182,7 +182,7 @@ def add_sangam_details(request):
                     dict6['message']= "Sangam name already used in active sangam"
                     dict6['data']=request.data
                     return Response(dict6,status=status.HTTP_226_IM_USED)
-            except:
+            except Exception:
                 return Response(request.data,status=status.HTTP_417_EXPECTATION_FAILED)   
             
             serializer876 = AddSangamDetailsSerializer(data=request.data)
@@ -234,7 +234,7 @@ def edit_sangam_details(request,pk):
                     dict6['message']= "Sangam name already used in active sangam"
                     dict6['data']=request.data
                     return Response(dict6,status=status.HTTP_226_IM_USED)
-            except:
+            except Exception:
                 return Response(request.data,status=status.HTTP_417_EXPECTATION_FAILED)      
             serializer876 = AddSangamDetailsSerializer(customer,data=request.data)
             if serializer876.is_valid():
@@ -255,7 +255,7 @@ def edit_sangam_details(request,pk):
                 dict6['message']= "Sangam name already used in active sangam"
                 dict6['data']=request.data
                 return Response(dict6,status=status.HTTP_226_IM_USED)
-        except:
+        except Exception:
             return Response(request.data,status=status.HTTP_417_EXPECTATION_FAILED)   
         serializer876 = AddSangamDetailsSerializer(customer,data=request.data,partial=True)
         if serializer876.is_valid():

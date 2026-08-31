@@ -8,7 +8,6 @@ from rest_framework import status
 import logging
 import datetime
 from token_app.views import token_checking, generate_token
-from user.models import User
 from other_people.models import OtherPeopleDetails
 from other_people.serializers import OtherPeopleDetailsSerializer
 from management.models import ManagementDetails
@@ -706,7 +705,7 @@ def user_edit(request, pk):
                     smy_user.set_password(take_pass)
                     smy_user.password_new=take_pass
                     smy_user.save() 
-                except:
+                except Exception:
                     print('nothing')
                 return Response(serializer.data,status=status.HTTP_200_OK)  
             return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)

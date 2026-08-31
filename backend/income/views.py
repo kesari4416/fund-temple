@@ -399,7 +399,7 @@ def edit_income_details(request,pk):
                 
                 try:
                     bank=request.data['bank']
-                except:
+                except Exception:
                     pass
                 income_amt=request.data['income_amt']
 
@@ -415,7 +415,7 @@ def edit_income_details(request,pk):
                             bank=BankDetails.objects.get(id=bank)
                             bank.credit_amt = float(bank.credit_amt) + float(income_amt)
                             bank.save()
-                    except:
+                    except Exception:
                         print("uuuuuuuuuuuuuu")
                         print(manage_get.cash_in_hand)
                         # print(temp_family.income_amt)

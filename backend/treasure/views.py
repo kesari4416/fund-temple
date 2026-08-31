@@ -4,12 +4,12 @@ from rest_framework import status
 from django.db.models import Sum
 from token_app.views import token_checking, generate_token
 from user.models import User
-from .models import *
+from .models import ManagementTreasure, ManagementBalanceSheet, ManagementFunds
 from management.models import ManagementDetails
 from income.models import ADDIncomeDetails
 from collection.models import CollectionDetails
 from amount.models import PeoplesAmountDetails
-from balancesheet.models import *
+from balancesheet.models import PeopleInterestBalanceSheet, FundMembersBalanceSheet, RentalBalanceSheet
 
 
 @api_view(['GET','POST'])

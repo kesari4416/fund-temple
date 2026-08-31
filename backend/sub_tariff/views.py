@@ -6,15 +6,13 @@ from .models import ADDSubscriptionTariffDetails
 from token_app.views import token_checking, generate_token
 from user.models import User
 import datetime
+from datetime import date, timedelta
 from management.models import ManagementDetails
 from family.models import Member_Details
 from amount.models import PeoplesAmountDetails
 from permisions.models import Permisions
 from collection.models import CollectionDetails
-import datetime
-from datetime import date
 import calendar
-from datetime import timedelta
 from reports.models import TempleMemberReport
 
 @api_view(['GET','POST'])
@@ -240,7 +238,7 @@ def edit_tariff_details(request,pk):
                                         new=TempleMemberReport.objects.get(id=new_mem.id)
                                         new.balance_amt = float(new.balance_amt)+float(new_credit_amt)
                                         new.save()
-                except:
+                except Exception:
                     print('people amount geting error')                
                 return Response(serializer876.data,status=status.HTTP_201_CREATED)
             else:
@@ -270,7 +268,7 @@ def edit_tariff_details(request,pk):
                     for p_amt in p_amt_obj:
                         p_amt.amount=temp_family.tariff_amount
                         p_amt.save()
-                except:
+                except Exception:
                     print('people amount geting error')
                 return Response(serializer876.data,status=status.HTTP_201_CREATED)
             else:

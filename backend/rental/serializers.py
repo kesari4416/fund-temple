@@ -4,7 +4,6 @@ from rest_framework.exceptions import ValidationError
 from django.utils import timezone
 from balancesheet.models import RentalBalanceSheet
 from assets.models import MoveableAssetDetails
-import datetime
 from datetime import datetime
 
 

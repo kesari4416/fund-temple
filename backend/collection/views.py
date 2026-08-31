@@ -2474,21 +2474,15 @@ def get_select_type(request):
         elif data == "Festival":
             if get_role == "User" and perm.festival == True or get_role == "Admin" or rejin.is_superuser == True:
                 today = date.today()
-                # FESTIVAL_001 fix: only show festivals within their validity window.
-                # start_date <= today <= end_date
+                # Show all active festivals within their valid date window.
+                # Member-level filtering (paid/unpaid) is done after festival selection.
                 fund = ADDFestivalDetails.objects.filter(
                     action=True,
                     management_profile=management,
                     start_date__lte=today,
                     end_date__gte=today,
                 )
-                fund_list = []
-                for fund_obj in fund:
-                    amount_obj = PeoplesAmountDetails.objects.filter(festival_id=fund_obj.id, penalty=False, paid=False,
-                                                                     management_profile=management)
-                    if amount_obj:
-                        fund_list.append(fund_obj)
-                serializer = ADDFestivalDetailsSerializer(fund_list, many=True)
+                serializer = ADDFestivalDetailsSerializer(fund, many=True)
             else:
                 return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
 

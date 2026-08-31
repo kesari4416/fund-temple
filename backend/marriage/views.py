@@ -1,6 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+import datetime
 from.serializers import MarriageDetailsSerializer
 from .models import MarriageDetails
 from token_app.views import token_checking, generate_token
@@ -62,7 +63,7 @@ def add_marriage_details(request):
                 if request.data['groom_native_type']=='Member' and request.data['bride_native_type']=='Member':
                     if int(request.data['bride_family'])==int(request.data['groom_family']):
                         return Response({"message":"Same family members not get married check the details"},status=status.HTTP_406_NOT_ACCEPTABLE)  
-            except:
+            except Exception:
                 pass
                
             serializer876 = MarriageDetailsSerializer(data=request.data)
@@ -139,7 +140,7 @@ def add_marriage_details(request):
                         else:
                             TempleMemberReport.objects.create(management_profile=management,members=y.member,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.bride_marriage_amt,balance_amt=temp_family.bride_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
 
-                    except:
+                    except Exception:
                         print('1st')
                         pass
                     
@@ -186,7 +187,7 @@ def add_marriage_details(request):
                         else:
                             TempleMemberReport.objects.create(management_profile=management,members=z.member,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=temp_family.groom_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
 
-                    except:
+                    except Exception:
                         pass
                     
                 elif temp_family.bride_member != None:
@@ -214,7 +215,7 @@ def add_marriage_details(request):
                         else:
                             TempleMemberReport.objects.create(management_profile=management,members=y.member,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.bride_marriage_amt,balance_amt=temp_family.bride_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
 
-                    except:
+                    except Exception:
                         pass
                 else:
                     pass
@@ -292,7 +293,7 @@ def edit_marriage_details(request,pk):
                 if request.data['groom_native_type']=='Member' and request.data['bride_native_type']=='Member':
                     if int(request.data['bride_family'])==int(request.data['groom_family']):
                         return Response({"message":"Same family members not get married check the details"},status=status.HTTP_406_NOT_ACCEPTABLE)  
-            except:
+            except Exception:
                 pass
             
             prod=request.data
@@ -301,7 +302,7 @@ def edit_marriage_details(request,pk):
                     invitation_status=False
                 else:
                     invitation_status=True
-            except:
+            except Exception:
                 pass
             
             try:
@@ -309,7 +310,7 @@ def edit_marriage_details(request,pk):
                     certificate_status=False
                 else:
                     certificate_status=True
-            except:
+            except Exception:
                 pass
             
             try:
@@ -317,7 +318,7 @@ def edit_marriage_details(request,pk):
                     i_status=False
                 else:
                     i_status=True
-            except:
+            except Exception:
                 pass   
         
             serializer876 = MarriageDetailsSerializer(customer,data=request.data)
@@ -331,7 +332,7 @@ def edit_marriage_details(request,pk):
                     try:
                         grm_amt=PeoplesAmountDetails.objects.filter(management_profile=management,marriage=temp_family,member=temp_family.groom_member).first()
                         grm_amt.delete()
-                    except:
+                    except Exception:
                         pass
                     temp_family.groom_family=None
                     temp_family.groom_member= None
@@ -344,7 +345,7 @@ def edit_marriage_details(request,pk):
                         get_bride_father=Member_Details.objects.filter(management_profile=management,family=temp_family.bride_family,head=True).first()
                         bride_amt=PeoplesAmountDetails.objects.filter(daughters_amt=True,management_profile=management,marriage=temp_family,member=get_bride_father).first()
                         bride_amt.delete()
-                    except:
+                    except Exception:
                         pass
                     temp_family.bride_family=None
                     temp_family.bride_member= None
@@ -358,20 +359,20 @@ def edit_marriage_details(request,pk):
                     if invitation_status==False:
                         temp_family.invitation=None
                         temp_family.save()
-                except:
+                except Exception:
                     pass
                 try:
                     if i_status==False:
                         temp_family.marriage_photo=None
                         temp_family.save()
-                except:
+                except Exception:
                     pass
                 
                 try:
                     if certificate_status==False:
                         temp_family.marriage_certificate=None
                         temp_family.save()
-                except:
+                except Exception:
                     pass
                 
                 marrige_fam1=temp_family.new_family
@@ -446,7 +447,7 @@ def edit_marriage_details(request,pk):
                                             m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                             get_fam.members_count=m_count
                                             get_fam.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -454,7 +455,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                             get_new_grm_fam1.members_count=m_coun1t3
                                             get_new_grm_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -462,7 +463,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                             get_old_br_fam1.members_count=m_coun1t2
                                             get_old_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -470,7 +471,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                             get_new_br_fam1.members_count=m_coun1t
                                             get_new_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         get_grm_mariage_amt_obj=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -508,7 +509,7 @@ def edit_marriage_details(request,pk):
                                             else:
                                                 TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=temp_family.groom_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
                                                      
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
                                         
@@ -542,7 +543,7 @@ def edit_marriage_details(request,pk):
                                                         new=TempleMemberReport.objects.get(id=new_mem.id)
                                                         new.balance_amt = float(new.balance_amt)+float(cal_dif_bal)
                                                         new.save()  
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport bride fath geting error')
                                             pass
                                         
@@ -577,7 +578,7 @@ def edit_marriage_details(request,pk):
                                             m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                             get_fam.members_count=m_count
                                             get_fam.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -585,7 +586,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                             get_new_grm_fam1.members_count=m_coun1t3
                                             get_new_grm_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         get_grm_mariage_amt_obj634=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -624,7 +625,7 @@ def edit_marriage_details(request,pk):
                                                 TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=bal1,type_choice="Marriage Amount",created_by=rejin.id)
                                             else:
                                                 TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=temp_family.groom_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)     
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
                                         
@@ -660,7 +661,7 @@ def edit_marriage_details(request,pk):
                                                         new=TempleMemberReport.objects.get(id=new_mem.id)
                                                         new.balance_amt = float(new.balance_amt)+float(cal_dif_bal)
                                                         new.save()  
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport bride fath geting error')
                                             pass
                                                
@@ -691,7 +692,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                             get_old_br_fam1.members_count=m_coun1t2
                                             get_old_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -699,7 +700,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                             get_new_br_fam1.members_count=m_coun1t
                                             get_new_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         
@@ -754,7 +755,7 @@ def edit_marriage_details(request,pk):
                                                         new98=TempleMemberReport.objects.get(id=new_mem3.id)
                                                         new98.balance_amt = float(new98.balance_amt)+float(cal_dif_bal_grm78)
                                                         new98.save()    
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
                                         
@@ -789,7 +790,7 @@ def edit_marriage_details(request,pk):
                                                     new=TempleMemberReport.objects.get(id=new_mem.id)
                                                     new.balance_amt = float(new.balance_amt)+float(cal_dif_balg)
                                                     new.save()  
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport bride fath geting error')
                                             pass
                                         
@@ -843,7 +844,7 @@ def edit_marriage_details(request,pk):
                                         m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                         get_fam.members_count=m_count
                                         get_fam.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     try:
@@ -851,7 +852,7 @@ def edit_marriage_details(request,pk):
                                         m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                         get_new_grm_fam1.members_count=m_coun1t3
                                         get_new_grm_fam1.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     try:
@@ -859,7 +860,7 @@ def edit_marriage_details(request,pk):
                                         m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                         get_old_br_fam1.members_count=m_coun1t2
                                         get_old_br_fam1.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     try:
@@ -867,7 +868,7 @@ def edit_marriage_details(request,pk):
                                         m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                         get_new_br_fam1.members_count=m_coun1t
                                         get_new_br_fam1.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     get_grm_mariage_amt_obj=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -910,7 +911,7 @@ def edit_marriage_details(request,pk):
                                         else:
                                             TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=temp_family.groom_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
                                                     
-                                    except:
+                                    except Exception:
                                         print('TempleMemberReport groom geting error')
                                         pass
                                     
@@ -934,7 +935,7 @@ def edit_marriage_details(request,pk):
                                             TempleMemberReport.objects.create(management_profile=management,members=bride_father,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.bride_marriage_amt,balance_amt=bal1f,type_choice="Marriage Amount",created_by=rejin.id)
                                         else:
                                             TempleMemberReport.objects.create(management_profile=management,members=bride_father,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.bride_marriage_amt,balance_amt=temp_family.bride_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)           
-                                    except:
+                                    except Exception:
                                         print('TempleMemberReport groom geting error')
                                         pass
                                     
@@ -981,7 +982,7 @@ def edit_marriage_details(request,pk):
                                             m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                             get_fam.members_count=m_count
                                             get_fam.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -989,7 +990,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                             get_new_grm_fam1.members_count=m_coun1t3
                                             get_new_grm_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -997,7 +998,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                             get_old_br_fam1.members_count=m_coun1t2
                                             get_old_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -1005,7 +1006,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                             get_new_br_fam1.members_count=m_coun1t
                                             get_new_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         get_grm_mariage_amt_obj=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -1046,7 +1047,7 @@ def edit_marriage_details(request,pk):
                                                 TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=bal31,type_choice="Marriage Amount",created_by=rejin.id)
                                             else:
                                                 TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=temp_family.groom_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)     
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
                                         
@@ -1070,7 +1071,7 @@ def edit_marriage_details(request,pk):
                                                 TempleMemberReport.objects.create(management_profile=management,members=bride_father,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.bride_marriage_amt,balance_amt=bal1f,type_choice="Marriage Amount",created_by=rejin.id)
                                             else:
                                                 TempleMemberReport.objects.create(management_profile=management,members=bride_father,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.bride_marriage_amt,balance_amt=temp_family.bride_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)          
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
                                         
@@ -1101,7 +1102,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                             get_new_br_fam1.members_count=m_coun1t
                                             get_new_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -1109,7 +1110,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                             get_old_br_fam1.members_count=m_coun1t2
                                             get_old_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         get_grm_mariage_amt_obj=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -1163,7 +1164,7 @@ def edit_marriage_details(request,pk):
                                                         new98=TempleMemberReport.objects.get(id=new_mem3.id)
                                                         new98.balance_amt = float(new98.balance_amt)+float(cal_dif_bal_grm78)
                                                         new98.save()    
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
                                         
@@ -1188,7 +1189,7 @@ def edit_marriage_details(request,pk):
                                                 TempleMemberReport.objects.create(management_profile=management,members=bride_father,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.bride_marriage_amt,balance_amt=bal1f,type_choice="Marriage Amount",created_by=rejin.id)
                                             else:
                                                 TempleMemberReport.objects.create(management_profile=management,members=bride_father,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.bride_marriage_amt,balance_amt=temp_family.bride_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)          
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
                                     
@@ -1241,7 +1242,7 @@ def edit_marriage_details(request,pk):
                                             m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                             get_fam.members_count=m_count
                                             get_fam.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -1249,7 +1250,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                             get_new_grm_fam1.members_count=m_coun1t3
                                             get_new_grm_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -1257,7 +1258,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                             get_old_br_fam1.members_count=m_coun1t2
                                             get_old_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         get_grm_mariage_amt_obj=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -1297,7 +1298,7 @@ def edit_marriage_details(request,pk):
                                             else:
                                                 TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=temp_family.groom_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
                                                      
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
                                         
@@ -1331,7 +1332,7 @@ def edit_marriage_details(request,pk):
                                                     new=TempleMemberReport.objects.get(id=new_mem.id)
                                                     new.balance_amt = float(new.balance_amt)+float(cal_dif_bal)
                                                     new.save()  
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport bride fath geting error')
                                             pass
                                         
@@ -1370,7 +1371,7 @@ def edit_marriage_details(request,pk):
                                             m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                             get_fam.members_count=m_count
                                             get_fam.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -1378,7 +1379,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                             get_new_grm_fam1.members_count=m_coun1t3
                                             get_new_grm_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         get_grm_mariage_amt_obj=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -1418,7 +1419,7 @@ def edit_marriage_details(request,pk):
                                             else:
                                                 TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=temp_family.groom_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
                                                      
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
                                         
@@ -1452,7 +1453,7 @@ def edit_marriage_details(request,pk):
                                                     new=TempleMemberReport.objects.get(id=new_mem.id)
                                                     new.balance_amt = float(new.balance_amt)+float(cal_dif_bal)
                                                     new.save()  
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport bride fath geting error')
                                             pass
                                         
@@ -1504,7 +1505,7 @@ def edit_marriage_details(request,pk):
                                             m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                             get_fam.members_count=m_count
                                             get_fam.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -1512,7 +1513,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                             get_new_grm_fam1.members_count=m_coun1t3
                                             get_new_grm_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -1520,7 +1521,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                             get_new_br_fam1.members_count=m_coun1t
                                             get_new_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         get_grm_mariage_amt_obj=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -1565,7 +1566,7 @@ def edit_marriage_details(request,pk):
                                             else:
                                                 TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=temp_family.groom_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
                                                      
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
                                         
@@ -1595,7 +1596,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                             get_new_br_fam1.members_count=m_coun1t
                                             get_new_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         get_grm_mariage_amt_obj=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -1651,7 +1652,7 @@ def edit_marriage_details(request,pk):
                                                         new98=TempleMemberReport.objects.get(id=new_mem3.id)
                                                         new98.balance_amt = float(new98.balance_amt)+float(cal_dif_bal_grm78)
                                                         new98.save()    
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
                                         
@@ -1699,7 +1700,7 @@ def edit_marriage_details(request,pk):
                                         m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                         get_fam.members_count=m_count
                                         get_fam.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     try:
@@ -1707,7 +1708,7 @@ def edit_marriage_details(request,pk):
                                         m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                         get_new_grm_fam1.members_count=m_coun1t3
                                         get_new_grm_fam1.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     try:
@@ -1715,7 +1716,7 @@ def edit_marriage_details(request,pk):
                                         m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                         get_new_br_fam1.members_count=m_coun1t
                                         get_new_br_fam1.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     get_grm_mariage_amt_obj=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -1760,7 +1761,7 @@ def edit_marriage_details(request,pk):
                                         else:
                                             TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=temp_family.groom_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
                                                     
-                                    except:
+                                    except Exception:
                                         print('TempleMemberReport groom geting error')
                                         pass
                                     
@@ -1807,7 +1808,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                             get_new_grm_fam1.members_count=m_coun1t3
                                             get_new_grm_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -1815,7 +1816,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                             get_new_br_fam1.members_count=m_coun1t
                                             get_new_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -1823,7 +1824,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                             get_old_br_fam1.members_count=m_coun1t2
                                             get_old_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         xiu=PeoplesAmountDetails.objects.create(amount_balance=temp_family.groom_marriage_amt,total_bal_amt=temp_family.groom_marriage_amt,management_profile=management,member=temp_family.groom_member,
@@ -1880,7 +1881,7 @@ def edit_marriage_details(request,pk):
                                                     new=TempleMemberReport.objects.get(id=new_mem.id)
                                                     new.balance_amt = float(new.balance_amt)+float(cal_dif_bal)
                                                     new.save()  
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport bride fath geting error')
                                             pass
                                         
@@ -1913,14 +1914,14 @@ def edit_marriage_details(request,pk):
                                             m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                             get_new_grm_fam1.members_count=m_coun1t3
                                             get_new_grm_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass                                        
                                         try:
                                             get_new_br_fam1=Fammily_Details.objects.get(id=new_bride_fam_id)
                                             m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                             get_new_br_fam1.members_count=m_coun1t
                                             get_new_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass  
                                                                               
                                         xiu=PeoplesAmountDetails.objects.create(amount_balance=temp_family.groom_marriage_amt,total_bal_amt=temp_family.groom_marriage_amt,management_profile=management,member=temp_family.groom_member,
@@ -1977,7 +1978,7 @@ def edit_marriage_details(request,pk):
                                                     new=TempleMemberReport.objects.get(id=new_mem.id)
                                                     new.balance_amt = float(new.balance_amt)+float(cal_dif_bal)
                                                     new.save()  
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport bride fath geting error')
                                             pass
                                         
@@ -2017,7 +2018,7 @@ def edit_marriage_details(request,pk):
                                         m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                         get_new_grm_fam1.members_count=m_coun1t3
                                         get_new_grm_fam1.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     try:
@@ -2025,7 +2026,7 @@ def edit_marriage_details(request,pk):
                                         m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                         get_new_br_fam1.members_count=m_coun1t
                                         get_new_br_fam1.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     try:
@@ -2033,7 +2034,7 @@ def edit_marriage_details(request,pk):
                                         m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                         get_old_br_fam1.members_count=m_coun1t2
                                         get_old_br_fam1.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     xiu=PeoplesAmountDetails.objects.create(amount_balance=temp_family.groom_marriage_amt,total_bal_amt=temp_family.groom_marriage_amt,management_profile=management,member=temp_family.groom_member,
@@ -2083,7 +2084,7 @@ def edit_marriage_details(request,pk):
                                         else:
                                             TempleMemberReport.objects.create(management_profile=management,members=bride_father,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.bride_marriage_amt,balance_amt=temp_family.bride_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
                                                     
-                                    except:
+                                    except Exception:
                                         print('TempleMemberReport groom geting error')
                                         pass
                                     
@@ -2124,7 +2125,7 @@ def edit_marriage_details(request,pk):
                                             get_famly=Fammily_Details.objects.get(id=get_marige_fam_id)
                                             get_famly.members_count=fam_mem_count 
                                             get_famly.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -2132,14 +2133,14 @@ def edit_marriage_details(request,pk):
                                             m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                             get_fam.members_count=m_count
                                             get_fam.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         try:
                                             get_new_grm_fam1=Fammily_Details.objects.get(id=new_grm_fam_id)
                                             m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                             get_new_grm_fam1.members_count=m_coun1t3
                                             get_new_grm_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         get_grm_mariage_amt_obj=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -2169,7 +2170,7 @@ def edit_marriage_details(request,pk):
                                                 TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=bal1,type_choice="Marriage Amount",created_by=rejin.id)
                                             else:
                                                 TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=temp_family.groom_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)     
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
                                         
@@ -2188,7 +2189,7 @@ def edit_marriage_details(request,pk):
                                             get_famly=Fammily_Details.objects.get(id=get_marige_fam_id)
                                             get_famly.members_count=fam_mem_count 
                                             get_famly.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         get_grm_mariage_amt_objc=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -2232,7 +2233,7 @@ def edit_marriage_details(request,pk):
                                                         new98=TempleMemberReport.objects.get(id=new_mem3.id)
                                                         new98.balance_amt = float(new98.balance_amt)+float(cal_dif_bal_grm78)
                                                         new98.save()    
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
                                         
@@ -2277,14 +2278,14 @@ def edit_marriage_details(request,pk):
                                         m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                         get_fam.members_count=m_count
                                         get_fam.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     try:
                                         get_new_grm_fam1=Fammily_Details.objects.get(id=new_grm_fam_id)
                                         m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                         get_new_grm_fam1.members_count=m_coun1t3
                                         get_new_grm_fam1.save()
-                                    except:
+                                    except Exception:
                                         pass                                    
                                     get_grm_mariage_amt_obj=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
                                     get_grm_mariage_amt_obj.member=temp_family.groom_member
@@ -2315,7 +2316,7 @@ def edit_marriage_details(request,pk):
                                         else:
                                             TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=temp_family.groom_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
                                                     
-                                    except:
+                                    except Exception:
                                         print('TempleMemberReport groom geting error')
                                         pass
                     
@@ -2365,14 +2366,14 @@ def edit_marriage_details(request,pk):
                                             m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                             get_fam.members_count=m_count
                                             get_fam.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         try:
                                             get_new_grm_fam1=Fammily_Details.objects.get(id=new_grm_fam_id)
                                             m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                             get_new_grm_fam1.members_count=m_coun1t3
                                             get_new_grm_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -2380,7 +2381,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                             get_old_br_fam1.members_count=m_coun1t2
                                             get_old_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         get_grm_mariage_amt_obj=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -2407,7 +2408,7 @@ def edit_marriage_details(request,pk):
                                                     
                                                 ol_br_fath_bal.delete()
                                             
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         # balasheet
@@ -2432,7 +2433,7 @@ def edit_marriage_details(request,pk):
                                             else:
                                                 TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=temp_family.groom_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
                                                         
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
                                     
@@ -2463,7 +2464,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                             get_old_br_fam1.members_count=m_coun1t2
                                             get_old_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         get_grm_mariage_amt_obj=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -2489,7 +2490,7 @@ def edit_marriage_details(request,pk):
                                                     new.save() 
                                                     
                                                 ol_br_fath_bal.delete()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         
@@ -2515,7 +2516,7 @@ def edit_marriage_details(request,pk):
                                             else:
                                                 TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=temp_family.groom_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
                                                         
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport groom geting error')
                                             pass
     
@@ -2557,14 +2558,14 @@ def edit_marriage_details(request,pk):
                                         m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                         get_fam.members_count=m_count
                                         get_fam.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     try:
                                         get_new_grm_fam1=Fammily_Details.objects.get(id=new_grm_fam_id)
                                         m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                         get_new_grm_fam1.members_count=m_coun1t3
                                         get_new_grm_fam1.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     get_grm_mariage_amt_obj=PeoplesAmountDetails.objects.filter(marriage=temp_family,daughters_amt=False).first()
@@ -2590,7 +2591,7 @@ def edit_marriage_details(request,pk):
                                                 new.save() 
                                                 
                                             ol_br_fath_bal.delete()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     # balasheet
@@ -2615,7 +2616,7 @@ def edit_marriage_details(request,pk):
                                         else:
                                             TempleMemberReport.objects.create(management_profile=management,members=neww_groom_member_obj,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.groom_marriage_amt,balance_amt=temp_family.groom_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
                                                     
-                                    except:
+                                    except Exception:
                                         print('TempleMemberReport groom geting error')
                                         pass
                         
@@ -2658,7 +2659,7 @@ def edit_marriage_details(request,pk):
                                     m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                     get_old_br_fam1.members_count=m_coun1t2
                                     get_old_br_fam1.save()
-                                except:
+                                except Exception:
                                     pass
                                 
                                 try:
@@ -2666,7 +2667,7 @@ def edit_marriage_details(request,pk):
                                     m_coun1t3=Member_Details.objects.filter(family=get_new_grm_fam1,marriage_remove=False,death=False).count()
                                     get_new_grm_fam1.members_count=m_coun1t3
                                     get_new_grm_fam1.save()
-                                except:
+                                except Exception:
                                     pass
                                 
                                 x=PeoplesAmountDetails.objects.create(amount_balance=temp_family.groom_marriage_amt,total_bal_amt=temp_family.groom_marriage_amt,management_profile=management,member=temp_family.groom_member,
@@ -2697,7 +2698,7 @@ def edit_marriage_details(request,pk):
                                             
                                         ol_br_fath_bal.delete()
                                     
-                                except:
+                                except Exception:
                                     pass
                                 
                                 # new
@@ -2731,7 +2732,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                             get_new_br_fam1.members_count=m_coun1t
                                             get_new_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -2739,7 +2740,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                             get_old_br_fam1.members_count=m_coun1t2
                                             get_old_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         bride_father=Member_Details.objects.filter(family=temp_family.bride_family,head=True).first()
@@ -2781,7 +2782,7 @@ def edit_marriage_details(request,pk):
                                                     new=TempleMemberReport.objects.get(id=new_mem.id)
                                                     new.balance_amt = float(new.balance_amt)+float(cal_dif_bal)
                                                     new.save()  
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport bride fath geting error')
                                             pass
                                         
@@ -2827,7 +2828,7 @@ def edit_marriage_details(request,pk):
                                                     new=TempleMemberReport.objects.get(id=new_mem.id)
                                                     new.balance_amt = float(new.balance_amt)+float(cal_dif_bal)
                                                     new.save()  
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport bride fath geting error')
                                             pass
                                         
@@ -2850,7 +2851,7 @@ def edit_marriage_details(request,pk):
                                         m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                         get_new_br_fam1.members_count=m_coun1t
                                         get_new_br_fam1.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     try:
@@ -2858,7 +2859,7 @@ def edit_marriage_details(request,pk):
                                         m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                         get_old_br_fam1.members_count=m_coun1t2
                                         get_old_br_fam1.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     bride_father=Member_Details.objects.filter(family=temp_family.bride_family,head=True).first()
@@ -2893,7 +2894,7 @@ def edit_marriage_details(request,pk):
                                         else:
                                             TempleMemberReport.objects.create(management_profile=management,members=bride_father,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.bride_marriage_amt,balance_amt=temp_family.bride_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
                                                     
-                                    except:
+                                    except Exception:
                                         print('TempleMemberReport groom geting error')
                                         pass
                                     
@@ -2936,7 +2937,7 @@ def edit_marriage_details(request,pk):
                                             m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                             get_fam.members_count=m_count
                                             get_fam.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -2944,7 +2945,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                             get_new_br_fam1.members_count=m_coun1t
                                             get_new_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -2952,7 +2953,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                             get_old_br_fam1.members_count=m_coun1t2
                                             get_old_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         bride_father=Member_Details.objects.filter(family=temp_family.bride_family,head=True).first()
@@ -2981,7 +2982,7 @@ def edit_marriage_details(request,pk):
                                                     
                                                 ol_grm_mem_balsheeet.delete()
                                             
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         # bride 
@@ -3014,7 +3015,7 @@ def edit_marriage_details(request,pk):
                                                     new=TempleMemberReport.objects.get(id=new_mem.id)
                                                     new.balance_amt = float(new.balance_amt)+float(cal_dif_bal)
                                                     new.save()  
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport bride fath geting error')
                                             pass
                                             
@@ -3044,7 +3045,7 @@ def edit_marriage_details(request,pk):
                                             m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                             get_fam.members_count=m_count
                                             get_fam.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         try:
@@ -3052,7 +3053,7 @@ def edit_marriage_details(request,pk):
                                             m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                             get_old_br_fam1.members_count=m_coun1t2
                                             get_old_br_fam1.save()
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         bride_father=Member_Details.objects.filter(family=temp_family.bride_family,head=True).first()
@@ -3081,7 +3082,7 @@ def edit_marriage_details(request,pk):
                                                     
                                                 ol_grm_mem_balsheeet.delete()
                                             
-                                        except:
+                                        except Exception:
                                             pass
                                         
                                         # bride 
@@ -3114,7 +3115,7 @@ def edit_marriage_details(request,pk):
                                                     new=TempleMemberReport.objects.get(id=new_mem.id)
                                                     new.balance_amt = float(new.balance_amt)+float(cal_dif_bal)
                                                     new.save()  
-                                        except:
+                                        except Exception:
                                             print('TempleMemberReport bride fath geting error')
                                             pass
                                         
@@ -3149,7 +3150,7 @@ def edit_marriage_details(request,pk):
                                         m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                         get_fam.members_count=m_count
                                         get_fam.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     try:
@@ -3157,7 +3158,7 @@ def edit_marriage_details(request,pk):
                                         m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                         get_new_br_fam1.members_count=m_coun1t
                                         get_new_br_fam1.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     try:
@@ -3165,7 +3166,7 @@ def edit_marriage_details(request,pk):
                                         m_coun1t2=Member_Details.objects.filter(family=get_old_br_fam1,marriage_remove=False,death=False).count()
                                         get_old_br_fam1.members_count=m_coun1t2
                                         get_old_br_fam1.save()
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                     bride_father=Member_Details.objects.filter(family=temp_family.bride_family,head=True).first()
@@ -3200,7 +3201,7 @@ def edit_marriage_details(request,pk):
                                         else:
                                             TempleMemberReport.objects.create(management_profile=management,members=bride_father,marriage=temp_family,reportdate=datetime.date.today(),credit_amt=temp_family.bride_marriage_amt,balance_amt=temp_family.bride_marriage_amt,type_choice="Marriage Amount",created_by=rejin.id)
                                                     
-                                    except:
+                                    except Exception:
                                         print('TempleMemberReport groom geting error')
                                         pass
                                     
@@ -3221,7 +3222,7 @@ def edit_marriage_details(request,pk):
                                                 
                                             ol_grm_mem_balsheeet.delete()
                                         
-                                    except:
+                                    except Exception:
                                         pass
                                     
                     elif old_groom_member!=None and old_bride_member==None:
@@ -3253,7 +3254,7 @@ def edit_marriage_details(request,pk):
                                     m_count=Member_Details.objects.filter(family=get_fam,marriage_remove=False,death=False).count()
                                     get_fam.members_count=m_count
                                     get_fam.save()
-                                except:
+                                except Exception:
                                     pass
                                 
                                 try:
@@ -3261,7 +3262,7 @@ def edit_marriage_details(request,pk):
                                     m_coun1t=Member_Details.objects.filter(family=get_new_br_fam1,marriage_remove=False,death=False).count()
                                     get_new_br_fam1.members_count=m_coun1t
                                     get_new_br_fam1.save()
-                                except:
+                                except Exception:
                                     pass
                                 
                                 try:
@@ -3281,7 +3282,7 @@ def edit_marriage_details(request,pk):
                                             
                                         ol_grm_mem_balsheeet.delete()
                                     
-                                except:
+                                except Exception:
                                     pass
                                 
                                 bride_father=Member_Details.objects.filter(family=temp_family.bride_family,head=True).first()

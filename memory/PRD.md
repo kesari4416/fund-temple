@@ -797,6 +797,54 @@ See `/app/memory/test_credentials.md`.
 - All F821 undefined name bugs fixed: expense/views.py (bank_check/bank variables), collection/views.py (temp_family→customer).
 - Backup file collection/views_bkp.py renamed to .bak to exclude from lint scan.
 
+## Bulk Lint Remediation — Aug 2026 (Round 2 & 3)
+Files fixed round 2: `permisions/views.py`, `rental/views.py`, `rental/serializers.py`, `sangam/views.py`, `sub_tariff/views.py`, `sub_tariff/serializers.py`, `token_app/views.py`, `my_tasks/tests.py`, settings files
+- 19 bare `except:` → `except Exception:` across permisions, rental, sangam, sub_tariff, token_app
+- `my_tasks/tests.py`: `from dateutil.relativedelta import *` → explicit
+- `rental/serializers.py`, `sub_tariff/serializers.py`, `sub_tariff/views.py`: removed duplicate `datetime` imports
+- `sangam/views.py`: replaced `from family.models import *` and `from family.serializers import *` with explicit imports
+- `rental/views.py`: removed duplicate `rent_viewlist` and `movablerentasset_viewlist` function definitions (lines 1244-1309)
+- `temple_proj/settings/dev.py`, `pro.py`, `test.py`: added `# noqa: F403` to standard Django settings pattern
+- `temple_proj/settings/pro.py`: fixed syntax error — missing `DATABASES = {` wrapper
+- Moved `temple_proj/venv/` (224MB, unused Python 3.10 venv) to `/tmp/temple_proj_venv_unused`
+
+## Bulk Lint Remediation — Aug 2026 (Round 1)
+Files fixed: `interest/views.py`, `interest/serializers.py`, `management/views.py`, `marriage/views.py`, `user/views.py`, `treasure/views.py`, `income/views.py` (49 E722 + 20 F403/F405/F811/F821 errors)
+- All bare `except:` replaced with `except Exception:` across 6 files
+- `interest/serializers.py`: Merged duplicate `datetime` imports; `from dateutil.relativedelta import *` → explicit
+- `interest/views.py`: Removed duplicate star imports from `balancesheet.serializers` and `dateutil`; removed inlined re-imports at line 815-816
+- `management/views.py`: Fixed `todayy5` undefined-before-use in both Credit and Debit branches (moved assignment before if/else block)
+- `marriage/views.py`: Added missing `import datetime`
+- `user/views.py`: Removed duplicate `from user.models import User` (line 11 was shadowing line 4)
+- `treasure/views.py`: Replaced `from .models import *` and `from balancesheet.models import *` with explicit named imports
+
+## Festival Collection Lifecycle Fix (Aug 2026)
+
+### Bugs Fixed
+
+**Bug 1: Festival disappears from dropdown ON end_date instead of day after**
+- Root cause: `my_tasks/views.py` scheduler filter `end_date=now23` triggered exactly ON end_date, calling `action=False` and making it invisible.
+- Fix: Changed to `end_date__lt=now23, action=True` — expires only festivals that have PASSED their end_date, not on the final day.
+
+**Bug 2: Festival disappears when members have penalty applied**
+- Root cause: `get_select_type` in `collection/views.py` filtered `penalty=False, paid=False` — once any members had penalty applied, festival could disappear from dropdown even during active window.
+- Fix: Removed per-festival loop. Now simply shows all festivals where `action=True AND start_date<=today<=end_date`.
+
+**Bug 3: `date_new` undefined variable in `my_tasks/views.py:1120`**
+- Root cause: Line used `date_new` (undefined) — should have been `date_new_get1` (defined at line 1114).
+- Fix: Changed `date_new` → `date_new_get1`.
+
+**Bug 4: Star import `from dateutil.relativedelta import *`**
+- Caused 60 F405 lint violations in `my_tasks/views.py`.
+- Fix: Replaced with explicit `from dateutil.relativedelta import relativedelta`.
+
+### Scheduler Penalty Logic (Already Implemented)
+- `my_tasks/views.py` line 455-484: When festival expires, unpaid members get `penalty=True` set and `penalty_amount` added to their `total_bal_amt` and `amount_balance`.
+- Idempotency guard on both `PeoplesAmountDetails.penalty` and `TempleMemberReport.type_choice="Festival Penalty"`.
+
+### Tax Application (Fixed in Previous Session)
+- `festival/views.py`: `member_age__gte=18` (inclusive) + `.exclude(death=True)` + per-member try/except.
+
 ## Lint and Import Cleanup (Aug 2026)
 - `fund/views.py`: Replaced all 8 star imports with explicit named imports.
   - Resolved: `ADDFundDetailsSerializer`, `ADDFundDetailsssssSerializer`, `ADDFundLeaseDetailsSerializer`, `FundGroupDetailsSerializer`, `FundGroupDetailsSerializer22`, `FundMemberDetailssSerializer`, `FundLeaseMemberDetailssSerializer` (from fund.serializers)

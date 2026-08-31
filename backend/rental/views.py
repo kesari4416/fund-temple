@@ -372,7 +372,7 @@ def edit_lease_things(request,pk):
                     documents_status=False
                 else:
                     documents_status=True
-            except:
+            except Exception:
                 pass
             
             try:
@@ -380,7 +380,7 @@ def edit_lease_things(request,pk):
                     photo_status=False
                 else:
                     photo_status=True
-            except:
+            except Exception:
                 pass
 
                 
@@ -417,7 +417,7 @@ def edit_lease_things(request,pk):
                                 asset_check578=AssetDetails.objects.filter(id=oldassetid).first()
                                 asset_check578.is_booked=False
                                 asset_check578.save()
-                            except:
+                            except Exception:
                                 pass
                             asset_check=AssetDetails.objects.filter(id=temp_family.asset_id).first()
                             asset_check.is_booked=True
@@ -504,7 +504,7 @@ def edit_lease_things(request,pk):
                             asset_check578=AssetDetails.objects.filter(id=oldassetid).first()
                             asset_check578.is_booked=False
                             asset_check578.save()
-                        except:
+                        except Exception:
                             pass
                         
                         asset_check=AssetDetails.objects.filter(id=temp_family.asset_id).first()
@@ -583,13 +583,13 @@ def edit_lease_things(request,pk):
                         if documents_status==False:
                             customer.documents=None
                             customer.save()
-                    except:
+                    except Exception:
                         pass
                     try:
                         if photo_status==False:
                             customer.images=None
                             customer.save()
-                    except:
+                    except Exception:
                         pass
                     return Response(serializer876.data,status=status.HTTP_201_CREATED) 
                     
@@ -629,7 +629,7 @@ def edit_lease_things(request,pk):
                                 asset_check578=AssetDetails.objects.filter(id=oldassetid).first()
                                 asset_check578.is_booked=False
                                 asset_check578.save()
-                            except:
+                            except Exception:
                                 pass
                             asset_check=AssetDetails.objects.filter(id=temp_family.asset_id).first()
                             asset_check.is_booked=True
@@ -676,7 +676,7 @@ def edit_lease_things(request,pk):
                             asset_check578=AssetDetails.objects.filter(id=oldassetid).first()
                             asset_check578.is_booked=False
                             asset_check578.save()
-                        except:
+                        except Exception:
                             pass
                         asset_check=AssetDetails.objects.filter(id=temp_family.asset_id).first()
                         asset_check.is_booked=True
@@ -709,13 +709,13 @@ def edit_lease_things(request,pk):
                         if documents_status==False:
                             customer.documents=None
                             customer.save()
-                    except:
+                    except Exception:
                         pass
                     try:
                         if photo_status==False:
                             customer.images=None
                             customer.save()
-                    except:
+                    except Exception:
                         pass    
                     
                     return Response(serializer876.data,status=status.HTTP_201_CREATED)
@@ -880,7 +880,7 @@ def rental_advance_settlement(request,pk):
     if request.method =='PUT':
         try: 
             advance_settlement_amt=float(request.data['initial_advance_amt'])
-        except:
+        except Exception:
             return Response({'message':"Settlement amount convertion error"},status.HTTP_417_EXPECTATION_FAILED)
             
         checking=RentalAndLeaseDetails.objects.filter(id=pk).first()
@@ -1241,69 +1241,3 @@ def edit_moveable_lease_things(request,pk):
             return Response({'message':"User does not have permission to delete rental"},status.HTTP_401_UNAUTHORIZED)
 
 
-
-@api_view(['GET','PUT',"DELETE"])
-def rent_viewlist(request,pk):
-    rejin=token_checking(request)
-    if not rejin:
-        return Response({"message":"No User Found"},status=status.HTTP_401_UNAUTHORIZED)
-    if not rejin.is_active:
-        return Response({"message":"Not Authorized Please Contact Admin"},status=status.HTTP_401_UNAUTHORIZED)
-    
-    check_management=ManagementDetails.objects.all()
-    if not check_management:
-        dict6={}
-        dict6['message']= "First Add Management Profile details"
-        return Response(dict6,status=status.HTTP_406_NOT_ACCEPTABLE)
-    else:
-        management=ManagementDetails.objects.all().first()
-    rental_details=RentalAndLeaseDetails.objects.filter(id=pk).first()
-    serializer=RentalAndLeaseDetailsSerializer(rental_details)
-    balance_rent_details=RentalBalanceSheet.objects.filter(rental_new_amt_id=pk).first()
-    serializer2=RentalBalanceSheetSerializer(balance_rent_details)
-    collection_details=CollectionDetails.objects.filter(rentsandlease_id=pk)
-    out=[]
-    collection_amount=CollectionDetails.objects.filter(rentsandlease_id=pk).aggregate(Sum('amount')).get('amount__sum')
-    serializer3=CollectionDetailsSerializer(collection_details,many=True)
-    out.append(serializer3.data)
-
-    dict32={}
-    dict32['rent_lease']=serializer.data
-    dict32['rent_balance_sheet']=serializer2.data
-    dict32['collection_details']=out
-    dict32['collection_amount']=collection_amount
-    return Response(dict32,status=status.HTTP_200_OK)
-
-
-        
-@api_view(['GET','PUT',"DELETE"])
-def movablerentasset_viewlist(request,pk):
-    rejin=token_checking(request)
-    if not rejin:
-        return Response({"message":"No User Found"},status=status.HTTP_401_UNAUTHORIZED)
-    if not rejin.is_active:
-        return Response({"message":"Not Authorized Please Contact Admin"},status=status.HTTP_401_UNAUTHORIZED)
-    
-    check_management=ManagementDetails.objects.all()
-    if not check_management:
-        dict6={}
-        dict6['message']= "First Add Management Profile details"
-        return Response(dict6,status=status.HTTP_406_NOT_ACCEPTABLE)
-    else:
-        management=ManagementDetails.objects.all().first()
-    rental_details=MovableAssetsRents.objects.filter(id=pk).first()
-    serializer=MovableAssetsRentsSerializer(rental_details)
-    balance_rent_details=MoveableRentBalanceSheet.objects.filter(rental_new_amt_id=pk).first()
-    serializer2=MoveableRentBalanceSheetSerializer(balance_rent_details)
-    collection_details=CollectionDetails.objects.filter(moveablerent_id=pk)
-    out=[]
-    collection_amount=CollectionDetails.objects.filter(moveablerent_id=pk).aggregate(Sum('amount')).get('amount__sum')
-    serializer3=CollectionDetailsSerializer(collection_details,many=True)
-    out.append(serializer3.data)
-
-    dict32={}
-    dict32['rent_lease']=serializer.data
-    dict32['rent_balance_sheet']=serializer2.data
-    dict32['collection_details']=out
-    dict32['collection_amount']=collection_amount
-    return Response(dict32,status=status.HTTP_200_OK)

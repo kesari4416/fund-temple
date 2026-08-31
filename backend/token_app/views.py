@@ -14,7 +14,7 @@ def token_checking(request):
         payload=jwt.decode(token,'secret',algorithms=['HS256'])
     except jwt.ExpiredSignatureError:
         raise AuthenticationFailed('Unauthenticated!')
-    except:
+    except Exception:
         return Response(status=status.HTTP_417_EXPECTATION_FAILED)
     user=User.objects.filter(id=payload['id']).first()
     if not user:

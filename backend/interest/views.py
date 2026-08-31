@@ -11,20 +11,17 @@ from collection.models import CollectionDetails
 from collection.serializers import CollectionDetailsSerializer
 
 from balancesheet.models import PeopleInterestBalanceSheet
-from balancesheet.serializers import PeopleInterestBalanceSheetSerializer
+from balancesheet.serializers import PeopleInterestBalanceSheetSerializer, PeopleInterestssssBalanceSheetSerializer
 # calculate sum
 from django.db.models import Sum
 from permisions.models import Permisions
-from family.models import Fammily_Details,Member_Details
-from family.serializers import Fammily_DetailsSerializer,member_DetailsSerializer
+from family.models import Fammily_Details, Member_Details
+from family.serializers import Fammily_DetailsSerializer, member_DetailsSerializer
 from treasure.models import ManagementTreasure
-from chit_fund.models import ChitFundInvesters,ChitFundsDetails
-from reports.models import Report,TempleMemberReport,FundMemberReport,ChitFundInterestOverallReport,InterestPeopleReport
-from reports.serializers import InterestPeopleReportserializer
-from reports.models import ChitFundInterestOverallReport
-from reports.serializers import ChitFundInterestOverallReport_serializer
-from dateutil.relativedelta import *
-from balancesheet.serializers import *
+from chit_fund.models import ChitFundInvesters, ChitFundsDetails
+from reports.models import Report, TempleMemberReport, FundMemberReport, ChitFundInterestOverallReport, InterestPeopleReport
+from reports.serializers import InterestPeopleReportserializer, ChitFundInterestOverallReport_serializer
+from dateutil.relativedelta import relativedelta
 
 
 
@@ -815,9 +812,6 @@ def interest_profile(request, pk):
     return Response(response_data, status=status.HTTP_200_OK)
 
 
-from family.models import Member_Details
-from family.serializers import member_DetailsSerializer
-
 @api_view(['GET','POST'])
 def interest_member_list(request):
     rejin=token_checking(request)
@@ -1037,7 +1031,7 @@ def interest_people_installmentinterest_balance_get(request):
                     else:
                         if iii.penalty_balance_amt > 0:
                             out.append(iii)
-                except:
+                except Exception:
                     print("hello")
 
 
@@ -1054,7 +1048,7 @@ def interest_people_installmentinterest_balance_get(request):
                     else:
                         if iii.penalty_balance_amt > 0:
                             out.append(iii)
-                except:
+                except Exception:
                     print("jjjjjjjjjj")
 
                                      

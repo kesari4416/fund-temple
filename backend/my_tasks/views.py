@@ -356,8 +356,7 @@ from management.models import ManagementDetails
 import datetime
 from amount.models import PeoplesAmountDetails
 from death.models import DeathDetails
-from dateutil.relativedelta import *
-from treasure.models import ManagementBalanceSheet
+from dateutil.relativedelta import relativedelta
 from income.models import ADDIncomeDetails
 from expense.models import ADDExpenseDetails
 from datetime import date,timedelta
@@ -444,8 +443,11 @@ def subscription_delete():
 
   
 
-    # festive_check=ADDFestivalDetails.objects.filter(penalty_start_date=now23) 
-    festive_check=ADDFestivalDetails.objects.filter(end_date=now23)    
+    # Expire festivals where today is STRICTLY AFTER end_date (day-after removal).
+    # Using end_date__lt=now23 means: on the end_date itself the festival is still
+    # active; the next morning this condition triggers, action→False and penalties applied.
+    # action=True guard prevents re-processing already-expired festivals.
+    festive_check=ADDFestivalDetails.objects.filter(end_date__lt=now23, action=True)
     logger.info(festive_check)   
     if festive_check:
           for i in festive_check:
@@ -1115,7 +1117,7 @@ def subscription_delete():
                             interst_date11fff=inter_bal.interest_apply_date+relativedelta(months=1)
                             # interst_date11=inter_bal.interest_apply_date+relativedelta(months=1)
 
-                            months = (now23.year - date_new.year) * 12 + now23.month - date_new.month
+                            months = (now23.year - date_new_get1.year) * 12 + now23.month - date_new_get1.month
                             interst_date11=datetime.date(interst_date11fff.year,interst_date11fff.month,20)
                             if interst_date11 == now23+relativedelta(days=1):
                                 inter_bal.first_interest_apply = False

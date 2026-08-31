@@ -49,11 +49,11 @@ def add_management(request):
                     dict87['opening_balance_type']=prod['opening_balance_type']
                 try:
                     dict87['documents']=prod['documents']
-                except:
+                except Exception:
                     pass
                 try:
                     dict87['images']=prod['images']
-                except:
+                except Exception:
                     pass
                 print('godd')
                 print(request.data['field_count'])
@@ -81,7 +81,7 @@ def add_management(request):
                 dict87['management']=produ_list
                 print('final')
                 print(dict87)
-            except:
+            except Exception:
                 return Response({"Message":"Data requirement error"},status=status.HTTP_417_EXPECTATION_FAILED)
                     
             serializer876 = ManagementDetailsSerializer(data=dict87)
@@ -165,7 +165,7 @@ def edit_management(request,pk):
                         d_status=False
                     else:
                         d_status=True
-                except:
+                except Exception:
                     pass
                 
                 try:
@@ -173,13 +173,13 @@ def edit_management(request,pk):
                         i_status=False
                     else:
                         i_status=True
-                except:
+                except Exception:
                     pass   
                 
                 dict87={}
                 try:
                     dict87['id']=prod['id']
-                except:
+                except Exception:
                     pass
                 dict87['temple_name']=prod['temple_name']
                 dict87['address']=prod['address']
@@ -192,11 +192,11 @@ def edit_management(request,pk):
                     dict87['opening_balance_type']=prod['opening_balance_type']
                 try:
                     dict87['documents']=prod['documents']
-                except:
+                except Exception:
                     pass
                 try:
                     dict87['images']=prod['images']
-                except:
+                except Exception:
                     pass
                 print('godd')
                 print(request.data['field_count'])
@@ -214,7 +214,7 @@ def edit_management(request,pk):
                             else:
                                 p_id=prod[f"management[{num}][id]"]
                                 dict8['id']=p_id
-                        except:
+                        except Exception:
                             pass
                         
                         dict8['bank_name']=prod[f"management[{num}][bank_name]"]
@@ -233,7 +233,7 @@ def edit_management(request,pk):
                 dict87['management']=produ_list
                 print('final')
                 print(dict87)
-            except:
+            except Exception:
                 return Response({"Message":"Data requirement error"},status=status.HTTP_417_EXPECTATION_FAILED)
                     
             serializer876 = ManagementDetailsSerializer(customer,data=dict87)
@@ -376,24 +376,24 @@ def edit_management(request,pk):
                     if temp_family.opening_balance_type!=None and temp_family.opening_balance!=None and temp_family.opening_balance_type=='Credit' and temp_family.opening_balance>0:    
                         ManagementTreasure.objects.create(management_profile=temp_family,cash_in_hand=temp_family.opening_balance)
                         check_mbal=ManagementBalanceSheet.objects.filter(management_profile=temp_family,managee=True).first()
+                        todayy5=datetime.datetime.now()
                         if check_mbal:
                             check_mbal.delete()
                             kie45=ManagementBalanceSheet.objects.create(management_profile=temp_family,managee=True,opening_balance_amt=temp_family.opening_balance,date=todayy5,opening_balance_type=temp_family.opening_balance_type)
                             Report.objects.create(type_choice="Addition",management_profile=temp_family,amount=temp_family.opening_balance,created_by=rejin.id,mangebalancesheet=kie45) 
                         else:
-                            todayy5=datetime.datetime.now()
                             kie=ManagementBalanceSheet.objects.create(management_profile=temp_family,managee=True,opening_balance_amt=temp_family.opening_balance,date=todayy5,opening_balance_type=temp_family.opening_balance_type)
                             Report.objects.create(type_choice="Addition",management_profile=temp_family,amount=temp_family.opening_balance,created_by=rejin.id,mangebalancesheet=kie) 
                                     
                     elif temp_family.opening_balance_type!=None and temp_family.opening_balance!=None and temp_family.opening_balance_type=='Debit' and temp_family.opening_balance>0:
                         ManagementTreasure.objects.create(management_profile=temp_family,expence_amt=temp_family.opening_balance)
                         check_mbal4=ManagementBalanceSheet.objects.filter(management_profile=temp_family,managee=True).first()
+                        todayy5=datetime.datetime.now()
                         if check_mbal4:
                             check_mbal4.delete()
                             kie45g=ManagementBalanceSheet.objects.create(management_profile=temp_family,managee=True,opening_balance_amt=temp_family.opening_balance,date=todayy5,opening_balance_type=temp_family.opening_balance_type)
                             Report.objects.create(type_choice="Reduction",management_profile=temp_family,amount=temp_family.opening_balance,created_by=rejin.id,mangebalancesheet=kie45g) 
                         else:
-                            todayy5=datetime.datetime.now()
                             kie=ManagementBalanceSheet.objects.create(management_profile=temp_family,managee=True,opening_balance_amt=temp_family.opening_balance,date=todayy5,opening_balance_type=temp_family.opening_balance_type)
                             Report.objects.create(type_choice="Reduction",management_profile=temp_family,amount=temp_family.opening_balance,created_by=rejin.id,mangebalancesheet=kie)      
                     else:
@@ -403,13 +403,13 @@ def edit_management(request,pk):
                     if d_status==False:
                         temp_family.documents=None
                         temp_family.save()
-                except:
+                except Exception:
                     pass
                 try:
                     if i_status==False:
                         temp_family.images=None
                         temp_family.save()
-                except:
+                except Exception:
                     pass
                 
                 # change tax eligible 

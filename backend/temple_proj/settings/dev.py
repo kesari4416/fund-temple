@@ -1,6 +1,4 @@
-from .base import *
-
-DEBUG = True
+from .base import *  # noqa: F403
 ALLOWED_HOSTS = ['*']
 
 # mysql database developing

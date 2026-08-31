@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .models import ADDSubscriptionTariffDetails
 from django.utils import timezone
-import datetime
 from datetime import datetime
 
 class ADDSubscriptionTariffDetailseSerializer(serializers.ModelSerializer):
