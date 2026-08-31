@@ -200,7 +200,7 @@ class Fammily_DetailsSerializer(serializers.ModelSerializer):
                 print(hobby.keys())
                 try:
                     varities_data = hobby.pop('im_status')
-                except:
+                except Exception:
                     pass
                 varities_datass = hobby.pop('family_iddd')
 

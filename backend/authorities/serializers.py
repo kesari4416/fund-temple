@@ -40,7 +40,7 @@ class AddAuthorityDetailsSerializer(serializers.ModelSerializer):
         try:
             atharity = validated_data.pop('atharity')
             rejin=True
-        except:
+        except Exception:
             rejin=False
         profile_instance = AddAuthorityDetails.objects.create(**validated_data)
         if rejin:
@@ -52,7 +52,7 @@ class AddAuthorityDetailsSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         try:
             user_hobby_list = validated_data.pop('atharity')
-        except:
+        except Exception:
             user_hobby_list=False
             
         instance.desgnation = validated_data.get('desgnation', instance.desgnation)         

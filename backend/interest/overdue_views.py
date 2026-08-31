@@ -244,16 +244,30 @@ def _apply_for_installment(
     except (TypeError, ValueError):
         max_cycle = 0
 
+    # Owner rule (Feb 2026 — v5, Days-type confirmed by owner):
+    # For "Days" installment loans the borrower gets the FULL due date
+    # to pay — penalty is NOT charged on the due date itself.  Only when
+    # the due date has STRICTLY PASSED (today > due_date) is a penalty
+    # row written, and the ledger date is set to the day AFTER the missed
+    # due date (i.e. ``due_date + delta``).
+    # For Weeks / Months the existing behaviour (penalty on/after due date,
+    # reportdate = due_date) is preserved unchanged.
+    ptype = (record.interest_period_type or "month").lower()
+    is_days = ptype in ("day", "days")
+
     if record.installment_date:
         # Every full cadence step BEFORE today is a missed due date.
         due_date = record.installment_date
         cycle = paid_counts + 1
-        while due_date <= today:
+        while (due_date < today) if is_days else (due_date <= today):
             if max_cycle and cycle > max_cycle:
                 break
+            # Days: penalty reportdate = day AFTER missed due date.
+            # Weeks/Months: penalty reportdate = due date itself.
+            penalty_report_date = (due_date + delta) if is_days else due_date
             already = InterestPeopleReport.objects.filter(
                 interest=record,
-                reportdate=due_date,
+                reportdate=penalty_report_date,
                 type_choice="Penalty",
             ).exists()
             if not already:
@@ -265,26 +279,27 @@ def _apply_for_installment(
                 InterestPeopleReport.objects.create(
                     management_profile=record.management_profile,
                     interest=record,
-                    reportdate=due_date,
+                    reportdate=penalty_report_date,
                     credit_amt=pen_per_cycle,
                     balance_amt=bal.balance_amt,
                     type_choice="Penalty",
                     created_by=record.created_by,
                 )
-                applied.append({"due_date": due_date.isoformat(), "penalty": pen_per_cycle})
+                applied.append({"due_date": penalty_report_date.isoformat(), "penalty": pen_per_cycle})
             cycle += 1
             due_date = due_date + delta
     else:
         # Legacy walker (no installment_date pointer yet).
         cycle = 1
         due_date = start + delta
-        while due_date <= today:
+        while (due_date < today) if is_days else (due_date <= today):
             if max_cycle and cycle > max_cycle:
                 break
             if cycle > paid_counts:
+                penalty_report_date = (due_date + delta) if is_days else due_date
                 already = InterestPeopleReport.objects.filter(
                     interest=record,
-                    reportdate=due_date,
+                    reportdate=penalty_report_date,
                     type_choice="Penalty",
                 ).exists()
                 if not already:
@@ -296,13 +311,13 @@ def _apply_for_installment(
                     InterestPeopleReport.objects.create(
                         management_profile=record.management_profile,
                         interest=record,
-                        reportdate=due_date,
+                        reportdate=penalty_report_date,
                         credit_amt=pen_per_cycle,
                         balance_amt=bal.balance_amt,
                         type_choice="Penalty",
                         created_by=record.created_by,
                     )
-                    applied.append({"due_date": due_date.isoformat(), "penalty": pen_per_cycle})
+                    applied.append({"due_date": penalty_report_date.isoformat(), "penalty": pen_per_cycle})
             cycle += 1
             due_date = start + (delta * cycle)
 

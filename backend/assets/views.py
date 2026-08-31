@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from.serializers import AssetCategorySerializer,AssetDetailsSerializer,MoveableAssetCategorySerializer,MoveableAssetDetailsSerializer
 from .models import AssetCategory,AssetDetails,MoveableAssetCategory,MoveableAssetDetails
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
 from management.models import ManagementDetails
 from permisions.models import Permisions
 from rental.models import RentalAndLeaseDetails,MovableAssetsRentTable
@@ -38,7 +39,7 @@ def add_asset_category_details(request):
                     dict6['message']= "Data already exists"
                     dict6['data']=request.data
                     return Response(dict6,status=status.HTTP_226_IM_USED)
-            except:
+            except Exception:
                 return Response(request.data,status=status.HTTP_417_EXPECTATION_FAILED)
                 
             serializer876 = AssetCategorySerializer(data=request.data)
@@ -101,7 +102,7 @@ def edit_asset_category_details(request,pk):
                     dict6['message']= "Data already exists"
                     dict6['data']=request.data
                     return Response(dict6,status=status.HTTP_226_IM_USED)
-            except:
+            except Exception:
                 return Response(request.data,status=status.HTTP_417_EXPECTATION_FAILED) 
             
             serializer876 = AssetCategorySerializer(customer,data=request.data)
@@ -166,7 +167,7 @@ def add_asset_details(request):
                         dict6['message']= "Data already exists"
                         # dict6['data']=request.data
                         return Response(dict6,status=status.HTTP_226_IM_USED)
-            except:
+            except Exception:
                 return Response(request.data,status=status.HTTP_417_EXPECTATION_FAILED)
                
             serializer876 = AssetDetailsSerializer(data=request.data)
@@ -229,7 +230,7 @@ def edit_asset_details(request,pk):
                         dict6['message']= "Data already exists"
                         # dict6['data']=request.data
                         return Response(dict6,status=status.HTTP_226_IM_USED)
-            except:
+            except Exception:
                 return Response(request.data,status=status.HTTP_417_EXPECTATION_FAILED)
             
             try:
@@ -237,7 +238,7 @@ def edit_asset_details(request,pk):
                     d_status=False
                 else:
                     d_status=True
-            except:
+            except Exception:
                 pass
             
             try:
@@ -245,7 +246,7 @@ def edit_asset_details(request,pk):
                     i_status=False
                 else:
                     i_status=True
-            except:
+            except Exception:
                 pass   
                 
             serializer876 = AssetDetailsSerializer(customer,data=request.data)
@@ -258,13 +259,13 @@ def edit_asset_details(request,pk):
                     if d_status==False:
                         temp_family.documents=None
                         temp_family.save()
-                except:
+                except Exception:
                     pass
                 try:
                     if i_status==False:
                         temp_family.images=None
                         temp_family.save()
-                except:
+                except Exception:
                     pass
                 
                 return Response(serializer876.data,status=status.HTTP_201_CREATED)
@@ -379,7 +380,7 @@ def add_movableasset_category_details(request):
                     dict6['message']= "Data already exists"
                     dict6['data']=request.data
                     return Response(dict6,status=status.HTTP_226_IM_USED)
-            except:
+            except Exception:
                 return Response(request.data,status=status.HTTP_417_EXPECTATION_FAILED)
              
             serializer876 = MoveableAssetCategorySerializer(data=request.data)
@@ -442,7 +443,7 @@ def edit_movableasset_category_details(request,pk):
                     dict6['message']= "Data already exists"
                     dict6['data']=request.data
                     return Response(dict6,status=status.HTTP_226_IM_USED)
-            except:
+            except Exception:
                 return Response(request.data,status=status.HTTP_417_EXPECTATION_FAILED)   
             serializer876 = MoveableAssetCategorySerializer(customer,data=request.data)
             if serializer876.is_valid():
@@ -507,7 +508,7 @@ def add_movableasset_details(request):
                         dict6['message']= "Data already exists"
                         dict6['data']=request.data
                         return Response(dict6,status=status.HTTP_226_IM_USED)
-            except:
+            except Exception:
                 return Response(request.data,status=status.HTTP_417_EXPECTATION_FAILED)
             
             serializer876 = MoveableAssetDetailsSerializer(data=request.data)
@@ -573,7 +574,7 @@ def edit_movableasset_details(request,pk):
                         dict6['message']= "Data already exists"
                         dict6['data']=request.data
                         return Response(dict6,status=status.HTTP_226_IM_USED)
-            except:
+            except Exception:
                 return Response(request.data,status=status.HTTP_417_EXPECTATION_FAILED)
             
             serializer876 = MoveableAssetDetailsSerializer(customer,data=request.data)

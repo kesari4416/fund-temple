@@ -1,22 +1,17 @@
 from django.db import models
-from family.models import Fammily_Details,Member_Details
-from management.models import ManagementDetails,BankDetails
-from fund.models import ADDFundDetails,FundGroupDetails,FundMemberDetailss
+from family.models import Fammily_Details, Member_Details
+from management.models import ManagementDetails, BankDetails
+from fund.models import ADDFundDetails, FundGroupDetails, FundMemberDetailss, FundLeaseDetailss
 from festival.models import ADDFestivalDetails
-from rental.models import RentalAndLeaseDetails
+from rental.models import RentalAndLeaseDetails, MovableAssetsRents
 from sub_tariff.models import ADDSubscriptionTariffDetails
 from chit_fund.models import ChitFundsDetails
 from interest.models import PeopleInterestDetails
 from amount.models import PeoplesAmountDetails
 from death.models import DeathDetails
 from marriage.models import MarriageDetails
-from fund.models import FundGroupDetails,FundLeaseDetailss
-from balancesheet.models import PeopleInterestBalanceSheet,FundMembersBalanceSheet,RentalBalanceSheet,MoveableRentBalanceSheet
-from rental.models import MovableAssetsRents
-
+from balancesheet.models import PeopleInterestBalanceSheet, FundMembersBalanceSheet, RentalBalanceSheet, MoveableRentBalanceSheet
 from django.core.validators import RegexValidator
-
-from fund.models import FundMemberDetailss
 
 NATIVE_CHOICES = (
     ('Member','Member'),

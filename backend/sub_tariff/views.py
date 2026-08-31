@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from.serializers import ADDSubscriptionTariffDetailseSerializer
 from .models import ADDSubscriptionTariffDetails
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
 import datetime
 from management.models import ManagementDetails
 from family.models import Member_Details

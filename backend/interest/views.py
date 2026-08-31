@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from.serializers import PeopleInterestDetailsSerializer
 from .models import PeopleInterestDetails
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
 from management.models import ManagementDetails
 import datetime
 from collection.models import CollectionDetails

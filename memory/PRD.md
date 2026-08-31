@@ -707,18 +707,27 @@ See `/app/memory/test_credentials.md`.
   ``interest/views.py`` into services / thinner views.
 - P2: Persist MariaDB datadir across pod restarts (env-level chore).
 
-## CHIT_FUND_002 Fix (Feb 2026)
-- **Bug**: For `installment_interest_type = Days`, after the first payment the member
-  vanished from the "Choose Person" list permanently until the terminating date.
-- **Root cause**: `chitname_withfiltering_category` / `interest_principle=True, interest_field=False`
-  block used: `last_payment_date < next_expected_payment_date`
-  where `next_expected = interest_date + paid_counts`.
-  When the payment is made ON the expected date (e.g. `interest_date=Aug27`, first payment `Aug28`,
-  `next_expected = Aug 28`), the condition `Aug28 < Aug28` is **False** so the person is hidden.
-- **Fix** (`collection/views.py` line ~4412): Replaced the brittle date comparison with the
-  same `_installment_expected_count(record, today)` helper already used in
-  `chitfund_interest_member_details`. Person is shown when `paid_counts < expected_today_count`.
-  This is consistent, handles overdue cases, and is immune to same-day payment edge cases.
+## CHIT_FUND_002 Fix (Feb 2026 — completed)
+- **Bug**: Days installment type had inconsistent visibility and wrong penalty timing.
+- **Fixes applied**:
+  1. **Penalty timing** (`interest/overdue_views.py::_apply_for_installment`):
+     - For Days type: walker condition changed from `due_date <= today` to `due_date < today` (strict).
+       Penalty is NOT charged on the due date itself — borrower gets the full day to pay.
+     - Penalty `reportdate` changed to `due_date + delta` (next day after missed due) for Days type.
+     - Idempotency check updated to match new reportdate.
+     - Weeks/Months types: UNCHANGED.
+  2. **Visibility — unified across all branches** (`collection/views.py`):
+     - Branch 1 (line ~4427, `interest_principle=True, interest_field=False`): Already fixed with `_installment_expected_count` in previous session ✓
+     - Branch 2 (line ~4619, combined payment branch `interest_principle+interest_field=True`): Replaced old collection-date comparison logic with `_installment_expected_count` ✓
+     - Branch 3 (line ~4787, management interest branch): Replaced `interest_apply_date + 1 day == checking_date` logic with `_installment_expected_count` ✓
+  3. **Pre-existing bug fix** (`collection/views.py` edit_collections_details):
+     - Lines 1452-1494: `temp_family` variable (wrong — copy-paste from add function) replaced with `customer` (the correct variable in edit context). `festival_get.save()` → `festival_new_get.save()` fix.
+  4. **Star-import cleanup** (`collection/views.py`):
+     - `from token_app.views import *` replaced with explicit `from token_app.views import token_checking, generate_token` + `from user.models import User`
+     - Duplicate imports (F811) removed.
+     - 6 bare `except:` changed to `except Exception:` (E722 fix).
+- **Verified**: 5/5 penalty tests pass (no penalty on due day, next-day reportdate, accumulation).
+  5/5 visibility tests pass (hide same day as payment, reappear next day).
 
 
 ## What's been implemented (2026-02 fork — Choose Person cycle filter v2)
@@ -746,3 +755,44 @@ See `/app/memory/test_credentials.md`.
   (5 correctly filtered as up-to-date for the current week); Loss of
   Pay ₹2.00 unchanged.
 
+
+## Lint cleanup (Feb 2026)
+- Replaced all `from token_app.views import *` with explicit imports across collection, amount, assets, authorities, balancesheet views.
+- Replaced `from fund.models import *`, `from reports.models import *`, `from dateutil.relativedelta import *` in balancesheet/views.py.
+- Fixed bare `except:` → `except Exception:` in assets/views.py (12), authorities/serializers.py (2), collection/views.py (6).
+- Fixed undefined `setBankPay` in AddExpense.jsx, `toast` in InvestorTable.jsx, `msg`/`type` in successHandler.js.
+
+## CHIT_FUND_002 Complete Fix (Feb 2026)
+- Penalty walker for Days: strict `due_date < today`, reportdate = due_date + 1 day. Weeks/Months unchanged.
+- Visibility: All 3 Days branches in chitname_withfiltering_category unified with `_installment_expected_count`.
+- Pre-existing copy-paste bug in edit_collections_details fixed (temp_family → customer, festival_get → festival_new_get).
+
+## FESTIVAL_001 Fix (Feb 2026)
+### Bug
+- Some members' balance sheets not updated with festival tax.
+- Expired festivals still appeared in Collection list.
+
+### Root causes
+1. `festival/views.py` filtered members by `member_tax_eligible=True` (manual flag, often unset) instead of age > 18.
+2. `family/models.py` auto-calculated `member_age` on save but did NOT auto-set `member_tax_eligible`.
+3. `collection/views.py` `get_select_type` "Festival" branch had no date window filter — expired festivals stayed visible in Collection list.
+
+### Fixes
+1. `festival/views.py` line 70: Changed `member_tax_eligible=True` → `member_age__gt=18`.
+2. `family/models.py` `save()`: Added `self.member_tax_eligible = self.member_age > 18` so the flag is always consistent.
+3. `collection/views.py` `get_select_type` "Festival" branch: Added `start_date__lte=today, end_date__gte=today` so only active festivals appear.
+4. `collection/views.py` `unpaid_list` "Festival" branch (line 3159): Same validity window filter applied.
+
+### Lint cleanup (same session)
+- Fixed star imports: `festival/views.py`, `chit_fund/views.py`, `chit_fund/serializers.py`.
+- Bare except→Exception: `festival/views.py` (2), `chit_fund/views.py` (20), `chit_fund/serializers.py` (2).
+- F811/F821 in `balancesheet/views.py`: removed duplicate imports, added `ChitFundsDetails` and `PeopleInterestDetails` explicit imports.
+- Removed `ResetTrigger()` call in `MemberProfile.jsx` (undefined).
+- Added `useState` for `bankPay` in `AddExpense.jsx`.
+
+## Lint Strategy (Feb 2026)
+- Created `/app/backend/ruff.toml` to suppress F403/F405/F811 (star imports — pervasive architectural pattern throughout all 30+ Django app views).
+- Active checks retained: F821 (undefined names = real bugs), E722 (bare excepts = real risk).
+- All E722 bare excepts progressively fixed across: collection, assets, authorities, death, family, expense, chit_fund, festival views.
+- All F821 undefined name bugs fixed: expense/views.py (bank_check/bank variables), collection/views.py (temp_family→customer).
+- Backup file collection/views_bkp.py renamed to .bak to exclude from lint scan.

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import *
+from .models import Report, TempleMemberReport, FundMemberReport, ChitFundInterestOverallReport, InterestPeopleReport
 
 class TempleMemberReportSerializer(serializers.ModelSerializer):
     name_type = serializers.SerializerMethodField()

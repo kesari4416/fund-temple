@@ -3,7 +3,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from.serializers import DeathDetailsSerializer,DeathDetailsSerializer45
 from .models import DeathDetails
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
+import datetime
 from management.models import ManagementDetails
 from family.models import Member_Details,Fammily_Details
 from permisions.models import Permisions
@@ -70,7 +72,7 @@ def add_death_details(request):
                     take_fam.death_members_count=kl
                     take_fam.married_remove_count=ma5
                     take_fam.save()
-                except:
+                except Exception:
                     print('death member geting error')
                     pass
                 
@@ -172,7 +174,7 @@ def edit_death_details(request,pk):
                     documents_status=False
                 else:
                     documents_status=True
-            except:
+            except Exception:
                 pass
             
             try:
@@ -180,18 +182,18 @@ def edit_death_details(request,pk):
                     photo_status=False
                 else:
                     photo_status=True
-            except:
+            except Exception:
                 pass
             
             if customer.old_death:
                 rj_dic={}
                 try:
                     rj_dic['documents']=request.data['documents']
-                except:
+                except Exception:
                     pass
                 try:
                     rj_dic['photo']=request.data['photo']
-                except:
+                except Exception:
                     pass
                 
                 rj_dic['death_date']=request.data['death_date']
@@ -210,13 +212,13 @@ def edit_death_details(request,pk):
                         if documents_status==False:
                             customer.documents=None
                             customer.save()
-                    except:
+                    except Exception:
                         pass
                     try:
                         if photo_status==False:
                             customer.photo=None
                             customer.save()
-                    except:
+                    except Exception:
                         pass
                     return Response(serializer8769664.data,status=status.HTTP_201_CREATED)  
                 else:        
@@ -226,11 +228,11 @@ def edit_death_details(request,pk):
                 rj_dic={}
                 try:
                     rj_dic['documents']=request.data['documents']
-                except:
+                except Exception:
                     pass
                 try:
                     rj_dic['photo']=request.data['photo']
-                except:
+                except Exception:
                     pass
                     
                 serializer876966 = DeathDetailsSerializer45(customer,data=rj_dic)
@@ -240,13 +242,13 @@ def edit_death_details(request,pk):
                         if documents_status==False:
                             customer.documents=None
                             customer.save()
-                    except:
+                    except Exception:
                         pass
                     try:
                         if photo_status==False:
                             customer.photo=None
                             customer.save()
-                    except:
+                    except Exception:
                         pass
                     return Response({'message':"Document and images can only be edited as penalty date is reached"},status.HTTP_302_FOUND) 
                 else:        
@@ -306,7 +308,7 @@ def edit_death_details(request,pk):
                                 d_tariff.penalty_amount=amount_cal
                                 d_tariff.save() 
                         
-                except:
+                except Exception:
                     print('death edit status changes error')
                     pass
                 
@@ -397,19 +399,19 @@ def edit_death_details(request,pk):
 
                                               
                         
-                except:
+                except Exception:
                     print('people amount geting error')                        
                 try:
                     if documents_status==False:
                         temp_family.documents=None
                         temp_family.save()
-                except:
+                except Exception:
                     pass
                 try:
                     if photo_status==False:
                         temp_family.photo=None
                         temp_family.save()
-                except:
+                except Exception:
                     pass
                         
                 return Response(serializer876.data,status=status.HTTP_201_CREATED)
@@ -479,7 +481,7 @@ def edit_death_details(request,pk):
                         take_fam.death_members_count=kl
                         take_fam.married_remove_count=ma5
                         take_fam.save()
-                    except:
+                    except Exception:
                         pass   
             else:
                 mem=Member_Details.objects.filter(id=customer.member_id).first()
@@ -497,7 +499,7 @@ def edit_death_details(request,pk):
                         take_fam.death_members_count=kl
                         take_fam.married_remove_count=ma5
                         take_fam.save()
-                    except:
+                    except Exception:
                         pass  
             reports= TempleMemberReport.objects.filter(death_tariff=customer)
             if reports:

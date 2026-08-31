@@ -2,31 +2,32 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 import jwt
-from.serializers import *
-from .models import Fammily_Details,Member_Details
+from .serializers import (
+    member_DetailsSerializer, Fammily_DetailsSerializer, Member_DetailsSerializer98,
+    Fammily_DetailsSerializer98, Member_DetailsSerializer55, Fammily_DetailsSerializer55,
+    Member_DetailsSerializer555, MemberDetailsSerializer, Fammily_DetailsSerializer9843,
+    MemberDetailsSerializer654, Fammily_DetailsSerialize87834664,
+)
+from .models import Fammily_Details, Member_Details
 from rest_framework.exceptions import AuthenticationFailed
-from user.models import User
 import pandas as pd
 import datetime
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
 from management.models import ManagementDetails
-from amount.models import PeoplesAmountDetails,PeoplesJOININGAmountDetails
-from amount.serializers import PeoplesAmountDetailsSerializer,PeoplesAmount123DetailsSerializer
+from amount.models import PeoplesAmountDetails, PeoplesJOININGAmountDetails
+from amount.serializers import PeoplesAmountDetailsSerializer, PeoplesAmount123DetailsSerializer
 from collection.models import CollectionDetails
 from collection.serializers import CollectionDetailsSerializer
 from fund.models import FundMemberDetailss
 from permisions.models import Permisions
-from death.models import *
-from treasure.models import *
-from rental.models import RentalAndLeaseDetails
-from rental.serializers import RentalAndLeaseDetailsSerializer
-from balancesheet.models import RentalBalanceSheet
-from balancesheet.serializers import RentalBalanceSheetSerializer
-from rental.models import MovableAssetsRents
-from balancesheet.models import RentalBalanceSheet,MoveableRentBalanceSheet
-from rental.serializers import MovableAssetsRentsSerializer
-from balancesheet.serializers import MoveableRentBalanceSheetSerializer
-from reports.models import Report,TempleMemberReport
+from death.models import DeathDetails
+from treasure.models import ManagementTreasure
+from rental.models import RentalAndLeaseDetails, MovableAssetsRents
+from rental.serializers import RentalAndLeaseDetailsSerializer, MovableAssetsRentsSerializer
+from balancesheet.models import RentalBalanceSheet, MoveableRentBalanceSheet
+from balancesheet.serializers import RentalBalanceSheetSerializer, MoveableRentBalanceSheetSerializer
+from reports.models import Report, TempleMemberReport
 from reports.serializers import TempleMemberReportSerializer
 
 # calculate sum
@@ -79,7 +80,7 @@ def view_family_link_to_ancester(request,pk):
                 try:
                     check_anses_family=Fammily_Details.objects.filter(id=int(customer25.ancestor)).first()
                     glad=True
-                except:
+                except Exception:
                     glad=False
                 if glad:     
                     serializer = Fammily_DetailsSerializer55(check_anses_family)
@@ -161,7 +162,7 @@ def add_family(request):
                         ans_det=None
                 except Fammily_Details.DoesNotExist:
                     return Response({"Message":"Family detail not found"},status=status.HTTP_404_NOT_FOUND)
-                except:
+                except Exception:
                     return Response({"Message":"Ancester gathering error"},status=status.HTTP_406_NOT_ACCEPTABLE)
                 
                 dict87['ancestor_detail']=ans_det
@@ -212,7 +213,7 @@ def add_family(request):
                             # photo instead of overwriting with garbage.
                             if hasattr(_mp, "read") and hasattr(_mp, "name"):
                                 dict8['member_photo'] = _mp
-                        except:
+                        except Exception:
                             pass
                         
                         # later adding
@@ -253,7 +254,7 @@ def add_family(request):
                 dict87['family']=produ_list
                 print('final')
                 print(dict87)
-            except:
+            except Exception:
                 return Response({"Message":"Data requirement error"},status=status.HTTP_417_EXPECTATION_FAILED)
                     
             serializer876 = Fammily_DetailsSerializer(data=dict87)
@@ -376,12 +377,12 @@ def edit_family(request,pk):
                         ans_det=None         
                 except Fammily_Details.DoesNotExist:
                     return Response({"Message":"Family detail not found"},status=status.HTTP_404_NOT_FOUND)
-                except:
+                except Exception:
                     return Response({"Message":"Ancester gathering error"},status=status.HTTP_406_NOT_ACCEPTABLE)
                 
                 try:
                     dict87['id']=prod['id']
-                except:
+                except Exception:
                     pass
                 
                 dict87['ancestor_detail']=ans_det    
@@ -409,7 +410,7 @@ def edit_family(request,pk):
                             else:
                                 p_id=prod[f"family[{num}][id]"]
                                 dict8['id']=p_id
-                        except:
+                        except Exception:
                             pass
                         dict8['family_iddd']=pk
                         dict8['member_name']=prod[f"family[{num}][member_name]"]
@@ -438,7 +439,7 @@ def edit_family(request,pk):
                             # photo instead of overwriting with garbage.
                             if hasattr(_mp, "read") and hasattr(_mp, "name"):
                                 dict8['member_photo'] = _mp
-                        except:
+                        except Exception:
                             pass
                         
                         # later adding
@@ -465,7 +466,7 @@ def edit_family(request,pk):
                                 dict8['im_status']=False
                             else:
                                 dict8['im_status']=True
-                        except:
+                        except Exception:
                             pass
                         
                         produ_list.append(dict8)
@@ -519,10 +520,10 @@ def edit_family(request,pk):
                                     if check_object:
                                         check_object.member_photo=None
                                         check_object.save()
-                            except:
+                            except Exception:
                                 print('sts2 false')
                                 pass
-                    except:
+                    except Exception:
                         print('sts1 false')
                         pass
                     continue
@@ -780,7 +781,7 @@ def family_group_view(request):
             try:
                 check_head=Member_Details.objects.filter(family=fam,head=True,member_relation_ship='FATHER').first()
                 serializer2 = Member_DetailsSerializer98(check_head)
-            except:
+            except Exception:
                 serializer2={}
             members=Member_Details.objects.filter(family=fam,head=False)
             serializer3 = Member_DetailsSerializer98(members,many=True)

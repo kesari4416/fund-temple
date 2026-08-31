@@ -1,7 +1,7 @@
 import { notification } from "antd";
 import codeMessage from "@request/codeMessage";
 
-const successHandler = (response,options = { notifyOnSuccess: false, notifyOnFailed: true, msg, type }) => {
+const successHandler = (response, options = { notifyOnSuccess: false, notifyOnFailed: true }) => {
   const { data, status } = response;
   // console.log(data, status);
 

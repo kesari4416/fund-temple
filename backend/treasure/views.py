@@ -2,7 +2,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Sum
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
 from .models import *
 from management.models import ManagementDetails
 from income.models import ADDIncomeDetails

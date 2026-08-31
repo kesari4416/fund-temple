@@ -1,18 +1,18 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from.serializers import ADDFestivalDetailsSerializer
+from .serializers import ADDFestivalDetailsSerializer
 from .models import ADDFestivalDetails
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
 from management.models import ManagementDetails
 from family.models import Member_Details
 from amount.models import PeoplesAmountDetails
 from permisions.models import Permisions
-from datetime import timedelta
+from datetime import timedelta, date
 from collection.models import CollectionDetails
 import datetime
 from reports.models import TempleMemberReport
-# from datetime import datetime
 
 
 @api_view(['GET','POST'])
@@ -67,7 +67,11 @@ def add_festival_details(request):
                 temp_family.penalty_start_date =  end_date_obj + timedelta(days=1) 
                 print(temp_family.penalty_start_date)
                 temp_family.save()                
-                get_tax_members=Member_Details.objects.filter(management_profile=management,member_tax_eligible=True,death=False)
+                get_tax_members = Member_Details.objects.filter(
+                    management_profile=management,
+                    death=False,
+                    member_age__gt=18,
+                )
                 for mem_tax in get_tax_members:
                     people_amount=PeoplesAmountDetails.objects.create(created_by=rejin.id,total_bal_amt=temp_family.tax_per_head,amount_balance=temp_family.tax_per_head,management_profile=management,member=mem_tax,festival=temp_family,amount=temp_family.tax_per_head,name='Festival')
                     if temp_family.choice=="Amount":
@@ -206,7 +210,7 @@ def edit_festival_details(request,pk):
                                         new.balance_amt = float(new.balance_amt)+float(new_credit_amt)
                                         new.save()
               
-                except:
+                except Exception:
                     print('people amount geting error')                
                 return Response(serializer876.data,status=status.HTTP_201_CREATED)
             else:
@@ -225,7 +229,7 @@ def edit_festival_details(request,pk):
                     for p_amt in p_amt_obj:
                         p_amt.amount=temp_family.tax_per_head
                         p_amt.save()
-                except:
+                except Exception:
                     print('people amount geting error')                    
                 return Response(serializer876.data,status=status.HTTP_201_CREATED)
             else:

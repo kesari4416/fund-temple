@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from.serializers import ADDIncomeDetailsSerializer,ADDIncomeCategorySerializer,ADDIncomeNamesSerializer
 from .models import ADDIncomeDetails,ADDIncomeCategory,ADDIncomeNames
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
 from management.models import ManagementDetails
 from permisions.models import Permisions
 from treasure.models import ManagementTreasure

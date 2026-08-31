@@ -81,6 +81,7 @@ export const AddExpenseForm = ({
   // /api/chit_fund/get_active_chitfunds/ endpoint.
   const showChitFundSelector = expenseSubcategory === "Chit Fund Expense";
   const [chitFundList, setChitFundList] = useState([]);
+  const [bankPay, setBankPay] = useState(null);
   useEffect(() => {
     if (!showChitFundSelector) return;
     request

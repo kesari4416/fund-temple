@@ -3,11 +3,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import CollectionDetailsSerializer
 from .models import CollectionDetails
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
 from management.models import ManagementDetails
 from family.models import Member_Details
 from amount.models import PeoplesAmountDetails
-from balancesheet.models import PeopleInterestBalanceSheet
 from permisions.models import Permisions
 from fund.models import ADDFundDetails
 from fund.serializers import ADDFundDetailsSerializer
@@ -15,8 +15,6 @@ from festival.models import ADDFestivalDetails
 from festival.serializers import ADDFestivalDetailsSerializer
 from rental.models import RentalAndLeaseDetails
 from rental.serializers import RentalAndLeaseDetailsSerializer
-from sub_tariff.models import ADDSubscriptionTariffDetails
-from sub_tariff.serializers import ADDSubscriptionTariffDetailseSerializer
 from chit_fund.models import ChitFundsDetails
 from chit_fund.serializers import ChitFundsDetailsSerializer
 from death.models import DeathDetails
@@ -52,7 +50,6 @@ from management.models import BankDetails
 from reports.models import TempleMemberReport
 from income.models import ADDIncomeDetails
 from expense.models import ADDExpenseDetails
-from rental.models import MovableAssetsRents
 from fund.models import FundMemberDetailss
 from fund.serializers import FundMemberDetailssSerializer
 from reports.models import ChitFundInterestOverallReport
@@ -493,7 +490,7 @@ def add_collection_details(request):
                             if interest_obj.interest_category == "Installment Interest":
                                 try:
                                     pay_coun = request.data['no_count_install']
-                                except:
+                                except Exception:
                                     pay_coun = 1
                                 # interest_obj.paid_counts = int(interest_obj.paid_counts)+ 1
                                 interest_obj.paid_counts = int(interest_obj.paid_counts) + pay_coun
@@ -583,7 +580,7 @@ def add_collection_details(request):
                             if interest_obj.interest_category == "Installment Interest":
                                 try:
                                     pay_coun = request.data['no_count_install']
-                                except:
+                                except Exception:
                                     pay_coun = 1
 
                                 interest_obj.paid_counts = int(interest_obj.paid_counts) + pay_coun
@@ -711,7 +708,7 @@ def add_collection_details(request):
                             if interest_obj.interest_category == "Installment Interest":
                                 try:
                                     pay_coun = request.data['no_count_install']
-                                except:
+                                except Exception:
                                     pay_coun = 1
 
                                 interest_obj.paid_counts = int(interest_obj.paid_counts) + pay_coun
@@ -789,7 +786,7 @@ def add_collection_details(request):
                             if interest_obj.interest_category == "Installment Interest":
                                 try:
                                     pay_coun = request.data['no_count_install']
-                                except:
+                                except Exception:
                                     pay_coun = 1
 
                                 interest_obj.paid_counts = int(interest_obj.paid_counts) + pay_coun
@@ -1106,7 +1103,7 @@ def add_collection_details(request):
                                                                                  income_choice="Addition")
 
 
-                    except:
+                    except Exception:
                         member_obj = Member_Details.objects.filter(id=temp_family.member.id).first()
                         temp_family.member_name = member_obj.member_name
                         temp_family.member_id = member_obj.id
@@ -1452,39 +1449,39 @@ def edit_collections_details(request, pk):
 
 
                     elif customer.collection_category == "Management Interest":
-                        festival_new = PeopleInterestBalanceSheet.objects.filter(interest=temp_family.interest,
-                                                                                 interest__people_member=temp_family.member,
+                        festival_new = PeopleInterestBalanceSheet.objects.filter(interest=customer.interest,
+                                                                                 interest__people_member=customer.member,
                                                                                  interest__interest_type="Management Interest")
                         if festival_new:
-                            festival_new_get = PeopleInterestBalanceSheet.objects.get(interest=temp_family.interest,
-                                                                                      interest__people_member=temp_family.member,
+                            festival_new_get = PeopleInterestBalanceSheet.objects.get(interest=customer.interest,
+                                                                                      interest__people_member=customer.member,
                                                                                       interest__interest_type="Management Interest")
-                            festival_new_get.credit_amt = float(festival_new_get.credit_amt) + float(temp_family.amount)
-                            festival_new_get.debit_amt = float(festival_new_get.debit_amt) - float(temp_family.amount)
+                            festival_new_get.credit_amt = float(festival_new_get.credit_amt) + float(customer.amount)
+                            festival_new_get.debit_amt = float(festival_new_get.debit_amt) - float(customer.amount)
                             festival_new_get.balance_amt = float(festival_new_get.balance_amt) + float(
-                                temp_family.amount)
+                                customer.amount)
 
-                            festival_get.save()
+                            festival_new_get.save()
 
 
 
-                    elif temp_family.collection_category == "Chit Interest":
-                        festival = PeopleInterestBalanceSheet.objects.filter(interest=temp_family.interest,
-                                                                             interest__people_member=temp_family.member,
+                    elif customer.collection_category == "Chit Interest":
+                        festival = PeopleInterestBalanceSheet.objects.filter(interest=customer.interest,
+                                                                             interest__people_member=customer.member,
                                                                              interest__interest_type="Chit fund Interest")
                         if festival:
-                            festival_get = PeopleInterestBalanceSheet.objects.get(interest=temp_family.interest,
-                                                                                  interest__people_member=temp_family.member,
+                            festival_get = PeopleInterestBalanceSheet.objects.get(interest=customer.interest,
+                                                                                  interest__people_member=customer.member,
                                                                                   interest__interest_type="Chit fund Interest")
-                            festival_get.credit_amt = float(festival_get.credit_amt) + float(temp_family.amount)
-                            festival_get.debit_amt = float(festival_get.debit_amt) - float(temp_family.amount)
-                            festival_get.balance_amt = float(festival_get.balance_amt) + float(temp_family.amount)
+                            festival_get.credit_amt = float(festival_get.credit_amt) + float(customer.amount)
+                            festival_get.debit_amt = float(festival_get.debit_amt) - float(customer.amount)
+                            festival_get.balance_amt = float(festival_get.balance_amt) + float(customer.amount)
 
                             # Fix C (Feb 2026): reverse the penalty
                             # portion of the collection being edited /
                             # deleted so penalty_paid_amt and
                             # penalty_balance_amt reflect the new state.
-                            _pen_prev = float(temp_family.penalty_amount or 0)
+                            _pen_prev = float(customer.penalty_amount or 0)
                             if _pen_prev > 0:
                                 festival_get.penalty_paid_amt = max(
                                     0.0,
@@ -2446,7 +2443,15 @@ def get_select_type(request):
                 return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
         elif data == "Festival":
             if get_role == "User" and perm.festival == True or get_role == "Admin" or rejin.is_superuser == True:
-                fund = ADDFestivalDetails.objects.filter(action=True, management_profile=management)
+                today = date.today()
+                # FESTIVAL_001 fix: only show festivals within their validity window.
+                # start_date <= today <= end_date
+                fund = ADDFestivalDetails.objects.filter(
+                    action=True,
+                    management_profile=management,
+                    start_date__lte=today,
+                    end_date__gte=today,
+                )
                 fund_list = []
                 for fund_obj in fund:
                     amount_obj = PeoplesAmountDetails.objects.filter(festival_id=fund_obj.id, penalty=False, paid=False,
@@ -3153,7 +3158,12 @@ def unpaid_list(request):
 
         if data == "Festival":
             if get_role == "User" and perm.festival == True or get_role == "Admin" or rejin.is_superuser == True:
-                fund = ADDFestivalDetails.objects.filter(management_profile=management)
+                today = date.today()
+                fund = ADDFestivalDetails.objects.filter(
+                    management_profile=management,
+                    start_date__lte=today,
+                    end_date__gte=today,
+                )
                 serializer = ADDFestivalDetailsSerializer(fund, many=True)
             else:
                 return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
@@ -4586,7 +4596,7 @@ def chitname_withfiltering_category(request):
                                         fund_mem_list.append(mem_obj.interest)
 
 
-                            except:
+                            except Exception:
                                 print("hhhhhhhhhh")
 
                         if mem_obj.interest.interest_period_type == "Month":
@@ -4617,68 +4627,14 @@ def chitname_withfiltering_category(request):
                                 print(f"Error while processing member {mem_obj.interest_id}: {e}")
                                 
                         elif mem_obj.interest.interest_period_type == "Days":
-                            print('findme')
-                            checking_collection_date = CollectionDetails.objects.filter(interest_id=mem_obj.interest_id)
-                            if checking_collection_date:
-                                checking_collection_dates = checking_collection_date.last()
-                                terminating_date = mem_obj.interest.interest_date + relativedelta(
-                                    days=mem_obj.interest.interest_period)
-                                # addednew
-                                calcu_days = abs(mem_obj.interest.interest_date - date.today()).days
-                                predicting_date = mem_obj.interest.interest_date + relativedelta(days=calcu_days)
-                                checking_days_limit = mem_obj.interest.interest_date + relativedelta(
-                                    days=calcu_days + 1
-
-                                )
-                                dates = []
-                                current_date = predicting_date
-                                while current_date >= predicting_date and current_date < checking_days_limit:
-                                    dates.append(current_date)
-                                    current_date += timedelta(days=1)
-
-                                # Check conditions for adding to the fund_mem_list
-                                if (
-                                        mem_obj.penalty_balance_amt > 0
-                                        or (
-                                        checking_collection_dates.pay_date not in dates
-                                        and mem_obj.interest.paid_counts != mem_obj.interest.interest_period
-                                        and terminating_date
-                                        and terminating_date >= checking_date
-                                )
-                                ):
-                                    fund_mem_list.append(mem_obj.interest)
-
-                            else:
-                                # Handle case where there are no collection records
-                                terminating_date = mem_obj.interest.interest_date + relativedelta(
-                                    days=mem_obj.interest.interest_period
-                                )
-                                if (
-                                        mem_obj.penalty_balance_amt > 0
-                                        or (
-                                        mem_obj.interest.paid_counts != mem_obj.interest.interest_period
-                                        and terminating_date >= checking_date
-                                )
-                                ):
-                                    fund_mem_list.append(mem_obj.interest)
-
-                            #     if mem_obj.penalty_balance_amt > 0 or ((mem_obj.interest_apply_date + relativedelta(
-                            #             days=1)).year == checking_date_year and (
-                            #                                                    mem_obj.interest_apply_date + relativedelta(
-                            #                                                    days=1)).month == checking_date_month and (
-                            #                                                    (
-                            #                                                            mem_obj.interest.interest_date + relativedelta(
-                            #                                                            days=mem_obj.interest.paid_counts)) != checking_date) and checking_collection_dates.pay_date != checking_date and terminating_date >= checking_date):
-                            #         fund_mem_list.append(mem_obj.interest)
-                            # else:
-                            #     if mem_obj.penalty_balance_amt > 0 or ((mem_obj.interest_apply_date + relativedelta(
-                            #             days=1)).year == checking_date_year and (
-                            #                                                    mem_obj.interest_apply_date + relativedelta(
-                            #                                                    days=1)).month == checking_date_month and (
-                            #                                                    (
-                            #                                                            mem_obj.interest.interest_date + relativedelta(
-                            #                                                            days=mem_obj.interest.paid_counts)) != checking_date)):
-                            #         fund_mem_list.append(mem_obj.interest)
+                            # CHIT_FUND_002 fix (Feb 2026): unified visibility rule
+                            # using _installment_expected_count (same helper used in
+                            # chitfund_interest_member_details).  Show borrower whenever
+                            # paid_counts < expected count for checking_date, or penalty
+                            # is outstanding.
+                            _days_expected = _installment_expected_count(mem_obj.interest, checking_date)
+                            if mem_obj.penalty_balance_amt > 0 or int(mem_obj.interest.paid_counts or 0) < _days_expected:
+                                fund_mem_list.append(mem_obj.interest)
 
 
                         elif mem_obj.interest.interest_period_type == "Week":
@@ -4784,14 +4740,11 @@ def chitname_withfiltering_category(request):
                                                                            mem_obj.interest_apply_date + relativedelta(
                                                                            months=1)).month == checking_date_month):
                                 fund_mem_list.append(mem_obj.interest)
-                        elif mem_obj.interest.interest_period_type == "Days":  
-
-                            if mem_obj.penalty_balance_amt > 0 or ((mem_obj.interest_apply_date + relativedelta(
-                                    days=1)).year == checking_date_year and (
-                                                                           mem_obj.interest_apply_date + relativedelta(
-                                                                           days=1)).month == checking_date_month and (
-                                                                           mem_obj.interest_apply_date + relativedelta(
-                                                                           days=1)).day == checking_date_date):
+                        elif mem_obj.interest.interest_period_type == "Days":
+                            # CHIT_FUND_002 fix (Feb 2026): unified visibility rule
+                            # using _installment_expected_count.
+                            _days_expected = _installment_expected_count(mem_obj.interest, checking_date)
+                            if mem_obj.penalty_balance_amt > 0 or int(mem_obj.interest.paid_counts or 0) < _days_expected:
                                 fund_mem_list.append(mem_obj.interest)
                         elif mem_obj.interest.interest_period_type == "Week":
                             checking_days_weeks = (mem_obj.interest_apply_date + relativedelta(weeks=1))

@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from.serializers import ADD_EXFieldsSerializer,AddPositionSerializer,AddAuthorityDetailsSerializer
 from .models import ADD_EXFields,AddPosition,AddAuthorityDetails,AutharityFields
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
 from management.models import ManagementDetails
 import datetime
 from permisions.models import Permisions

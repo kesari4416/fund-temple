@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import *
+from .models import ADDFundDetails, FundGroupDetails, FundMemberDetailss, FundLeaseDetailss, FundLeaseMemberDetailss
 from django.utils import timezone
 import datetime
 from datetime import datetime

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import ChitFundsDetails,ChitFundInvesters,ChitFundsettleAplication,ChitFundSettlement,ChitFundDistribution,InvestersProfitDistributionTable
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
-from treasure.models import *
+from treasure.models import ManagementTreasure
 
 
 def chit_fnd_no():
@@ -117,12 +117,12 @@ class ChitFundsDetailsSerializer(serializers.ModelSerializer):
                 # new
                 try:
                     varities_data1 = hobby.pop('im_status')
-                except:
+                except Exception:
                     pass
                 
                 try:
                     varities_data1 = hobby.pop('doc_status')
-                except:
+                except Exception:
                     pass
                 
                 if "id" in hobby.keys():

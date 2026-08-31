@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from.serializers import My_RolesSerializer
 from .models import My_Roles
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
 from management.models import ManagementDetails
 from permisions.models import Permisions
 from permisions.serializers import PermisionsSerializer

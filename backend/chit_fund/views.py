@@ -2,14 +2,24 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 import jwt
-from.serializers import *
-from .models import ChitFundsDetails,ChitFundInvesters,ChitFundsettleAplication,ChitFundSettlement,InvestersProfitDistributionTable
+from .serializers import (
+    ChitFundsDetailsSerializer26, ManagementTreasureSerializer,
+    ChitFundInvestersSerializer2, ChitFundInvestersSerializer,
+    ChitFundsDetailsSerializer, ChitFundsettleAplicationSerializer,
+    ChitFundSettlementSerializer, ChitFundsDistributionSerializer,
+    ChitFundInvesterssSerializer, ChitFundsDetailssSerializer,
+    InvestersProfitDistributionTableSerializer987, ChitFundsDistributionSerializer98756,
+)
+from .models import (
+    ChitFundsDetails, ChitFundInvesters, ChitFundsettleAplication,
+    ChitFundSettlement, ChitFundDistribution, InvestersProfitDistributionTable,
+)
 from rest_framework.exceptions import AuthenticationFailed
 from user.models import User
 from user.serializers import RejinUserSerializer78
 import pandas as pd
 import datetime
-from token_app.views import *
+from token_app.views import token_checking, generate_token
 from management.models import ManagementDetails
 from permisions.models import Permisions
 from treasure.models import ManagementTreasure
@@ -18,11 +28,9 @@ from family.models import Member_Details
 from family.serializers import member_DetailsSerializer
 from balancesheet.models import PeopleInterestBalanceSheet
 from datetime import date
-from family.serializers import member_DetailsSerializer
-from reports.models import ChitFundInterestOverallReport,Report
+from reports.models import ChitFundInterestOverallReport, Report
 from decimal import Decimal
 import calendar
-from interest.models import PeopleInterestDetails
 
 @api_view(['GET'])
 def get_active_chitfunds(request):
@@ -190,7 +198,7 @@ def add_chit_fund(request):
                         dict8={}
                         try:
                             dict8['invester_member']=prod[f"chit[{num}][invester_member]"]
-                        except:
+                        except Exception:
                             pass
                         dict8['invester_type']=prod[f"chit[{num}][invester_type]"]
                         dict8['invester_name']=prod[f"chit[{num}][invester_name]"]
@@ -203,17 +211,17 @@ def add_chit_fund(request):
                         
                         try:
                             dict8['images']=prod[f"chit[{num}][images]"]
-                        except:
+                        except Exception:
                             pass
                         try:
                             dict8['documents']=prod[f"chit[{num}][documents]"]
-                        except:
+                        except Exception:
                             pass                        
                         produ_list.append(dict8)                        
                 dict87['chitt_fund']=produ_list
                 print('final')
                 print(dict87)
-            except:
+            except Exception:
                 return Response({"Message":"Data requirement error"},status=status.HTTP_417_EXPECTATION_FAILED)                    
             serializer876 = ChitFundsDetailsSerializer(data=dict87)
             if serializer876.is_valid():                
@@ -322,7 +330,7 @@ def edit_chit_fund(request,pk):
                 dict87={}
                 try:
                     dict87['id']=prod['id']
-                except:
+                except Exception:
                     pass
                 dict87['chit_name']=prod['chit_name']
                 dict87['starting_date']=prod['starting_date']
@@ -355,7 +363,7 @@ def edit_chit_fund(request,pk):
                             else:
                                 p_id=prod[f"chit[{num}][id]"]
                                 dict8['id']=p_id
-                        except:
+                        except Exception:
                             pass
                         
                         try:
@@ -363,7 +371,7 @@ def edit_chit_fund(request,pk):
                                 pass
                             else:
                                 dict8['invester_member']=prod[f"chit[{num}][invester_member]"]
-                        except:
+                        except Exception:
                             pass
                         
                         dict8['invester_type']=prod[f"chit[{num}][invester_type]"]
@@ -375,11 +383,11 @@ def edit_chit_fund(request,pk):
                         dict8['share_count']=prod[f"chit[{num}][share_count]"]
                         try:
                             dict8['images']=prod[f"chit[{num}][images]"]
-                        except:
+                        except Exception:
                             pass
                         try:
                             dict8['documents']=prod[f"chit[{num}][documents]"]
-                        except:
+                        except Exception:
                             pass    
                         
                         try:
@@ -387,7 +395,7 @@ def edit_chit_fund(request,pk):
                                 dict8['im_status']=False
                             else:
                                 dict8['im_status']=True
-                        except:
+                        except Exception:
                             pass
                         
                         try:
@@ -395,7 +403,7 @@ def edit_chit_fund(request,pk):
                                 dict8['doc_status']=False
                             else:
                                 dict8['doc_status']=True
-                        except:
+                        except Exception:
                             pass
                         
                                             
@@ -403,7 +411,7 @@ def edit_chit_fund(request,pk):
                 dict87['chitt_fund']=produ_list
                 print('final')
                 print(dict87)
-            except:
+            except Exception:
                 return Response({"Message":"Data requirement error"},status=status.HTTP_417_EXPECTATION_FAILED)
                     
             serializer876 = ChitFundsDetailsSerializer(customer,data=dict87)
@@ -448,7 +456,7 @@ def edit_chit_fund(request,pk):
                                     if check_object:
                                         check_object.images=None
                                         check_object.save()
-                            except:
+                            except Exception:
                                 print('sts2 false')
                                 pass
                             
@@ -459,10 +467,10 @@ def edit_chit_fund(request,pk):
                                     if check_object1:
                                         check_object1.documents=None
                                         check_object1.save()
-                            except:
+                            except Exception:
                                 print('sts2 false')
                                 pass
-                    except:
+                    except Exception:
                         print('sts1 false')
                         pass
                     continue
@@ -554,7 +562,7 @@ def add_chit_fund_investors(request):
         if get_role=="User" and perm.chit_fund_add ==True or get_role=="Admin" or rejin.is_superuser == True: 
             try:
                 chit_fund=request.data['chitt_fund']  
-            except:
+            except Exception:
                 return Response({"Message":"Data requirement error"},status=status.HTTP_417_EXPECTATION_FAILED)
             
             try:
@@ -636,7 +644,7 @@ def edit_chit_fund_investors(request,pk):
                 return Response({"Message":"Cant be edited as the invested amount is used in interest or Other operations involved.!"},status=status.HTTP_300_MULTIPLE_CHOICES)
             try:
                 chit_fund=request.data['chitt_fund']  
-            except:
+            except Exception:
                 return Response({"Message":"Data requirement error"},status=status.HTTP_417_EXPECTATION_FAILED)
             
             try:
@@ -978,7 +986,7 @@ def add_chit_fund_settlement(request):
                     getting_cheet=ChitFundsDetails.objects.filter(id=int(request.data['chitt_fund'])).first()
                     getting_invester=ChitFundInvesters.objects.filter(id=int(request.data['investers'])).first()
                     aplication=ChitFundsettleAplication.objects.filter(id=int(request.data['chitt_settilement'])).first()
-                except:
+                except Exception:
                     return Response({"Message":"Data requirement error"},status=status.HTTP_417_EXPECTATION_FAILED)
                     
                 if getting_cheet.cash_inhand_amount<getting_invester.final_settlement_amount:
@@ -1150,7 +1158,7 @@ def get_chitfund_distribution(request):
     if request.method =='POST':
         try:
             chit_fund=request.data['chit_fund']
-        except:
+        except Exception:
             return Response({"Message":"Data requirement error"},status=status.HTTP_417_EXPECTATION_FAILED)
         
         c_ap=ChitFundsettleAplication.objects.filter(chitt_fund_id=chit_fund)
@@ -1399,7 +1407,7 @@ def get_chitfund_members(request):
         try:
             chit_fund=request.data['chit_fund']
             person_type=request.data['person_type']
-        except:
+        except Exception:
             return Response({"Message":"Data requirement error"},status=status.HTTP_417_EXPECTATION_FAILED)
         
         try:

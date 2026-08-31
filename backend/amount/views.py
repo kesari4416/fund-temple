@@ -3,7 +3,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from permisions.models import Permisions
 from rest_framework import status
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
 from management.models import ManagementDetails,BankDetails
 from treasure.models import ManagementTreasure
 from .models import CashTransactionDetails

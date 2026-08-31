@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from.serializers import MarriageDetailsSerializer
 from .models import MarriageDetails
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
 from management.models import ManagementDetails
 from family.models import Member_Details,Fammily_Details
 from family.serializers import Member_DetailsSerializer98

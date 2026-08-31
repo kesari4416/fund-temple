@@ -9,7 +9,8 @@ from .chit_fund_hooks import (
     reverse_chit_fund_expense,
 )
 from chit_fund.models import ChitFundsDetails
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
 from management.models import ManagementDetails
 from permisions.models import Permisions
 from treasure.models import ManagementTreasure
@@ -297,7 +298,7 @@ def add_expen_details(request):
 
                 try:
                     bank=request.data['bank']
-                except:
+                except Exception:
                     pass
                 expense_amt=request.data['expense_amt']
                 manage=ManagementTreasure.objects.filter(management_profile=management)
@@ -319,7 +320,7 @@ def add_expen_details(request):
                             else:
                                 return Response({'message':"Insufficient bank amount, Only " + f'{int(bank_check.credit_amt)}' + " rupees is available in selected bank"},status.HTTP_302_FOUND) 
 
-                    except:
+                    except Exception:
                             # print("jjjjjjjjjjjjjjjjjjj")
                             # if manage_get.cash_in_hand >= float(expense_amt):
                             #     manage_get.cash_in_hand =float(manage_get.cash_in_hand) - float(expense_amt)
@@ -454,9 +455,10 @@ def edit_expen_details(request,pk):
                     if bank_check_get != None:                 
                         
                             manage_get.bank_amt =float(manage_get.bank_amt) + float(amount_check)                            
-                            bank_previous=BankDetails.objects.filter(id=bank_check.id).first()
-                            bank_previous.debit_amt = float(bank.debit_amt) -  float(amount_check)
-                            bank_previous.credit_amt = float(bank.credit_amt) + float(amount_check)
+                            bank_previous=BankDetails.objects.filter(id=bank_check_get).first()
+                            if bank_previous:
+                                bank_previous.debit_amt = float(bank_previous.debit_amt) -  float(amount_check)
+                                bank_previous.credit_amt = float(bank_previous.credit_amt) + float(amount_check)
                             # bank.save()                                           
 
                     else:
@@ -467,7 +469,7 @@ def edit_expen_details(request,pk):
                 print(request.data)
                 try:
                     bank=request.data['bank']
-                except:
+                except Exception:
                     pass
                 expense_amt=request.data['expense_amt']
                 
@@ -496,7 +498,7 @@ def edit_expen_details(request,pk):
 
                             else:
                                 return Response({'message':"Insufficient bank amount, Only " + f'{int(bank_check.credit_amt)}' + " rupees is available in selected bank"},status.HTTP_302_FOUND) 
-                    except:
+                    except Exception:
                             
                             # if manage_get1.cash_in_hand >= float(expense_amt):
                             #     manage_get1.cash_in_hand =float(manage_get1.cash_in_hand) - float(expense_amt)

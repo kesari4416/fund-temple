@@ -52,7 +52,6 @@ const MemberProfile = () => {
 
     const handleOk = () => {
         setIsModalOpen(false);
-        ResetTrigger();
     };
 
     const handleCancel = () => {

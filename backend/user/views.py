@@ -7,7 +7,8 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 import logging
 import datetime
-from token_app.views import *
+from token_app.views import token_checking, generate_token
+from user.models import User
 from other_people.models import OtherPeopleDetails
 from other_people.serializers import OtherPeopleDetailsSerializer
 from management.models import ManagementDetails

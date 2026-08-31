@@ -1,4 +1,5 @@
 import React, { Fragment, useEffect, useState } from 'react'
+import { toast } from 'react-toastify'
 import { useDispatch, useSelector } from 'react-redux'
 import { AllInvestortableData, AllInvestortableStatus, getInvestortable } from '@modules/InvestorDashBoard/InvestorDashBoardSlice'
 import { CustomStandardTable } from '@components/form/CustomStandardTable'
