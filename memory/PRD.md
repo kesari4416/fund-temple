@@ -796,3 +796,18 @@ See `/app/memory/test_credentials.md`.
 - All E722 bare excepts progressively fixed across: collection, assets, authorities, death, family, expense, chit_fund, festival views.
 - All F821 undefined name bugs fixed: expense/views.py (bank_check/bank variables), collection/views.py (temp_family→customer).
 - Backup file collection/views_bkp.py renamed to .bak to exclude from lint scan.
+
+## CHIT_FUND_002 v5.1 Fix — Same-day penalty (Feb 2026)
+### Bug
+Balance sheet shows penalty on the SAME date as the borrower's payment (SI6 penalty + SI5 payment both dated Sep5).
+
+### Root cause
+1. Signal sets `installment_date = interest_date + delta × (paid_counts + 1)`. After a late Sep5 payment (paid_counts=2), this gives `Sep3` — already in the past.
+2. When `_apply_for_record` runs after the payment, the walker traverses Sep3→Sep4 and creates a Sep5 penalty (reportdate = Sep4 + 1 day = Sep5) — same as payment date.
+
+### Two-part fix
+1. **`interest/signals.py` `sync_installment_date`**: For Days type only, if the scheduled date is ≤ today (late payment), advance installment_date to `today + delta`. After Sep5 payment: `installment_date = Sep6`. Walker starts at Sep6, Sep6 > Sep5 → no Sep5 penalty created going forward.
+2. **`collection/views.py` `add_collection_details`**: After recording a Days-type payment on date `pay_date`, delete any Penalty row with `reportdate = pay_date` and reverse its balance sheet effects. This handles the case where the walker ran before the payment was recorded.
+
+### Verified
+5/5 unit tests pass: Sep5 payment → no Sep5 penalty; Sep6 miss → Sep7 penalty; normal Sep1 payment → Sep2 installment_date.

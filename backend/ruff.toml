@@ -1,14 +1,15 @@
-[lint]
-# F403/F405: star imports are an existing architectural pattern throughout this
-# codebase and cannot be fixed wholesale without large-scale refactoring.
-# F811: duplicate imports - being fixed progressively.
-# These are suppressed so the linter focuses on actionable bugs only.
-ignore = ["F403", "F405", "F811"]
-
-# Directories to exclude from linting (vendor packages, caches)
+# Exclude vendor packages, migrations, and backup files from linting
 exclude = [
     "venv310/",
+    ".venv/",
+    "*/migrations/*",
     "__pycache__/",
     "*.pyc",
-    "migrations/",
+    "*.bak",
 ]
+
+[lint]
+# F403/F405: star imports are an architectural pattern throughout this codebase.
+# F811: duplicate imports - being cleaned up progressively.
+# Suppressing to focus on actionable bugs only.
+ignore = ["F403", "F405", "F811"]

@@ -149,7 +149,6 @@ const ChitFundListView = () => {
 
     const handleOk = () => {
         setIsModalOpen(false);
-        ResetTrigger();
     };
 
     const handleCancel = () => {

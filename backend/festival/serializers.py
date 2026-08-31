@@ -2,7 +2,6 @@ from rest_framework import serializers
 from .models import ADDFestivalDetails
 from django.utils import timezone
 from management.models import ManagementDetails
-import datetime
 from datetime import datetime
 
 def fes_no():

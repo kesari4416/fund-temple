@@ -790,7 +790,37 @@ def add_collection_details(request):
                                     pay_coun = 1
 
                                 interest_obj.paid_counts = int(interest_obj.paid_counts) + pay_coun
-                                interest_obj.save()
+
+                                interest_obj.save()  # signal updates installment_date
+                                # CHIT_FUND_002 fix (Feb 2026 — v5.1, Days-type):
+                                # The overdue walker may have created a penalty whose
+                                # reportdate == today BEFORE this payment was recorded
+                                # (e.g. operator loaded balance sheet earlier today).
+                                # Delete it now so payment and penalty don't share the
+                                # same date. Only applies to Days-type loans.
+                                if interest_obj.interest_period_type == "Days":
+                                    _pay_date = temp_family.pay_date
+                                    _same_day_pens = InterestPeopleReport.objects.filter(
+                                        interest=interest_obj,
+                                        reportdate=_pay_date,
+                                        type_choice="Penalty",
+                                    )
+                                    for _pen in _same_day_pens:
+                                        _pen_amt = float(_pen.credit_amt or 0)
+                                        try:
+                                            _bal = PeopleInterestBalanceSheet.objects.filter(
+                                                interest=interest_obj
+                                            ).first()
+                                            if _bal and _pen_amt > 0:
+                                                _bal.penalty_amt = max(0.0, float(_bal.penalty_amt or 0) - _pen_amt)
+                                                _bal.penalty_balance_amt = max(0.0, float(_bal.penalty_balance_amt or 0) - _pen_amt)
+                                                _bal.credit_amt = max(0.0, float(_bal.credit_amt or 0) - _pen_amt)
+                                                _bal.balance_amt = max(0.0, float(_bal.balance_amt or 0) - _pen_amt)
+                                                _bal.save()
+                                        except Exception:
+                                            pass
+                                        _pen.delete()
+
 
                         chit_fund_obj = ChitFundsDetails.objects.filter(id=temp_family.interest.chitt_fund.id)
                         if chit_fund_obj:

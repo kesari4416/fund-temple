@@ -60,6 +60,27 @@ def sync_installment_date(sender, instance, created, update_fields, **kwargs):
 
     paid_counts = int(instance.paid_counts or 0)
     target = instance.interest_date + (delta * (paid_counts + 1))
+
+    # CHIT_FUND_002 fix (Feb 2026 — v5.1, Days-type):
+    # When a "Days" installment borrower pays late, the naive formula
+    # `interest_date + delta × (paid_counts + 1)` sets installment_date
+    # to a date ALREADY IN THE PAST (e.g. paid Sep5, target = Sep3).
+    # This causes the penalty walker to traverse the gap and create a
+    # penalty whose reportdate == today (the payment day).
+    #
+    # Fix: for Days loans, cap installment_date at a minimum of
+    # `today + delta` (tomorrow) so the walker always starts in the
+    # future right after a payment is recorded.  Weeks / Months are
+    # UNCHANGED.
+    ptype_check = (instance.interest_period_type or "").lower()
+    if ptype_check in ("day", "days"):
+        from datetime import date as _date_today
+        _today = _date_today.today()
+        if target <= _today:
+            # Advance to tomorrow so the next-due-date is always
+            # strictly in the future immediately after recording a payment.
+            target = _today + delta
+
     if instance.installment_date == target:
         return
 
