@@ -592,15 +592,20 @@ def add_collection_details(request):
 
                         festival_get.save()
                         interest_obj = PeopleInterestDetails.objects.filter(id=temp_family.interest.id).first()
-                        if interest_obj.interest_category == "Installment Interest":
-                            new_amt = float(temp_family.amount) + float(temp_family.penalty_amount) + float(
-                                temp_family.interst_amount) - float(temp_family.discount_amount)
-                            print(new_amt)
-                        else:
-                            new_amt = float(temp_family.amount) + float(temp_family.penalty_amount) + float(
-                                temp_family.interst_amount)
-                        payment_bal = float(festival_get.balance_amt) - float(temp_family.interst_amount) - float(
-                            temp_family.penalty_amount) - float(temp_family.amount) + float(temp_family.discount_amount)
+                        # Cash actually received — do NOT subtract discount.
+                        # Discount is a waiver already applied to festival_get.balance_amt
+                        # in the branch above; subtracting it here produced a negative
+                        # debit (shown as 0.00 in the UI) for pure-waiver collections.
+                        new_amt = (
+                            float(temp_family.amount)
+                            + float(temp_family.penalty_amount)
+                            + float(temp_family.interst_amount)
+                        )
+                        # festival_get.balance_amt is already the post-payment value
+                        # (branches above updated and saved it). The old formula added
+                        # discount back to an already-reduced balance, making the
+                        # "Interest Payment" row show the pre-waiver balance.
+                        payment_bal = float(festival_get.balance_amt)
                         type_choice_interest = InterestPeopleReport.objects.create(
                             management_profile=festival_get.management_profile, interest_id=festival_get.interest.id,
                             reportdate=temp_family.created_at.date(), debit_amt=new_amt, balance_amt=payment_bal,
@@ -881,24 +886,34 @@ def add_collection_details(request):
                                             ii.share_count * shared_amount)
                                 ii.save()
 
-                        festival_get.debit_amt = float(festival_get.debit_amt) + float(temp_family.amount) + float(
-                            temp_family.penalty_amount) + float(temp_family.interst_amount)
-                        festival_get.balance_amt = float(festival_get.balance_amt) - float(temp_family.amount) - float(
-                            temp_family.penalty_amount) - float(temp_family.interst_amount)
-                        festival_get.save()
+                        # NOTE: festival_get.balance_amt was already correctly
+                        # updated and saved inside each of the three branches
+                        # above (principle-only / interest-only / combined).
+                        # The previous code block here double-updated the same
+                        # fields, causing the balance to be subtracted twice.
+                        # It has been removed. The temp_family FK link and save
+                        # are preserved below.
                         temp_family.interest_balance = festival_get
                         temp_family.save()
 
-                        if interest_obj.interest_category == "Installment Interest":
-                            tot_int_amt = float(temp_family.amount) + float(temp_family.penalty_amount) + float(
-                                temp_family.interst_amount) - float(temp_family.discount_amount)
-                        else:
-                            tot_int_amt = float(temp_family.amount) + float(temp_family.penalty_amount) + float(
-                                temp_family.interst_amount)
+                        # Cash actually received from the borrower (no discount
+                        # subtraction — discount is a waiver already reflected in
+                        # festival_get.balance_amt via branch 2, and is shown
+                        # separately in the Discount row below).
+                        # Subtracting discount here produced a negative debit that
+                        # the frontend clamped to 0, hiding the payment entirely.
+                        tot_int_amt = (
+                            float(temp_family.amount)
+                            + float(temp_family.penalty_amount)
+                            + float(temp_family.interst_amount)
+                        )
 
-                        report_bal = float(festival_get.balance_amt) - float(temp_family.amount) - float(
-                            temp_family.penalty_amount) - float(temp_family.interst_amount) + float(
-                            temp_family.discount_amount)
+                        # Use the balance already stored on festival_get — the
+                        # branches above set it to the correct post-payment value.
+                        # The old formula re-added discount to an already-reduced
+                        # balance, making it appear as if the balance *increased*
+                        # after a pure-waiver (discount-only) collection.
+                        report_bal = float(festival_get.balance_amt)
 
                         type_choice_interest = InterestPeopleReport.objects.create(
                             management_profile=festival_get.management_profile, interest_id=festival_get.interest.id,
