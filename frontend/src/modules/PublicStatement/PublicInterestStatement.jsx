@@ -82,7 +82,6 @@ const PublicInterestStatement = () => {
     if (!autoPrint || printedRef.current) return;
     if (state.loading || state.error) return;
     printedRef.current = true;
-    // eslint-disable-next-line no-console
     console.log("[InterestStatement] Auto-triggering print dialog…");
     const t = setTimeout(() => window.print(), 800);
     return () => clearTimeout(t);

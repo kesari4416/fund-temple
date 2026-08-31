@@ -38,12 +38,18 @@ export const ChitfundInterestGivenView = ({ datas }) => {
             render: (value, item, index) => index + 1,
         },
         {
-            title: 'Name',
-            dataIndex: 'name'
+            title: 'Person Name',
+            dataIndex: 'person_name',
+            render: (val) => val || '-',
         },
         {
-            title: 'Amount',
-            dataIndex: 'amount'
+            title: 'Chit Name',
+            dataIndex: 'chit_name',
+            render: (val) => val || '-',
+        },
+        {
+            title: 'Principal Amount',
+            dataIndex: 'amount',
         },
     ]
 

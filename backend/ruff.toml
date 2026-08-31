@@ -1,8 +1,13 @@
 # Exclude vendor packages, migrations, and backup files from linting
 exclude = [
     "venv310",
+    "venv310_unused",
     ".venv",
+    "venv_unused",
+    "temple_proj/venv",
+    "temple_proj/venv_unused",
     "**/venv310/**",
+    "**/venv_unused/**",
     "*/migrations/*",
     "__pycache__",
     "*.pyc",

@@ -27,7 +27,7 @@ import { APIURLS } from "@request/apiUrls/urls";
 import successHandler from "@request/successHandler";
 import styled from "styled-components";
 import { FaCameraRotate } from "react-icons/fa6";
-import { StyledHeading } from "@modules/Fund/style";
+import { StyledHeading, StyledTabSelected } from "@modules/Fund/style";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getFundList,

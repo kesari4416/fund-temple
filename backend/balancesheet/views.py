@@ -6164,18 +6164,17 @@ def balancesheet_chitfundview(request):
                 if chit_fund_interest_given_amount==None:
                     chit_fund_interest_given_amount=0
                 if chit_fund_interest_given:
-                    chit_fund_interest_check=ChitFundInterestOverallReport.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,income_choice="Principal Given").exclude(chitfund=None).exclude(interest=None).values("chitfund_id").distinct()
-
+                    # Build one row per individual record (person + chit) instead of
+                    # a rolled-up total per chit fund.
                     out_chit_dis=[]
-                    for iiii in chit_fund_interest_check:
-                        fund_name=ChitFundsDetails.objects.filter(id=iiii['chitfund_id']).first()                    
-                        amount_check=ChitFundInterestOverallReport.objects.filter(chitfund=iiii['chitfund_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,income_choice="Principal Given").aggregate(Sum('amount')).get('amount__sum')
-
-                        int_name=fund_name.chit_name                       
-                        dic_interest={}
-                        dic_interest['name']=int_name 
-                        dic_interest['amount']=amount_check
-                        out_chit_dis.append(dic_interest)
+                    for rec in chit_fund_interest_given:
+                        chit_name = rec.chitfund.chit_name if rec.chitfund else '-'
+                        person_name = rec.interest.people_name if rec.interest else '-'
+                        out_chit_dis.append({
+                            'person_name': person_name,
+                            'chit_name': chit_name,
+                            'amount': rec.amount,
+                        })
                     difffff={}
                     difffff['total_amount']=chit_fund_interest_given_amount
                     difffff['details']=out_chit_dis
@@ -6405,17 +6404,16 @@ def balancesheet_chitfundview(request):
                 if chit_fund_interest_given_amount==None:
                     chit_fund_interest_given_amount=0
                 if chit_fund_interest_given:
-                    chit_fund_interest_check=ChitFundInterestOverallReport.objects.filter(management_profile=management,created_at__date=start_date,income_choice="Principal Given").exclude(chitfund=None).exclude(interest=None).values("chitfund_id").distinct()
+                    # Build one row per individual record (person + chit) — same fix as date-range block
                     out_chit_dis=[]
-                    for iiii in chit_fund_interest_check:
-                        fund_name=ChitFundsDetails.objects.filter(id=iiii['chitfund_id']).first()                    
-                        amount_check=ChitFundInterestOverallReport.objects.filter(chitfund=iiii['chitfund_id'],management_profile=management,created_at__date=start_date,income_choice="Principal Given").aggregate(Sum('amount')).get('amount__sum')
-
-                        int_name=fund_name.chit_name                       
-                        dic_interest={}
-                        dic_interest['name']=int_name 
-                        dic_interest['amount']=amount_check
-                        out_chit_dis.append(dic_interest)
+                    for rec in chit_fund_interest_given:
+                        chit_name = rec.chitfund.chit_name if rec.chitfund else '-'
+                        person_name = rec.interest.people_name if rec.interest else '-'
+                        out_chit_dis.append({
+                            'person_name': person_name,
+                            'chit_name': chit_name,
+                            'amount': rec.amount,
+                        })
                     difffff={}
                     difffff['total_amount']=chit_fund_interest_given_amount
                     difffff['details']=out_chit_dis

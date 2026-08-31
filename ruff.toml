@@ -1,11 +1,6 @@
 # Root-level ruff config - covers backend linting from project root
 exclude = [
-    "backend/venv310",
     "backend/.venv",
-    "venv310",
-    ".venv",
-    "**/venv310/**",
-    "**/venv/**",
     "**/.venv/**",
     "backend/*/migrations",
     "**/migrations/**",
@@ -16,7 +11,4 @@ exclude = [
 ]
 
 [lint]
-# F403/F405: star imports are an architectural pattern throughout this codebase.
-# F811: duplicate imports - being cleaned up progressively.
-# F821: undefined names - venv packages have Python 2 compat code.
 ignore = ["F403", "F405", "F811", "F821"]

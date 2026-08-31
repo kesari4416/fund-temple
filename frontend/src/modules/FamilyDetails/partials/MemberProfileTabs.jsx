@@ -281,7 +281,6 @@ export const MemberBalanceSheet = ({ datas }) => {
         if (!tableData || tableData.length === 0) return;
         printedRef.current = true;
         // A short delay lets fonts / CSS settle before print snapshots.
-        // eslint-disable-next-line no-console
         console.log("[BalanceSheet] Auto-triggering print dialog…");
         const t = setTimeout(() => handlePrint(), 800);
         return () => clearTimeout(t);

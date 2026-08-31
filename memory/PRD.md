@@ -797,6 +797,23 @@ See `/app/memory/test_credentials.md`.
 - All F821 undefined name bugs fixed: expense/views.py (bank_check/bank variables), collection/views.py (temp_family→customer).
 - Backup file collection/views_bkp.py renamed to .bak to exclude from lint scan.
 
+## CHITFUND_003 — Interest Given Itemized Breakdown (Aug 2026)
+### Bug
+Chit Fund Balance Sheet → Debit → Interest Given expand arrow showed only one aggregated row per chit fund, not individual person rows.
+
+### Root cause
+`balancesheet/views.py` (lines 6162-6182 date-range block, 6403-6422 single-date block): Loop used `.values("chitfund_id").distinct()` then `Sum('amount')` — producing one row per chit with a rolled-up total. `people_name` was never read from the `interest` FK.
+
+### Fix
+Replaced both blocks with per-record iteration:
+- `for rec in chit_fund_interest_given:` (uses the existing `.exclude(chitfund=None).exclude(interest=None)` queryset)
+- Each dict has: `person_name = rec.interest.people_name`, `chit_name = rec.chitfund.chit_name`, `amount = rec.amount`
+
+Frontend `ChitfundInterestGivenView` (`SheetView.jsx`) updated from 2 columns (`Name`, `Amount`) to 3 columns (`Person Name`, `Chit Name`, `Principal Amount`).
+
+### Verified
+API returns 164 individual rows (was 1 aggregated row per chit). Sample: `Person: A.Saroja, Chit: AMMAN FINANCE, Amount: 18000.0`.
+
 ## Bulk Lint Remediation — Aug 2026 (Round 2 & 3)
 Files fixed round 2: `permisions/views.py`, `rental/views.py`, `rental/serializers.py`, `sangam/views.py`, `sub_tariff/views.py`, `sub_tariff/serializers.py`, `token_app/views.py`, `my_tasks/tests.py`, settings files
 - 19 bare `except:` → `except Exception:` across permisions, rental, sangam, sub_tariff, token_app
