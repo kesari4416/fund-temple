@@ -21,6 +21,7 @@ const authSlice = createSlice({
             state.role = role
             state.superuser = superUsers
             state.permissions = permission
+            state.isTokenExpired = false
         },
         setTokenExpired: (state, action) => {
             state.isTokenExpired = action.payload;

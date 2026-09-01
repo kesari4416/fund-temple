@@ -108,9 +108,9 @@ def generate_token(request):
             iat_ts = decoded_token.get('iat')
             if iat_ts:
                 issued_at = datetime.datetime.utcfromtimestamp(int(iat_ts))
-                if datetime.datetime.utcnow() - issued_at > datetime.timedelta(minutes=60):
+                if datetime.datetime.utcnow() - issued_at > datetime.timedelta(hours=8):
                     return Response(
-                        {'error': 'Session has exceeded the 1-hour limit. Please log in again.'},
+                        {'error': 'Session has exceeded the 8-hour limit. Please log in again.'},
                         status=status.HTTP_401_UNAUTHORIZED,
                     )
             user_id = decoded_token.get('id')
@@ -119,7 +119,7 @@ def generate_token(request):
             if user:
                 payload = {
                     "id": user.id,
-                    "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=60),
+                    "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=8),
                     "iat": datetime.datetime.utcnow(),
                 }
                 # Generate a new token for the user

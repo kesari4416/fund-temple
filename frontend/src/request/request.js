@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import dayjs from 'dayjs';
-import { setTokenExpired } from '@modules/Auth/authSlice';
+import { setTokenExpired, logOut } from '@modules/Auth/authSlice';
 import { store } from 'src/store';
 import { message } from 'antd';
 
@@ -20,15 +20,15 @@ const request = axios.create({
   },
 });
 
-// Session policy: absolute 1-hour session from login.
-// The backend issues JWTs with a 60-minute `exp`; when it lapses we log the
-// user out immediately instead of silently refreshing. This matches the
-// business rule that the user must re-login every hour.
+// Session policy: 8-hour session from login.
+// The backend issues JWTs with an 8-hour `exp`; when it lapses we log the
+// user out. Users stay logged in for a full working day without interruption.
 const forceLogout = () => {
   try {
     localStorage.removeItem('persist');
     localStorage.removeItem('user');
   } catch (_) { /* storage unavailable */ }
+  store.dispatch(logOut());
   store.dispatch(setTokenExpired(true));
   // Only redirect if we're not already on the sign-in / public statement pages
   if (typeof window !== 'undefined') {
