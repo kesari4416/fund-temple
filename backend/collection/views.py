@@ -880,8 +880,19 @@ def add_collection_details(request):
                                 chit_fund_get.cash_inhand_amount = float(chit_fund_get.cash_inhand_amount) + float(
                                     temp_family.amount) + float(temp_family.interst_amount) + float(
                                     temp_family.penalty_amount)
-                                chit_fund_get.profit_amount = float(chit_fund_get.profit_amount) + float(
-                                    temp_family.interst_amount) + float(temp_family.penalty_amount) - _discount
+                                # Profit calculation:
+                                # Penalty-only path (interest_field=True, interest_principle=False):
+                                #   penalty_amount = net cash received; discount = additional waiver.
+                                #   Full billed penalty = net cash + waiver → profit += penalty + discount.
+                                #   Subtracting discount here double-deducts it (penalty_amount is already
+                                #   the net-cash side; discount is the waiver side on top of it).
+                                # Other paths (principal or combined): discount is on principal, keep as-is.
+                                if temp_family.interest_field and not temp_family.interest_principle:
+                                    chit_fund_get.profit_amount = float(chit_fund_get.profit_amount) + float(
+                                        temp_family.interst_amount) + float(temp_family.penalty_amount) + _discount
+                                else:
+                                    chit_fund_get.profit_amount = float(chit_fund_get.profit_amount) + float(
+                                        temp_family.interst_amount) + float(temp_family.penalty_amount) - _discount
                                 chit_fund_get.save()
 
                             if interest_obj.interest_category == "Installment Interest":

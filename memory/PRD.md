@@ -890,6 +890,31 @@ Files fixed: `interest/views.py`, `interest/serializers.py`, `management/views.p
 - Test festival created: 211 records created (was 208 before — the 3 exactly-age-18 members now included).
 - Members S.P ABINAYAA (id=10), S. ASWIN (id=55), S.T.Priya (id=110) all correctly received ₹100 tax.
 
+## Chit Fund Discount Double-Counting Fix (Sep 2026)
+### Bug
+When a Chit Interest collection (non-Installment Interest, penalty-only path: `interest_field=True, interest_principle=False`) included a `discount_amount > 0`, the `profit_amount` on `ChitFundsDetails` was being double-deducted.
+
+### Root cause
+`collection/views.py` lines 883-884 (else branch): `profit += interst_amount + penalty_amount - _discount`.
+- `penalty_amount` = NET cash received for penalty (already does NOT include the discount)
+- `_discount` = the additional waiver on top of the cash
+- Subtracting `_discount` again from a `penalty_amount` that was already net caused the discount to be deducted twice, making `profit = net_cash - discount` instead of the correct `net_cash + discount = full_billed_penalty`.
+
+### Fix
+Made the profit update path-conditional in `collection/views.py`:
+```python
+if temp_family.interest_field and not temp_family.interest_principle:
+    # Penalty-only: profit = full billed = cash + waiver
+    profit += interst_amount + penalty_amount + _discount
+else:
+    profit += interst_amount + penalty_amount - _discount  # unchanged
+```
+
+### Verified
+- `tests/test_chit_discount_profit.py`: 12/12 assertions pass.
+- Penalty balance update and cash_inhand were already correct and unchanged.
+- No regression: discount=0 case unchanged; principal-only path unchanged.
+
 ## CHIT_FUND_002 v5.1 Fix — Same-day penalty (Feb 2026)
 ### Bug
 Balance sheet shows penalty on the SAME date as the borrower's payment (SI6 penalty + SI5 payment both dated Sep5).

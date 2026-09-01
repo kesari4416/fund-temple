@@ -89,7 +89,6 @@ const ViewfundDetails = () => {
 
   const handleOk = () => {
     setIsModalOpen(false);
-    ResetTrigger();
   };
   const handleCancel = () => {
     setIsModalOpen(false);
