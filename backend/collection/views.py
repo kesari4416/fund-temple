@@ -860,18 +860,16 @@ def add_collection_details(request):
 
                             if interest_obj.interest_category == "Installment Interest":
                                 # For EMI/installment loans, `temp_family.amount` is the
-                                # full EMI (principal portion + interest portion).
-                                # Adding interst_amount on top would double-count the
-                                # interest — so only amount + penalty enter cash-in-hand.
-                                # Feb 2026 owner rule (WAIVER): subtract discount so
-                                # cash-in-hand + profit reflect only the ACTUAL cash
-                                # the chit-fund received (discount is money the
-                                # borrower never handed over).
+                                # cash the borrower actually handed over (discount is a
+                                # waiver already reflected in festival_get.balance_amt, NOT
+                                # a cash outflow from the fund).  Do NOT subtract discount
+                                # from cash_inhand_amount — that would count the waiver
+                                # twice (once as reduced balance, once as lost cash).
                                 _discount = float(temp_family.discount_amount or 0)
                                 chit_fund_get.collected_principal_amount = float(
                                     chit_fund_get.collected_principal_amount) + new_principal_amt
                                 chit_fund_get.cash_inhand_amount = float(chit_fund_get.cash_inhand_amount) + float(
-                                    temp_family.amount) + float(temp_family.penalty_amount) - _discount
+                                    temp_family.amount) + float(temp_family.penalty_amount)
                                 chit_fund_get.profit_amount = float(
                                     chit_fund_get.profit_amount) + new_pro_amount + float(temp_family.penalty_amount) - _discount
                                 chit_fund_get.save()
@@ -881,7 +879,7 @@ def add_collection_details(request):
                                     chit_fund_get.collected_principal_amount) + float(temp_family.amount)
                                 chit_fund_get.cash_inhand_amount = float(chit_fund_get.cash_inhand_amount) + float(
                                     temp_family.amount) + float(temp_family.interst_amount) + float(
-                                    temp_family.penalty_amount) - _discount
+                                    temp_family.penalty_amount)
                                 chit_fund_get.profit_amount = float(chit_fund_get.profit_amount) + float(
                                     temp_family.interst_amount) + float(temp_family.penalty_amount) - _discount
                                 chit_fund_get.save()

@@ -11,8 +11,7 @@ export const FundLeaseCase = () => {
     const ChangeProductId = (e) => {
     }
 
-    const onFinish = (data) => {
-        SetDynamicTable(data)
+    const onFinish = (_data) => {
     };
 
     const categoryOption = [
