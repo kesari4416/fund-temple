@@ -1275,3 +1275,40 @@ def subscription_delete():
                                 inter_bal.save()
                     else:
                         logger.info("checking penalty")      
+
+
+
+# ─── Manual scheduler trigger (Admin only) ────────────────────────────────────
+from rest_framework.decorators import api_view
+from rest_framework.response import Response as DRFResponse
+from rest_framework import status as drf_status
+from token_app.views import token_checking
+
+
+@api_view(['POST'])
+def run_scheduler_now(request):
+    """
+    POST /api/my_tasks/run_scheduler_now/
+    Admin-only endpoint. Immediately runs subscription_delete() so that
+    expired festivals / tariffs / death entries get their penalty rows
+    applied without waiting for the nightly cron.
+    """
+    rejin = token_checking(request)
+    if isinstance(rejin, DRFResponse):
+        return rejin
+    if not (rejin.is_superuser or getattr(rejin, 'user_role', '') == 'Admin'):
+        return DRFResponse(
+            {'message': 'Admin access required'},
+            status=drf_status.HTTP_403_FORBIDDEN,
+        )
+    try:
+        subscription_delete()
+        return DRFResponse(
+            {'message': 'Scheduler ran successfully. Penalties applied for all expired festivals / tariffs.'},
+            status=drf_status.HTTP_200_OK,
+        )
+    except Exception as e:
+        return DRFResponse(
+            {'message': f'Scheduler error: {str(e)}'},
+            status=drf_status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
