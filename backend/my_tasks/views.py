@@ -1236,43 +1236,39 @@ def subscription_delete():
                                 inter_bal.interest_apply_date = now23+relativedelta(days=1)
                                 inter_bal.save()
                         elif inter_check.interest_period_type== "Days":
-                            # inter_check = PeopleInterestBalanceSheet.objects.get(id=interest.id)
                             date_new=inter_check.created_at.date()
-                            date_new_get=inter_bal.interest_apply_date
-                            interst_date=inter_bal.interest_apply_date+relativedelta(days=1)
-                            logger.info(interst_date)
-                            # delta = abs(now23 - date_new)
-                            # weeks=delta.days
-                            delta = now23 - date_new
-                        
-                            weeks= delta.days + 1
-                            if interst_date == now23:
-                                logger.info(now23)
-                                if weeks > inter_check.paid_counts:
-                                    logger.info(weeks)
-                                    logger.info("sgjg")
-                                    logger.info(inter_check.paid_counts)
-                                    if inter_check.penalty_type == "percentage":
-                                        per_convert=(float(inter_bal.principal_balance) * float(inter_check.penalty_amount))/100
-                                        inter_bal.penalty_balance_amt = float(inter_bal.penalty_balance_amt) + float(per_convert)
-                                        inter_bal.penalty_amt = float(inter_bal.penalty_amt) + float(per_convert)
-                                        inter_bal.balance_amt = float(inter_bal.balance_amt) + float(per_convert)
-                                        inter_bal.credit_amt = float(inter_bal.credit_amt) + float(per_convert)
-
-                                        inter_bal.save()
-                                        InterestPeopleReport.objects.create(management_profile=inter_check.management_profile,interest=inter_check,reportdate=now23,credit_amt=per_convert,balance_amt=inter_bal.balance_amt,type_choice="Penalty",created_by=inter_check.created_by)
-
-                                    elif inter_check.penalty_type== "amount":
-                                        inter_bal.penalty_balance_amt = float(inter_bal.penalty_balance_amt) + float(inter_check.penalty_amount)
-                                        inter_bal.penalty_amt = float(inter_bal.penalty_amt) + float(inter_check.penalty_amount)
-                                        inter_bal.balance_amt = float(inter_bal.balance_amt) + float(inter_check.penalty_amount)
-                                        inter_bal.credit_amt = float(inter_bal.credit_amt) + float(inter_check.penalty_amount)
-
-                                        inter_bal.save()
-                                        InterestPeopleReport.objects.create(management_profile=inter_check.management_profile,interest=inter_check,reportdate=now23,credit_amt=inter_check.penalty_amount,balance_amt=inter_bal.balance_amt,type_choice="Penalty",created_by=inter_check.created_by)
-
-                                inter_bal.interest_apply_date = now23
+                            # Catch-up loop: apply one penalty row for EVERY missed day,
+                            # not only the exact next day.  Fixes the bug where jumping
+                            # the system date by multiple days silently skips penalties.
+                            next_due = inter_bal.interest_apply_date + relativedelta(days=1)
+                            while next_due <= now23:
+                                day_count = (next_due - date_new).days + 1
+                                if day_count > inter_check.paid_counts:
+                                    # Avoid duplicate penalty rows for the same day
+                                    already_exists = InterestPeopleReport.objects.filter(
+                                        interest=inter_check,
+                                        reportdate=next_due,
+                                        type_choice="Penalty",
+                                    ).exists()
+                                    if not already_exists:
+                                        if inter_check.penalty_type == "percentage":
+                                            per_convert=(float(inter_bal.principal_balance) * float(inter_check.penalty_amount))/100
+                                            inter_bal.penalty_balance_amt = float(inter_bal.penalty_balance_amt) + float(per_convert)
+                                            inter_bal.penalty_amt = float(inter_bal.penalty_amt) + float(per_convert)
+                                            inter_bal.balance_amt = float(inter_bal.balance_amt) + float(per_convert)
+                                            inter_bal.credit_amt = float(inter_bal.credit_amt) + float(per_convert)
+                                            inter_bal.save()
+                                            InterestPeopleReport.objects.create(management_profile=inter_check.management_profile,interest=inter_check,reportdate=next_due,credit_amt=per_convert,balance_amt=inter_bal.balance_amt,type_choice="Penalty",created_by=inter_check.created_by)
+                                        elif inter_check.penalty_type== "amount":
+                                            inter_bal.penalty_balance_amt = float(inter_bal.penalty_balance_amt) + float(inter_check.penalty_amount)
+                                            inter_bal.penalty_amt = float(inter_bal.penalty_amt) + float(inter_check.penalty_amount)
+                                            inter_bal.balance_amt = float(inter_bal.balance_amt) + float(inter_check.penalty_amount)
+                                            inter_bal.credit_amt = float(inter_bal.credit_amt) + float(inter_check.penalty_amount)
+                                            inter_bal.save()
+                                            InterestPeopleReport.objects.create(management_profile=inter_check.management_profile,interest=inter_check,reportdate=next_due,credit_amt=inter_check.penalty_amount,balance_amt=inter_bal.balance_amt,type_choice="Penalty",created_by=inter_check.created_by)
+                                inter_bal.interest_apply_date = next_due
                                 inter_bal.save()
+                                next_due = next_due + relativedelta(days=1)
                     else:
                         logger.info("checking penalty")      
 
