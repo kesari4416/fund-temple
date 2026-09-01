@@ -29,9 +29,70 @@ from balancesheet.models import RentalBalanceSheet, MoveableRentBalanceSheet
 from balancesheet.serializers import RentalBalanceSheetSerializer, MoveableRentBalanceSheetSerializer
 from reports.models import Report, TempleMemberReport
 from reports.serializers import TempleMemberReportSerializer
+from festival.models import ADDFestivalDetails
 
 # calculate sum
-from django.db.models import Sum 
+from django.db.models import Sum
+
+
+def _apply_festival_penalty_for_member(member, management):
+    """
+    On-demand festival penalty check for a single member.
+    Called on every GET of the member profile so the balance sheet is always
+    up-to-date regardless of whether the nightly scheduler has run.
+
+    Logic mirrors my_tasks/views.py::subscription_delete – but scoped to
+    one member only so it is fast.  Fully idempotent: safe to call on
+    every page load.
+    """
+    today = datetime.date.today()
+    # Find festivals that have expired but whose action flag is still True
+    # (scheduler hasn't processed them yet).
+    expired_festivals = ADDFestivalDetails.objects.filter(
+        management_profile=management,
+        end_date__lt=today,
+        action=True,
+    )
+    for fest in expired_festivals:
+        bill = PeoplesAmountDetails.objects.filter(
+            festival=fest,
+            member=member,
+            paid=False,
+        ).first()
+        if not bill:
+            continue
+
+        # Apply penalty to running balance exactly once.
+        if not bill.penalty:
+            bill.penalty = True
+            bill.amount_balance = float(bill.amount_balance) + float(bill.penalty_amount)
+            bill.total_bal_amt = float(bill.total_bal_amt) + float(bill.penalty_amount)
+            bill.save()
+        else:
+            bill.penalty = True
+            bill.save()
+
+        # Create the "Festival Penalty" ledger row (idempotent).
+        already_in_ledger = TempleMemberReport.objects.filter(
+            members=member,
+            festivals=fest,
+            type_choice="Festival Penalty",
+        ).exists()
+        if already_in_ledger:
+            continue
+
+        last_rep = TempleMemberReport.objects.filter(members=member).last()
+        prev_bal = float(last_rep.balance_amt) if last_rep else 0
+        TempleMemberReport.objects.create(
+            management_profile=management,
+            members=member,
+            festivals=fest,
+            reportdate=today,
+            credit_amt=bill.penalty_amount,
+            balance_amt=prev_bal + float(bill.penalty_amount),
+            type_choice="Festival Penalty",
+            created_by=bill.created_by,
+        ) 
 
 
 def death_no():
@@ -1116,6 +1177,9 @@ def single_member_view(request,pk):
         return Response(status=status.HTTP_404_NOT_FOUND)
     
     if request.method == 'GET':
+        # Apply any overdue festival penalties for this member on-the-fly.
+        _apply_festival_penalty_for_member(mer, management)
+
         serializer1 = Member_DetailsSerializer98(mer)
         check_t_m_pen_bal=TempleMemberReport.objects.filter(members=mer).last()
         if check_t_m_pen_bal:

@@ -147,7 +147,7 @@ export const FundLeaseCase = () => {
 
                     <Flex gap={'20px'} center={"true"} margin={'20px 0'}>
                         <Button.Danger text={'Submit'} htmlType={'submit'} />
-                        <Button.Success text={'cancel'} onClick={() => onReset()} />
+                        <Button.Success text={'cancel'} onClick={() => {}} />
                     </Flex>
 
                 </CustomRow>
