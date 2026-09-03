@@ -62,15 +62,26 @@ def _apply_festival_penalty_for_member(member, management):
         if not bill:
             continue
 
-        # Apply penalty to running balance exactly once.
+        # Apply penalty to running balance.
+        # Also self-heal stale records where the old scheduler set penalty=True
+        # but forgot to update amount_balance / total_bal_amt (they were commented out).
+        # Detection: if total_bal_amt doesn't yet include penalty_amount, add it now.
+        needs_balance_update = (
+            float(bill.penalty_amount) > 0
+            and abs(float(bill.total_bal_amt) - float(bill.amount_balance)) < 0.01
+            and float(bill.total_bal_amt) < float(bill.amount_balance) + float(bill.penalty_amount)
+        )
         if not bill.penalty:
             bill.penalty = True
             bill.amount_balance = float(bill.amount_balance) + float(bill.penalty_amount)
-            bill.total_bal_amt = float(bill.total_bal_amt) + float(bill.penalty_amount)
+            bill.total_bal_amt  = float(bill.total_bal_amt)  + float(bill.penalty_amount)
             bill.save()
-        else:
-            bill.penalty = True
+        elif needs_balance_update:
+            # Stale record: penalty flag is set but balances were never updated
+            bill.amount_balance = float(bill.amount_balance) + float(bill.penalty_amount)
+            bill.total_bal_amt  = float(bill.total_bal_amt)  + float(bill.penalty_amount)
             bill.save()
+        # else: already correctly applied — nothing to do
 
         # Create the "Festival Penalty" ledger row (idempotent).
         already_in_ledger = TempleMemberReport.objects.filter(
