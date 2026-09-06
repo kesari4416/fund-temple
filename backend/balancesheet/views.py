@@ -3132,7 +3132,6 @@ def balancesheet_view(request):
         return Response({"message":"No User Found"},status=status.HTTP_401_UNAUTHORIZED)
     if not rejin.is_active:
         return Response({"message":"Not Authorized Please Contact Admin"},status=status.HTTP_401_UNAUTHORIZED)
-    print(f'token---{rejin}')
     check_management=ManagementDetails.objects.all()
     if not check_management:
         dict6={}
@@ -3140,8 +3139,7 @@ def balancesheet_view(request):
         return Response(dict6,status=status.HTTP_406_NOT_ACCEPTABLE)
     else:
         management=ManagementDetails.objects.all().first()
-    get_role=rejin.user_role
-    print(get_role)     
+    get_role=rejin.user_role   
     
     
     if request.method == 'POST':
@@ -3223,16 +3221,9 @@ def balancesheet_view(request):
                         if opening_balance_bank_amounts_reduction==None:
                             opening_balance_bank_amounts_reduction=0
 
-                        print(opening_balance_check_amounts)
-                        print(all_incomes)
-                        print(opening_balance_check_amounts)
-                        print(opening_balance_bank_amounts)
-                        print(opening_balance_bank_amounts_reduction)
                         
 
                         total_opening_balnce= opening_balance_check_amounts + all_incomes - all_expenses + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_borrow_cash - all_income_borrow_paid_cash + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
-                        print("yyyyyyyyy")
-                        print(total_opening_balnce)  
                         calculating_bank_opening=all_incomes_bank_amount - all_expenses_bank_amount + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_deposit - all_income_withdraw + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
                         calculating_cash_opening=all_incomes_cash_amount - all_expenses_cash_amount + opening_balance_check_amounts  - all_income_deposit + all_income_withdraw + all_income_borrow_cash - all_income_borrow_paid_cash
                        
@@ -3247,12 +3238,10 @@ def balancesheet_view(request):
                         if opening_balance_bank_amounts_reduction==None:
                             opening_balance_bank_amounts_reduction=0
                         total_opening_balnce=all_incomes -all_expenses - opening_balance_check_amounts + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_borrow_cash - all_income_borrow_paid_cash + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
-                        print(total_opening_balnce)
                         calculating_bank_opening=all_incomes_bank_amount - all_expenses_bank_amount + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_deposit - all_income_withdraw + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
                         calculating_cash_opening=all_incomes_cash_amount - all_expenses_cash_amount - opening_balance_check_amounts - all_income_deposit + all_income_withdraw + all_income_borrow_cash - all_income_borrow_paid_cash               
                     else:
                         total_opening_balnce=0
-                        print(total_opening_balnce)
                         calculating_bank_opening=0
                         calculating_cash_opening=0
                 else:
@@ -3271,8 +3260,6 @@ def balancesheet_view(request):
                             total_opening_balnce= opening_balance_check_amounts + all_incomes - all_expenses + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_borrow_cash - all_income_borrow_paid_cash + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
                             calculating_bank_opening=all_incomes_bank_amount - all_expenses_bank_amount + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_deposit - all_income_withdraw + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
                             calculating_cash_opening=all_incomes_cash_amount - all_expenses_cash_amount + opening_balance_check_amounts - all_income_deposit + all_income_withdraw + all_income_borrow_cash - all_income_borrow_paid_cash
-                            print("yyyyyyyyy")
-                            print(total_opening_balnce)                
 
                         elif opening_balance_check_amount.type_choice =="Reduction":
                             opening_balance_check_amounts=Report.objects.filter(type_choice="Reduction",management_profile=management,created_at__date__lt=start_date).exclude(mangebalancesheet=None).aggregate(Sum('amount')).get('amount__sum')
@@ -3283,14 +3270,12 @@ def balancesheet_view(request):
                             if opening_balance_bank_amounts_reduction==None:
                                 opening_balance_bank_amounts_reduction=0
                             total_opening_balnce=all_incomes -all_expenses - opening_balance_check_amounts + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_borrow_cash - all_income_borrow_paid_cash + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
-                            print(total_opening_balnce)
                             calculating_bank_opening=all_incomes_bank_amount - all_expenses_bank_amount + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_deposit - all_income_withdraw + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
                             calculating_cash_opening=all_incomes_cash_amount - all_expenses_cash_amount + opening_balance_check_amounts   - all_income_deposit + all_income_withdraw + all_income_borrow_cash - all_income_borrow_paid_cash              
                         else:
                             total_opening_balnce=0
                             calculating_bank_opening=0
                             calculating_cash_opening=0
-                            print(total_opening_balnce)
                     else:                        
                             opening_balance_check=Report.objects.filter(management_profile=management,created_at__date__lt=start_date,mangebalancesheet=None)
                             if opening_balance_check:
@@ -3304,8 +3289,6 @@ def balancesheet_view(request):
                                     total_opening_balnce= opening_balance_check_amounts + all_incomes - all_expenses + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_borrow_cash - all_income_borrow_paid_cash + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
                                     calculating_bank_opening=all_incomes_bank_amount - all_expenses_bank_amount + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_deposit - all_income_withdraw + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
                                     calculating_cash_opening=all_incomes_cash_amount - all_expenses_cash_amount + opening_balance_check_amounts - all_income_deposit + all_income_withdraw + all_income_borrow_cash - all_income_borrow_paid_cash
-                                    print("yyyyyyyyy")
-                                    print(total_opening_balnce) 
                         
                             else:
                                 opening_balance_check=Report.objects.filter(management_profile=management,created_at__date__lt=start_date,managee=True)
@@ -3358,8 +3341,6 @@ def balancesheet_view(request):
                     if all__festival_bank_amount==None:
                         all__festival_bank_amount=0
                     category_check_expense=ADDIncomeDetails.objects.exclude(income_subcategory="Chit Fund Income").filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).values("category_id").distinct()
-                    print(category_check_expense)
-                    print("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
                     for i in category_check_expense:
                         print(i['category_id'])
                         category_check_expense_details=ADDIncomeDetails.objects.exclude(income_subcategory="Chit Fund Income").filter(category=i['category_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date)
@@ -3379,7 +3360,6 @@ def balancesheet_view(request):
                             
 
                             out1.append(dict1111)
-                        print("iiiiiiiiiii")
                         dict3={}
                         dict3['name']=category_name
                         dict3['amount']=category_check_expense_total_amount
@@ -3403,19 +3383,15 @@ def balancesheet_view(request):
                 if all_expense_check==None:
                     all_expense_check=0
                 all_expense_details=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Reduction").exclude(expenses=None).exclude(expenses__expense_subcategory="Chit Fund Expense")
-                print("ttttttttttttttttttt")
-                print(all_expense_details)
                 if all_expense_details:
                     out2=[]
                     category_check_expense=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date).values("category_id").distinct()
-                    print(category_check_expense)
                     all_expense_bank_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Reduction").exclude(expenses=None).exclude(expenses__expense_subcategory="Chit Fund Expense").exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
                     if all_expense_bank_amount==None:
                         all_expense_bank_amount=0
                     all_expense_cash_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Reduction",banks=None).exclude(expenses=None).exclude(expenses__expense_subcategory="Chit Fund Expense").aggregate(Sum('amount')).get('amount__sum')
                     if all_expense_cash_amount==None:
                         all_expense_cash_amount=0
-                    print("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
                     for i in category_check_expense:
                         print(i['category_id'])
                         category_check_expense_details=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(category=i['category_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date)
@@ -3434,7 +3410,6 @@ def balancesheet_view(request):
                             
 
                             out1.append(dict1111)
-                        print("iiiiiiiiiii")
                         dict3={}
                         dict3['name']=category_name
                         dict3['amount']=category_check_expense_total_amount
@@ -3443,7 +3418,6 @@ def balancesheet_view(request):
 
                                    
                         out2.append(dict3)
-                        print(out2)
                     dict222={}
                     dict222['expense_details']=out2
                     dict222['cash_amount']=all_expense_cash_amount
@@ -3466,8 +3440,6 @@ def balancesheet_view(request):
                     for i in all_marriage_details:                    
                         fest_details=MarriageDetails.objects.filter(id=i["marriage_id"]).first()                        
                         amount_details=PeoplesAmountDetails.objects.filter(marriage=fest_details)
-                        print(len(amount_details))
-                        print(amount_details)
                         if len(amount_details) >1:
                             for i in  amount_details: 
                                 print("ggggggggggggggg")
@@ -3485,9 +3457,7 @@ def balancesheet_view(request):
 
                                 out.append(dict1222)
                         elif len(amount_details)==1:
-                            print("hrllo")
                             amount_detail=PeoplesAmountDetails.objects.filter(marriage=fest_details).first()
-                            print(amount_detail)
                             payment_nature=CollectionDetails.objects.filter(amount_link=amount_detail).first() 
 
                             amount_details_check=PeoplesAmountDetails.objects.filter(marriage=fest_details).first()
@@ -3627,8 +3597,6 @@ def balancesheet_view(request):
                         peopl_link_details=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",balance=False,festivals_id=i["festivals_id"])
                         
                         # peopl_link_details=CollectionDetails.objects.filter(festivals=fest_details,moveable_asset_payment="Received",management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,amount_link__penalty=False)
-                        print(peopl_link_details)
-                        print("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
                         paid_check=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",balance=False,festivals_id=i["festivals_id"]).count()
 
                         # paid_check=CollectionDetails.objects.filter(festivals=fest_details,moveable_asset_payment="Received",management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,amount_link__penalty=False).count()
@@ -3720,7 +3688,6 @@ def balancesheet_view(request):
                         # paid_check=CollectionDetails.objects.filter(festivals=fest_details,moveable_asset_payment="Received",management_profile=management,created_at__date=start_date,amount_link__penalty=True).count()
                         paid_check=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",balance=False,sub_tariff_id=i["sub_tariff_id"]).count()
                         
-                        print("llllllllllllllllllllllllllll")
                         # print(paid_checks)                    
                         # fest_details=ADDSubscriptionTariffDetails.objects.filter(id=i['sub_tariff_id']).first()
                         peopl_link_details=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",balance=False,sub_tariff_id=i["sub_tariff_id"])
@@ -3770,7 +3737,6 @@ def balancesheet_view(request):
                 if all_rentlease_check1==None:
                     all_rentlease_check1=0
                 all_rentlease_details1=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",collection=None).exclude(rentsandlease=None)
-                print(all_rentlease_details1)
                 out1=[]
                 if all_rentlease_details1:
                     rent_lease_bank_amount=  Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",collection=None).exclude(rentsandlease=None).exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')                       
@@ -3841,7 +3807,6 @@ def balancesheet_view(request):
                     for i in all_moveable_details1:
                         dict1={}
                         # print(i['death_tariff_id'])                
-                        print("tttttttttttttttttttttt")
                         # paid_check=CollectionDetails.objects.filter(sub_tariff_id=i['death_tariff_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,amount_link__penalty=True).count()
                         # paid_checks=CollectionDetails.objects.filter(sub_tariff_id=i['death_tariff_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,amount_link__penalty=True).aggregate(Sum('amount')).get('amount__sum')
                         rent_lease_expense_moveable=MovableAssetsRents.objects.filter(id=i["moveablerent_id"]).first()
@@ -3895,8 +3860,6 @@ def balancesheet_view(request):
                     dictttt['bank_amount']=overall_rent_bank
                     dic['other_incomes']=dictttt 
 
-                print(dic)
-                print("jjjjjjjjjjjjjj")
                 rent_out=[]
                 all_rentlease_check3=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Reduction").exclude(rentsandlease=None).aggregate(Sum('amount')).get('amount__sum')
                 if all_rentlease_check3==None:
@@ -3963,8 +3926,6 @@ def balancesheet_view(request):
                     member_joinng_amount=0
                 member_joinng_details=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",collection=None).exclude(join_amt=None)
                 if member_joinng_details:
-                    print(member_joinng_details)
-                    print("oooooooooooooooooooooo")
                     out1=[]
                     for i in member_joinng_details:
                             joining__checks=PeoplesJOININGAmountDetails.objects.filter(management_profile=management,id=i.join_amt_id).first()
@@ -3982,24 +3943,19 @@ def balancesheet_view(request):
                     # dict11111['payment_type']="Cash"
                     
                     dic['member_joining']=dict11111 
-                    print(dic)
 
                 all_check_balance=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",balance=True).exclude(collection=None).aggregate(Sum('amount')).get('amount__sum')
                 if all_check_balance==None:
                     all_check_balance=0
                 balance_check=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",balance=True).values("members_id").distinct()
-                print("tttttttttttttttttttttt")
-                print(balance_check)
                 if balance_check:
                     balance_check_total_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",balance=True).aggregate(Sum('amount')).get('amount__sum')
                     if balance_check_total_amount==None:
                         balance_check_total_amount=0
                     balance_check_cash_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",balance=True,banks=None).exclude(collection=None).aggregate(Sum('amount')).get('amount__sum')
-                    print(balance_check_cash_amount)
                     if balance_check_cash_amount==None:
                         balance_check_cash_amount=0
                     balance_check_bank_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",balance=True).exclude(collection=None).exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
-                    print(balance_check_bank_amount)
                     if balance_check_bank_amount==None:
                         balance_check_bank_amount=0
                     out_balance=[]
@@ -4083,8 +4039,6 @@ def balancesheet_view(request):
                             dic_bank['amount']=transaction_check.amount
                             dic_bank['payment_type']="Cash"
                             out_borrow.append(dic_bank)
-                print("**********************")
-                print(out_borrow)
 
                 if cash_borrow_bank_details or cash_borrow_details:
                     dic_final={}
@@ -4264,8 +4218,6 @@ def balancesheet_view(request):
                         dic_final['total_amount']=manage_check
                         dic_final['id']=fund_name.id
                         out_final.append(dic_final)
-                        print(out_fund)
-                        print("000000000")
 
                     dic1['Chit_fund_Investment']=out_final
 
@@ -4317,13 +4269,10 @@ def balancesheet_view(request):
                     chit_fund_profit_distribution_check=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition").exclude(chit_fund=None).values("chit_fund_id").distinct()
 
                     out_chit_disxxxx=[]
-                    print("iiiiiiiiiiiiiiiiiiiiiiiiii")
-                    print(chit_fund_profit_distribution_check)
                     for iiii in chit_fund_profit_distribution_check:
                         fund_name=ChitFundsDetails.objects.filter(id=iiii['chit_fund_id']).first()                    
                         amount_check=Report.objects.filter(chit_fund=iiii['chit_fund_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition").aggregate(Sum('amount')).get('amount__sum')
 
-                        print("ffffffffffffffffff")
                         
                         dic_interestxxxx={}
                         dic_interestxxxx['name']=fund_name.chit_name
@@ -4340,17 +4289,11 @@ def balancesheet_view(request):
                 fund_total_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",banks=None).exclude(fund_m=None).exclude(fund_m__fund__fund_type="Normal").aggregate(Sum('amount')).get('amount__sum') 
                 if fund_total_amount==None:
                     fund_total_amount=0
-                print(fund_total_amount)
                 fund_initial_cash_amount_exists=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",banks=None).exclude(fund_m=None).exclude(fund_m__fund__fund_type="Normal")
-                print(fund_initial_cash_amount_exists)
-                print("pppppppppppppppppppppppppppp")
                 
                 if fund_initial_cash_amount_exists:
                     
                     for cccc in fund_initial_cash_amount_exists:
-                        print("kkkkkkkkkkkkkkkkkkk")
-                        print(cccc)
-                        print(cccc.fund_m.fund.fund_type)                        
                         if cccc.fund_m.fund.fund_type == "Fund 21":                                                  
                             
                                 fund_group_id=cccc.fund_m_id
@@ -4384,11 +4327,9 @@ def balancesheet_view(request):
                             out_fund21ffffff.append(dic_normal)
                         #                 # break
                 if fund_initial_cash_amount_exists or check_normal:
-                    print(out_fund21ffffff)
                     dic["Fund"]=out_fund21ffffff
 
                 total_credit_cash_amountsssssssss=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",banks=None,managee=False,mangebalancesheet=None)
-                print(total_credit_cash_amountsssssssss)
                 
                 
                 total_credit_cash_amount=Report.objects.filter(management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,type_choice="Addition",banks=None,managee=False,mangebalancesheet=None).aggregate(Sum('amount')).get('amount__sum')
@@ -4420,7 +4361,6 @@ def balancesheet_view(request):
                     opening_balance_credit=total_opening_balnce
                 elif total_opening_balnce==0:
                     opening_balance=total_opening_balnce  
-                    print(opening_balance)              
                 else:
                     dic1['opening_balance']=abs(total_opening_balnce)  
                     opening_balance_debit=total_opening_balnce
@@ -4510,7 +4450,6 @@ def balancesheet_view(request):
 
                 if balance_check:
                     dict['balance']=dic_balance   
-                print(dict)             
                 return Response(dict,status=status.HTTP_201_CREATED) 
        
              
@@ -4518,10 +4457,8 @@ def balancesheet_view(request):
                 dic={}
                 dic1={}      
                 start_date=request.data['start_date']
-                print(start_date)
                 all_incomes=Report.objects.filter(management_profile=management,created_at__date__lt=start_date,type_choice="Addition",mangebalancesheet=None,managee=False).aggregate(Sum('amount')).get('amount__sum')
                 all_incomessssssss=Report.objects.filter(management_profile=management,created_at__date__lt=start_date,type_choice="Addition",mangebalancesheet=None,managee=False)
-                print(all_incomessssssss)
                 if all_incomes==None:
                     all_incomes=0
 
@@ -4576,13 +4513,11 @@ def balancesheet_view(request):
                     all_expenses_cash_amount=0
                 # check whether management exists or not in report 
                 opening_balance_check=Report.objects.filter(management_profile=management,created_at__date__lte=start_date).exclude(mangebalancesheet=None)
-                print(opening_balance_check)
                 if opening_balance_check:
                     opening_balance_check_amount=Report.objects.filter(management_profile=management,created_at__date__lte=start_date).exclude(mangebalancesheet=None).first()
                     if opening_balance_check_amount.type_choice =="Addition":
                         opening_balance_check_amounts=Report.objects.filter(type_choice="Addition",management_profile=management,created_at__date__lte=start_date,banks=None).exclude(mangebalancesheet=None).aggregate(Sum('amount')).get('amount__sum')
                         opening_balance_check_amounts_check=Report.objects.filter(type_choice="Addition",management_profile=management,created_at__date__lte=start_date,banks=None).exclude(mangebalancesheet=None)
-                        print(opening_balance_check_amounts_check)
 
                         opening_balance_bank_amounts=Report.objects.filter(type_choice="Addition",management_profile=management,created_at__date__lte=start_date,managee=True).exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
                         if opening_balance_bank_amounts==None:
@@ -4611,12 +4546,8 @@ def balancesheet_view(request):
                         total_opening_balnce= opening_balance_check_amounts + all_incomes - all_expenses + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_borrow_cash - all_income_borrow_paid_cash + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
                         calculating_bank_opening=all_incomes_bank_amount - all_expenses_bank_amount + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_deposit - all_income_withdraw + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
                         calculating_cash_opening=all_incomes_cash_amount - all_expenses_cash_amount + opening_balance_check_amounts - all_income_deposit + all_income_withdraw + all_income_borrow_cash - all_income_borrow_paid_cash
-                        print("yyyyyyyyy")
-                        print(calculating_bank_opening)                
 
-                        print(calculating_cash_opening)                
 
-                        print(total_opening_balnce)                
 
                     elif opening_balance_check_amount.type_choice =="Reduction":
                         opening_balance_check_amounts=Report.objects.filter(type_choice="Reduction",management_profile=management,created_at__date__lte=start_date).exclude(mangebalancesheet=None,banks=None).aggregate(Sum('amount')).get('amount__sum')
@@ -4629,8 +4560,6 @@ def balancesheet_view(request):
                         logger.info("ttttttttttttt")
                         logger.info(opening_balance_check_amounts)
                         logger.info(opening_balance_check_amounts)
-                        print(opening_balance_bank_amounts)
-                        print(opening_balance_bank_amounts_reduction)
                         logger.info(all_incomes)
                         logger.info(all_expenses)
                         logger.info(all_income_borrow_cash)
@@ -4642,15 +4571,12 @@ def balancesheet_view(request):
                         total_opening_balnce=all_incomes -all_expenses - opening_balance_check_amounts + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_borrow_cash - all_income_borrow_paid_cash + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
                         calculating_bank_opening=all_incomes_bank_amount - all_expenses_bank_amount + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction  + all_income_deposit - all_income_withdraw + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
                         calculating_cash_opening=all_incomes_cash_amount - all_expenses_cash_amount - opening_balance_check_amounts - all_income_deposit + all_income_withdraw + all_income_borrow_cash - all_income_borrow_paid_cash
-                        print(total_opening_balnce)                
                     else:
                         total_opening_balnce=0
                         calculating_bank_opening=0
                         calculating_cash_opening=0
-                        print(total_opening_balnce)
                 else:
                     opening_balance_check=Report.objects.filter(management_profile=management,created_at__date__lte=start_date,mangebalancesheet=None)                    
-                    print("soundssssssssssssss")
                     if opening_balance_check: 
                             opening_balance_bank_amounts=Report.objects.filter(type_choice="Addition",management_profile=management,created_at__date__lte=start_date,managee=True).exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
                             if opening_balance_bank_amounts==None:
@@ -4660,16 +4586,12 @@ def balancesheet_view(request):
                                 opening_balance_bank_amounts_reduction=0
                                                 
                             opening_balance_check_amounts=0 
-                            print(opening_balance_bank_amounts_reduction) 
-                            print(opening_balance_bank_amounts) 
 
                             # opening_balance_bank_amounts=0                      #     
                             total_opening_balnce= opening_balance_check_amounts + all_incomes - all_expenses + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_borrow_cash - all_income_borrow_paid_cash + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
                             calculating_bank_opening=all_incomes_bank_amount - all_expenses_bank_amount + opening_balance_bank_amounts - opening_balance_bank_amounts_reduction + all_income_deposit - all_income_withdraw + all_income_borrow_bank - all_expense_borrow_bank + all_income_loan_bank - all_expense_loan_repay
                             calculating_cash_opening=all_incomes_cash_amount - all_expenses_cash_amount + opening_balance_check_amounts - all_income_deposit + all_income_withdraw + all_income_borrow_cash - all_income_borrow_paid_cash
                         # print("yyyyyyyyy")
-                            print("yyyyyyyyy")
-                            print(total_opening_balnce) 
                     else:
                         opening_balance_bank_amounts_recheck=Report.objects.filter(management_profile=management,created_at__date__lte=start_date,managee=True).exclude(banks=None).aggregate(Sum('amount')).get('amount__sum')
                         if  opening_balance_bank_amounts_recheck:  
@@ -4690,8 +4612,6 @@ def balancesheet_view(request):
                             calculating_cash_opening=0
                 logger.info("8888888888888888")
                 logger.info(total_opening_balnce) 
-                print("heeeeeeeeeeeeeeeeeen")
-                print(total_opening_balnce)              
 
                 if total_opening_balnce>0:
                     dic['opening_balance']=total_opening_balnce
@@ -4702,7 +4622,6 @@ def balancesheet_view(request):
                     opening_balance=total_opening_balnce  
                     # calculating_bank_opening=0
                     # calculating_cash_opening=0
-                    print(opening_balance)              
                 else:
                     dic1['opening_balance']=abs(total_opening_balnce)  
                     opening_balance_debit=total_opening_balnce  
@@ -4723,10 +4642,7 @@ def balancesheet_view(request):
                     if all__festival_bank_amount==None:
                         all__festival_bank_amount=0
                     category_check_expense=ADDIncomeDetails.objects.exclude(income_subcategory="Chit Fund Income").filter(management_profile=management,created_at__date=start_date).values("category_id").distinct()
-                    print(category_check_expense)
-                    print("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
                     for i in category_check_expense:
-                        print(i['category_id'])
                         category_check_expense_details=ADDIncomeDetails.objects.exclude(income_subcategory="Chit Fund Income").filter(category=i['category_id'],management_profile=management,created_at__date=start_date)
                         category_check_expense_total_amount=ADDIncomeDetails.objects.exclude(income_subcategory="Chit Fund Income").filter(category=i['category_id'],management_profile=management,created_at__date=start_date).aggregate(Sum('income_amt')).get('income_amt__sum')
                         category_name=ADDIncomeCategory.objects.filter(id=i['category_id']).first().category_name
@@ -4742,14 +4658,12 @@ def balancesheet_view(request):
                                 dict1111['payment_type']=a.transaction_type                        
 
                             out1.append(dict1111)
-                        print("iiiiiiiiiii")
                         dict3={}
                         dict3['name']=category_name
                         dict3['amount']=category_check_expense_total_amount
                         dict3['details']=  out1 
                         dict3['id']=  category_id.id                                           
                         out2.append(dict3)
-                        print(out2)
                     dicttttt={}
                     dicttttt['income_details']=out2
                     dicttttt['cash_amount']=all_festival_cash_amount
@@ -4760,9 +4674,6 @@ def balancesheet_view(request):
                 if all_expense_check==None:
                     all_expense_check=0
                 all_expense_details=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Reduction").exclude(expenses=None).exclude(expenses__expense_subcategory="Chit Fund Expense")
-                print("ttttttttttttttttttt")
-                print("sssssssssssssssssssssssssssssssssss")
-                print(all_expense_details)
                 if all_expense_details:
                     out2=[]
                     all_festival_cash_amount=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Reduction",banks=None).exclude(expenses=None).exclude(expenses__expense_subcategory="Chit Fund Expense").aggregate(Sum('amount')).get('amount__sum')
@@ -4772,10 +4683,7 @@ def balancesheet_view(request):
                     if all__festival_bank_amount==None:
                         all__festival_bank_amount=0
                     category_check_expense=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(management_profile=management,created_at__date=start_date).values("category_id").distinct()
-                    print(category_check_expense)
-                    print("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
                     for i in category_check_expense:
-                        print(i['category_id'])
                         category_check_expense_details=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(category=i['category_id'],management_profile=management,created_at__date=start_date)
                         category_check_expense_total_amount=ADDExpenseDetails.objects.exclude(expense_subcategory="Chit Fund Expense").filter(category=i['category_id'],management_profile=management,created_at__date=start_date).aggregate(Sum('expense_amt')).get('expense_amt__sum')
                         category_name=ADDExpenseCategory.objects.filter(id=i['category_id']).first().category_name
@@ -4791,7 +4699,6 @@ def balancesheet_view(request):
                                 dict1111['payment_type']=a.transaction_type
 
                             out1.append(dict1111)
-                        print("iiiiiiiiiii")
                         dict3={}
                         dict3['name']=category_name
                         dict3['amount']=category_check_expense_total_amount
@@ -4800,7 +4707,6 @@ def balancesheet_view(request):
 
                                           
                         out2.append(dict3)
-                        print(out2)
                     dict222={}
                     dict222['expense_details']=out2
                     dict222['cash_amount']=all_festival_cash_amount
@@ -4812,7 +4718,6 @@ def balancesheet_view(request):
                 if all_marriage_check==None:
                     all_marriage_check=0
                 all_marriage_details=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Addition").exclude(marriage=None).values("marriage_id").distinct()
-                print(all_marriage_details)
                 if all_marriage_details:
                     out=[]
                     all_festival_cash_amount=Report.objects.filter(management_profile=management,created_at__date=start_date,type_choice="Addition",banks=None).exclude(marriage=None).aggregate(Sum('amount')).get('amount__sum')
@@ -4823,10 +4728,8 @@ def balancesheet_view(request):
                         all__festival_bank_amount=0
                     for i in all_marriage_details:                    
                         fest_details=MarriageDetails.objects.filter(id=i['marriage_id']).first() 
-                        print(fest_details)                       
                         amount_details=PeoplesAmountDetails.objects.filter(marriage=fest_details)
                         
-                        print(len(amount_details))
                         if len(amount_details) >1:
                             for i in  amount_details:  
                                 dict1={} 
@@ -4835,8 +4738,6 @@ def balancesheet_view(request):
 
                                 dict1['name']=f'{i.member.member_name}' +"/"+f'{i.member.member_no}'       
                                 dict1['total_amount']= i.amount
-                                print("kkkkkkkkkkkkkkkkkkkkkkkkkk")
-                                print(payment_nature)                               
                                 if payment_nature:
                                     if payment_nature.bank_link !=None:
                                         dict1['payment_type']= payment_nature.bank_name  
@@ -4845,13 +4746,9 @@ def balancesheet_view(request):
                                 dict1['id']=fest_details.id 
 
                                 out.append(dict1)
-                                print(out)
                         elif len(amount_details)==1:
                             amount_detail=PeoplesAmountDetails.objects.filter(marriage=fest_details).first()
-                            print("ooooooooooooo")
-                            print(amount_details)
                             payment_nature=CollectionDetails.objects.filter(amount_link=amount_detail).first() 
-                            print(payment_nature)
 
                             amount_details_check=PeoplesAmountDetails.objects.filter(marriage=fest_details).first()
                             dict1={}
@@ -6192,10 +6089,23 @@ def balancesheet_chitfundview(request):
                         fund_name=ChitFundsDetails.objects.filter(id=iiii['chitfund_id']).first()                    
                         amount_check=ChitFundInterestOverallReport.objects.filter(chitfund=iiii['chitfund_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,income_choice="Addition").aggregate(Sum('amount')).get('amount__sum')
 
-                        int_name=fund_name.chit_name                       
+                        int_name=fund_name.chit_name
+
+                        # Individual collection rows behind this chit fund's total,
+                        # so the frontend can show a Sl.No / Person Name / Amount
+                        # breakdown when the row is expanded.
+                        chit_fund_records=ChitFundInterestOverallReport.objects.filter(chitfund=iiii['chitfund_id'],management_profile=management,created_at__date__gte=start_date,created_at__date__lte=end_date,income_choice="Addition").exclude(interest=None)
+                        member_details=[]
+                        for rec in chit_fund_records:
+                            member_details.append({
+                                'person_name': rec.interest.people_name if rec.interest else '-',
+                                'amount': rec.amount,
+                            })
+
                         dic_interest={}
                         dic_interest['name']=int_name 
                         dic_interest['amount']=amount_check
+                        dic_interest['member_details']=member_details
                         out_chit_dis.append(dic_interest)
                     difffff={}
                     difffff['total_amount']=chit_fund_interest_collection_amount
@@ -6319,6 +6229,26 @@ def balancesheet_chitfundview(request):
                 total_out_opening_balance = opening_balance_out + opening_balance_outdistribution
                 print(total_out_opening_balance)
 
+                # Carry forward prior Chit Fund Expense/Income into opening balance
+                # (same fix already applied in the custom_date_range branch above)
+                opening_expense_out = ADDExpenseDetails.objects.filter(
+                    management_profile=management,
+                    date__lt=start_date,
+                    expense_subcategory="Chit Fund Expense",
+                ).aggregate(Sum('expense_amt')).get('expense_amt__sum')
+                if opening_expense_out is None:
+                    opening_expense_out = 0
+
+                opening_income_in = ADDIncomeDetails.objects.filter(
+                    management_profile=management,
+                    date__lt=start_date,
+                    income_subcategory="Chit Fund Income",
+                ).aggregate(Sum('income_amt')).get('income_amt__sum')
+                if opening_income_in is None:
+                    opening_income_in = 0
+
+                total_in_opening_balance = total_in_opening_balance + opening_income_in
+                total_out_opening_balance = total_out_opening_balance + opening_expense_out
 
                 if total_in_opening_balance > total_out_opening_balance:
                     dic['opening_balance'] = total_in_opening_balance - total_out_opening_balance
@@ -6371,11 +6301,6 @@ def balancesheet_chitfundview(request):
                     print(out_final)
                     print("ttttttttttttt")
                     dic['Chit_fund_Investment']=out_final
-                # if check_mnagement:
-                #     manage_check_total_amount=manage_check_total_amount
-                # else:
-                #     manage_check_total_amount=0
-
 
                 chit_fund_profit_distribution=ChitFundInterestOverallReport.objects.filter(management_profile=management,created_at__date=start_date,income_choice="Distribution").exclude(chitfund=None).exclude(chitdistribution=None)
                 chit_fund_profit_distribution_amount=ChitFundInterestOverallReport.objects.filter(management_profile=management,created_at__date=start_date,income_choice="Distribution").exclude(chitfund=None).exclude(chitdistribution=None).aggregate(Sum('amount')).get('amount__sum')
@@ -6419,32 +6344,47 @@ def balancesheet_chitfundview(request):
                     difffff['details']=out_chit_dis
                     dic1['Chit_fund_Interest_Given']=difffff
                 
+                # FIX: this was previously filtered with created_at__date__gte=start_date
+                # (an open-ended range filter with no upper bound), inconsistent with
+                # every other query in this branch which uses the exact-day filter
+                # created_at__date=start_date. That mismatch meant "From_Collection"
+                # on a single-day balance sheet silently included every collection
+                # from start_date onward instead of just that day's collections.
                 chit_fund_interest_collection=ChitFundInterestOverallReport.objects.filter(management_profile=management,created_at__date=start_date,income_choice="Addition").exclude(chitfund=None).exclude(interest=None)
                 chit_fund_interest_collection_amount=ChitFundInterestOverallReport.objects.filter(management_profile=management,created_at__date=start_date,income_choice="Addition").exclude(chitfund=None).exclude(interest=None).aggregate(Sum('amount')).get('amount__sum')
                 if chit_fund_interest_collection_amount==None:
                     chit_fund_interest_collection_amount=0
                 if chit_fund_interest_collection:
-                    chit_fund_collection_check=ChitFundInterestOverallReport.objects.filter(management_profile=management,created_at__date__gte=start_date,income_choice="Addition").exclude(chitfund=None).exclude(interest=None).values("chitfund_id").distinct()
+                    chit_fund_collection_check=ChitFundInterestOverallReport.objects.filter(management_profile=management,created_at__date=start_date,income_choice="Addition").exclude(chitfund=None).exclude(interest=None).values("chitfund_id").distinct()
 
                     out_chit_dis=[]
                     for iiii in chit_fund_collection_check:
                         fund_name=ChitFundsDetails.objects.filter(id=iiii['chitfund_id']).first()                    
                         amount_check=ChitFundInterestOverallReport.objects.filter(chitfund=iiii['chitfund_id'],management_profile=management,created_at__date=start_date,income_choice="Addition").aggregate(Sum('amount')).get('amount__sum')
 
-                        int_name=fund_name.chit_name                       
+                        int_name=fund_name.chit_name
+
+                        # Individual collection rows behind this chit fund's total,
+                        # so the frontend can show a Sl.No / Person Name / Amount
+                        # breakdown when the row is expanded.
+                        chit_fund_records=ChitFundInterestOverallReport.objects.filter(chitfund=iiii['chitfund_id'],management_profile=management,created_at__date=start_date,income_choice="Addition").exclude(interest=None)
+                        member_details=[]
+                        for rec in chit_fund_records:
+                            member_details.append({
+                                'person_name': rec.interest.people_name if rec.interest else '-',
+                                'amount': rec.amount,
+                            })
+
                         dic_interest={}
                         dic_interest['name']=int_name 
                         dic_interest['amount']=amount_check
+                        dic_interest['member_details']=member_details
                         out_chit_dis.append(dic_interest)
                     difffff={}
                     difffff['total_amount']=chit_fund_interest_collection_amount
                     difffff['details']=out_chit_dis
                     dic['From_Collection']=difffff
 
-
-                print(check_invest_amount)
-                print(chit_fund_interest_collection_amount)
-                # print(d)
 
                 # ---- Chit Fund Expenses (custom_date branch) ----
                 chit_expense_qs = ADDExpenseDetails.objects.filter(
@@ -6519,8 +6459,7 @@ def balancesheet_chitfundview(request):
                     dict['balance_amount']=abs(net)
                     dict['balance_type']="Debit"
                 print(dict)
-                return Response(dict,status=status.HTTP_201_CREATED) 
-
+                return Response(dict,status=status.HTTP_201_CREATED)
 
 
 
