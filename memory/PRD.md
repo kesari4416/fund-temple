@@ -929,3 +929,19 @@ Balance sheet shows penalty on the SAME date as the borrower's payment (SI6 pena
 
 ### Verified
 5/5 unit tests pass: Sep5 payment → no Sep5 penalty; Sep6 miss → Sep7 penalty; normal Sep1 payment → Sep2 installment_date.
+
+## Balance → Other Total Balance Amount Fix (Sep 2026)
+### Bug
+Selecting Category="Balance" + Balance Type="Other" in the Collection form showed a "randomly added or subtracted" Total Balance Amount.
+
+### Root Cause (Frontend — 2 issues)
+1. **Stale `TotalAmt` across balance-type switches**: `handleBalanceTypeChange` reset `balance_name`, `member`, `payment_mode`, `amount` but NOT `TotalAmt`. Switching from "Other" → "Interest Balance" → back to "Other" left the Interest Balance member's total visible until a new member was selected.
+2. **Wrong `max` constraint on `TotalAmt` display field**: `max={maxLease}` was placed on both the disabled `TotalAmt` display field AND the `amount` input. When a user entered an amount > total (triggering `setMaxLease(currentTotal)`), switching to a different member with a higher balance would result in Ant Design's InputNumber clamping the new (correct) total to the old max, making it appear "randomly subtracted."
+
+### Fixes (`Collection.jsx`)
+1. `handleBalanceTypeChange`: Added `"TotalAmt"` to `form.resetFields(...)` and called `setMaxLease(undefined)` — clears stale total and removes old max constraint when switching balance types.
+2. Removed `max={maxLease}` from the `TotalAmt` (disabled display) `CustomInputNumber` — max constraint only belongs on the editable `amount` input.
+3. `handleBalanceChange` / `handleBalanceIntChange`: Added `setMaxLease(undefined)` + `form.resetFields(["amount"])` — each new member selection starts with a clean amount field and no clamping.
+
+### Verified
+Build passes (`yarn build` exit 0). Frontend hot-reloaded successfully.

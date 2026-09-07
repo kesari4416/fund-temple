@@ -715,13 +715,16 @@ export const Collection = ({ trigger }) => {
 
   const handleBalanceChange = (value) => {
     const FindBalanceAmtDetails = balanceDetails?.find((bal) => bal?.list?.id === value);
+    setMaxLease(undefined);
+    form.resetFields(["amount"]);
     form.setFieldsValue({ TotalAmt: FindBalanceAmtDetails?.amount })
     form.setFieldsValue({ balance_name: `${FindBalanceAmtDetails?.list?.member_name}/ ${FindBalanceAmtDetails?.list?.member_mobile_number}` })
   }
 
   const handleBalanceIntChange = (value) => {
     const FindBalanceAmtDetails = balanceIntDetails?.find((bal) => bal?.id === value);
-
+    setMaxLease(undefined);
+    form.resetFields(["amount"]);
     form.setFieldsValue({ TotalAmt: FindBalanceAmtDetails?.amount })
     form.setFieldsValue({ interest: FindBalanceAmtDetails?.id })
     form.setFieldsValue({ balance_name: `${FindBalanceAmtDetails?.people_name}/ ${FindBalanceAmtDetails?.people_mobile}` })
@@ -1316,7 +1319,8 @@ export const Collection = ({ trigger }) => {
 
   const handleBalanceTypeChange = (e) => {
     setBalanceType(e.target.value);
-    form.resetFields(["balance_name", "member", "payment_mode", "amount"]);
+    form.resetFields(["balance_name", "member", "payment_mode", "amount", "TotalAmt"]);
+    setMaxLease(undefined);
     setPaymentMode([]);
 
     const BalanceValues = {
@@ -1913,7 +1917,6 @@ export const Collection = ({ trigger }) => {
                   name={"TotalAmt"}
                   precision={2}
                   suffix={"₹"}
-                  max={maxLease}
                   defaultValue={0}
                   disabled
                 />
