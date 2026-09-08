@@ -964,3 +964,18 @@ Selecting Category="Balance" + Balance Type="Other" in the Collection form showe
 
 ### Verified
 Build passes (`yarn build` ✓), frontend redeployed.
+
+## What's been implemented (2026-09 — Card/Grid view toggle on Member List)
+- [x] **Table ↔ Card view flip toggle** added to Family Details → Member List page.
+  - Works across ALL member list tabs: Member List, Death List, Marriage Remove List, All Member List.
+  - Card view: circular photo avatar (crimson-gold border), member ID badge, name, gender/family ID/mobile/address, action buttons.
+  - File touched: `/app/frontend/src/modules/FamilyDetails/partials/MemberList.jsx`
+
+## What's been implemented (2026-09 — Dashboard view flip toggle)
+- [x] **Dashboard Image ↔ Stats Overview flip toggle** added to the Home/Dashboard page.
+  - Toggle button (image icon / grid icon) in top-right of the dashboard card.
+  - **Image view** (default): Shows amman.jpg temple photo as before.
+  - **Stats Overview**: Live metric cards — Active Members (245), Death Members (42), Marriage Removed (2), Active Chit Funds (1), Pending Penalty ₹10,03,060 (884 records), Collections shortcut.
+  - All stat cards are clickable and navigate to the relevant module.
+  - Stats fetched lazily on first click, cached in component state.
+  - Files touched: `FirstModal.jsx`, `urls.js` (PENALTY_SUMMARY added)

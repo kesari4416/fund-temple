@@ -608,5 +608,8 @@ export const APIURLS = {
     ADMIN_POST,
     ADMIN_GET_TABLE_VIEW,
 
+    // Dashboard stats
+    PENALTY_SUMMARY: 'penalty/summary/',
+
 }
 
