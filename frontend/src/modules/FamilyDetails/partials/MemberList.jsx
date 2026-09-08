@@ -10,6 +10,7 @@ import {
 import { CustomPageTitle } from "@components/others/CustomPageTitle";
 import { Col, Tooltip } from "antd";
 import React, { useEffect, useRef, useState } from "react";
+import { BsGrid3X3Gap, BsListUl } from "react-icons/bs";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getDeathMemberError,
@@ -64,6 +65,101 @@ const PrintShowData = styled.div`
   display: none;
 `
 
+const CardGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+  padding: 8px 0;
+`
+
+const MemberCard = styled.div`
+  background: #fff;
+  border: 1px solid #f0e6d3;
+  border-radius: 12px;
+  padding: 18px 14px 14px;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(128,0,0,0.07);
+  transition: transform 0.18s, box-shadow 0.18s;
+  cursor: pointer;
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(128,0,0,0.14);
+    border-color: #800000;
+  }
+`
+
+const MemberAvatar = styled.div`
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto 10px;
+  border: 2px solid #C5A059;
+  img { width: 100%; height: 100%; object-fit: cover; }
+`
+
+const MemberBadge = styled.span`
+  background: #fff3e0;
+  color: #800000;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 2px 10px;
+  border: 1px solid #f5c87a;
+  display: inline-block;
+  margin-bottom: 6px;
+`
+
+const MemberName = styled.div`
+  font-size: 13px;
+  font-weight: 700;
+  color: #2d1a0e;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`
+
+const MemberInfo = styled.div`
+  font-size: 11px;
+  color: #7a6652;
+  margin-bottom: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`
+
+const CardActions = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #f0e6d3;
+`
+
+const ViewToggle = styled.div`
+  display: flex;
+  gap: 4px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  overflow: hidden;
+  align-self: center;
+`
+
+const ToggleBtn = styled.button`
+  background: ${p => p.active ? '#800000' : '#fff'};
+  color: ${p => p.active ? '#fff' : '#800000'};
+  border: none;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s;
+  &:hover { background: ${p => p.active ? '#800000' : '#f9f0f0'}; }
+`
+
 const MemberList = () => {
 
   const dispatch = useDispatch();
@@ -80,6 +176,7 @@ const MemberList = () => {
   const [Member, setMember] = useState("All");
   const [searchTexts, setSearchTexts] = useState([]); //---------Seach Bar 1--------
   const [search2Texts, setSearch2Texts] = useState([]); //---------Seach Bar 2--------
+  const [viewMode, setViewMode] = useState("table"); // 'table' | 'card'
 
   // ======  Modal Open ========
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -427,13 +524,67 @@ const MemberList = () => {
     handleOk();
   };
 
+  // ---- Card view renderer ----
+  const renderCardGrid = (list) => {
+    if (!list || list.length === 0)
+      return <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>No records found</div>;
+
+    const filtered = list.filter((r) => {
+      const name = r.member?.member_name || '';
+      const phone = r.member?.member_mobile_number || '';
+      const matchName = !searchTexts || name.toLowerCase().includes(String(searchTexts).toLowerCase());
+      const matchPhone = !search2Texts || phone.includes(String(search2Texts));
+      return matchName && matchPhone;
+    });
+
+    return (
+      <CardGrid>
+        {filtered.map((record) => {
+          const mem = record?.member || {};
+          return (
+            <MemberCard key={mem.id} onClick={() => ViewMemberProfile(record)}>
+              <MemberAvatar>
+                <img
+                  src={mem.member_photo || DummyMember}
+                  onError={(e) => { e.target.onerror = null; e.target.src = DummyMember; }}
+                  alt="member"
+                />
+              </MemberAvatar>
+              <MemberBadge>{mem.member_no || '—'}</MemberBadge>
+              <MemberName>{mem.member_name || '—'}</MemberName>
+              <MemberInfo>{mem.member_gender || ''} · Fam: {record.family_no || '—'}</MemberInfo>
+              <MemberInfo>{mem.member_mobile_number || '—'}</MemberInfo>
+              <MemberInfo style={{ fontSize: '10px' }}>{record.address || ''}</MemberInfo>
+              <CardActions>
+                {(superUsers || role === userRolesConfig.ADMIN || memberListPermissions?.Family?.View) && (
+                  <Tooltip title="View Profile">
+                    <TableIconHolder size={"28px"} onClick={(e) => { e.stopPropagation(); ViewMemberProfile(record); }}>
+                      <img src={SvgIcons.Eye} style={{ cursor: "pointer" }} />
+                    </TableIconHolder>
+                  </Tooltip>
+                )}
+                {(superUsers || role === userRolesConfig.ADMIN || memberListPermissions?.Family?.View) && (
+                  <Tooltip title="Balance Sheet">
+                    <TableIconHolder size={"28px"} onClick={(e) => { e.stopPropagation(); ViewMemberBalanceSheet(record); }} data-testid={`member-balance-sheet-btn-${mem.id}`}>
+                      <img src={SvgIcons.Money} style={{ cursor: "pointer" }} />
+                    </TableIconHolder>
+                  </Tooltip>
+                )}
+              </CardActions>
+            </MemberCard>
+          );
+        })}
+      </CardGrid>
+    );
+  };
+
   let content;
 
   if (AllMembersStatus === "loading") {
     content = <CommonLoading />;
   } else if (AllMembersStatus === "succeeded") {
     const rowKey = (dataSource) => dataSource?.member?.id;
-    content = (
+    content = viewMode === 'card' ? renderCardGrid(dataSource) : (
       <CustomStandardTable
         columns={TableColumn}
         data={dataSource}
@@ -450,7 +601,7 @@ const MemberList = () => {
     content1 = <CommonLoading />;
   } else if (AllDeathMembersStatus === "succeeded") {
     const rowKey = (deathMember) => deathMember?.member?.id;
-    content1 = (
+    content1 = viewMode === 'card' ? renderCardGrid(deathMember) : (
       <CustomStandardTable
         columns={TableColumn}
         data={deathMember}
@@ -467,7 +618,7 @@ const MemberList = () => {
     content2 = <CommonLoading />;
   } else if (AllLeavingMemberStatus === "succeeded") {
     const rowKey = (leavingMember) => leavingMember?.member?.id;
-    content2 = (
+    content2 = viewMode === 'card' ? renderCardGrid(leavingMember) : (
       <CustomStandardTable
         columns={TableColumn}
         data={leavingMember}
@@ -484,7 +635,7 @@ const MemberList = () => {
     content3 = <CommonLoading />;
   } else if (AllMarriageMembersStatus === "succeeded") {
     const rowKey = (marriageMember) => marriageMember?.member?.id;
-    content3 = (
+    content3 = viewMode === 'card' ? renderCardGrid(marriageMember) : (
       <CustomStandardTable
         columns={TableColumn}
         data={marriageMember}
@@ -501,7 +652,7 @@ const MemberList = () => {
     content4 = <CommonLoading />;
   } else if (AllTypeMembersStatus === "succeeded") {
     const rowKey = (allTypeMember) => allTypeMember?.member?.id;
-    content4 = (
+    content4 = viewMode === 'card' ? renderCardGrid(allTypeMember) : (
       <CustomStandardTable
         columns={TableColumn}
         data={allTypeMember}
@@ -549,7 +700,7 @@ const MemberList = () => {
           </Col>
           <Col span={24} md={12}>
             <CustomRow space={[12, 12]}>
-              <Col span={24} md={12}>
+              <Col span={24} md={10}>
                 <CustomSelect
                   name={"Select"}
                   placeholder={"Select"}
@@ -557,7 +708,7 @@ const MemberList = () => {
                   onChange={handleSelect}
                 />
               </Col>
-              <Col span={24} md={12}>
+              <Col span={24} md={10}>
                 {filer === "MemberName" ? (
                   <CustomInput
                     value={searchTexts}
@@ -573,6 +724,20 @@ const MemberList = () => {
                     onChange={(e) => handle2Search(e.target.value)}
                   />
                 )}
+              </Col>
+              <Col span={24} md={4} style={{ display: 'flex', alignItems: 'center' }}>
+                <ViewToggle>
+                  <Tooltip title="Table View">
+                    <ToggleBtn active={viewMode === 'table'} onClick={() => setViewMode('table')} data-testid="view-toggle-table">
+                      <BsListUl />
+                    </ToggleBtn>
+                  </Tooltip>
+                  <Tooltip title="Card View">
+                    <ToggleBtn active={viewMode === 'card'} onClick={() => setViewMode('card')} data-testid="view-toggle-card">
+                      <BsGrid3X3Gap />
+                    </ToggleBtn>
+                  </Tooltip>
+                </ViewToggle>
               </Col>
             </CustomRow>
           </Col>

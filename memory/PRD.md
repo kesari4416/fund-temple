@@ -699,10 +699,19 @@ See `/app/memory/test_credentials.md`.
   correctly received the last festival tax; the 36 members with
   ``member_tax_eligible=False`` are intentionally excluded.
 
+## What's been implemented (2026-09 — Card/Grid view toggle on Member List)
+- [x] **Table ↔ Card view toggle** added to Family Details → Member List page.
+  - Toggle button (BsListUl / BsGrid3X3Gap) appears in the search bar row.
+  - Works across ALL member list tabs: Member List, Death List, Marriage Remove List, All Member List.
+  - Card view: circular photo avatar (crimson-gold border), member badge, name, gender, mobile, family ID, address, action buttons (View + Balance Sheet).
+  - Table view remains the default; toggle persists within the current session.
+  - File touched: `/app/frontend/src/modules/FamilyDetails/partials/MemberList.jsx`
+
 ## Backlog / Future (P1/P2) — Feb 2026 fork continued
 - P1: QA Excel Bug 8 — WhatsApp Agent Collection List routing.
 - P1: QA Excel Bug 5/6 — Notification template variables (WhatsApp missing fine amounts).
 - P1: QA Excel Bug 1 — Separate "Total Due" vs "Total Collected" in Collection Details.
+- P2: Extend Card/Grid view toggle to CollectionUserList, ChitFund, Interest pages.
 - P2: Refactor ``collection/views.py`` (4900+ lines) and
   ``interest/views.py`` into services / thinner views.
 - P2: Persist MariaDB datadir across pod restarts (env-level chore).
