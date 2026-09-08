@@ -101,8 +101,9 @@ const DashboardLayout = ({ children }) => {
 
                 <Drawer
                     title={
-                        <span style={{ color: '#C5A059', fontWeight: 800, fontSize: 18, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                            &#9765; Temple
+                        <span style={{ color: '#C5A059', fontWeight: 800, fontSize: 18, fontFamily: "'Plus Jakarta Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <img src={SvgIcons.Logoimg} alt="logo" width={28} height={28} style={{ flexShrink: 0 }} />
+                            Temple
                         </span>
                     }
                     placement={placement}

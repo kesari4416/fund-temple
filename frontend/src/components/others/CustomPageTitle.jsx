@@ -5,12 +5,12 @@ import { IoIosArrowBack } from "react-icons/io";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@components/form";
 import { baseRequest } from "@request/request";
+import { SvgIcons } from "@assets/Svg";
+
 const Titles = styled.div`
   display: flex;
   align-items: center;
-  /* max-width: ${(props) => (props.width ? props.width : "326px")}; */
   gap: 8px;
-  /* background:red; */
   justify-content:space-between;
   .icon {
     display: flex;
@@ -34,7 +34,6 @@ const Titles = styled.div`
     justify-content: center;
     border-radius: 50%;
     cursor: pointer;
-    /* box-shadow:${THEME.button_box_shadow} */
   }
   & h2 {
     font-size: 24px;
@@ -42,6 +41,10 @@ const Titles = styled.div`
     color: ${THEME.primary_color_dark};
     font-weight: 500;
     background-color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
   }
 `;
 const TitleScroll = styled.div`
@@ -52,13 +55,15 @@ const TitleScroll = styled.div`
   }
 `;
 const FormTitles = styled.div`
-  /* margin: auto; */
   & h2 {
     font-size: 18px;
     color: #5B626B;
     font-weight: 600;
     text-transform: capitalize;
     margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 `;
 const FormSubTitles = styled.div`
@@ -80,7 +85,6 @@ export const CustomPageTitle = ({
   width,
   newpage,
 }) => {
-  //  =======  GO Back To the pages
   const navigate = useNavigate();
   const locationName = useLocation();
   const PreviousPage = () => {
@@ -89,10 +93,11 @@ export const CustomPageTitle = ({
   return (
     <>
       <Titles width={width} style={style}>
-        {/* <h2>{Heading}</h2>
-        { newpage && <a className="newTab" href={locationName?.pathname} target="_blank">New Tab</a>} */}
-        <a href={locationName?.pathname} target="_blank">
-          <h2>{Heading}</h2>
+        <a href={locationName?.pathname} target="_blank" style={{ textDecoration: 'none' }}>
+          <h2>
+            <img src={SvgIcons.Logoimg} alt="logo" style={{ width: 22, height: 22, flexShrink: 0 }} />
+            {Heading}
+          </h2>
         </a>
       </Titles>
       <hr
@@ -116,7 +121,10 @@ export const CustomPageTitleScroll = ({ Heading }) => {
 export const CustomPageFormTitle = ({ Heading }) => {
   return (
     <FormTitles>
-      <h2 style={{ color: "#FF4D00" }}> {Heading} </h2>
+      <h2 style={{ color: "#FF4D00" }}>
+        <img src={SvgIcons.Logoimg} alt="logo" style={{ width: 18, height: 18, flexShrink: 0 }} />
+        {Heading}
+      </h2>
     </FormTitles>
   );
 };

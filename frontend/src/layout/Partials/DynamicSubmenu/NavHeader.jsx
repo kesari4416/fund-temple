@@ -6,6 +6,7 @@ import { useSelector } from "react-redux";
 import { selectCurrentUser } from "@modules/Auth/authSlice";
 import { MdMenu } from "react-icons/md";
 import { HiOutlineMenuAlt2 } from "react-icons/hi";
+import { SvgIcons } from "@assets/Svg";
 
 const PageTitle = styled.h2`
   font-size: 18px;
@@ -14,6 +15,8 @@ const PageTitle = styled.h2`
   margin: 0;
   letter-spacing: -0.2px;
   font-family: 'Plus Jakarta Sans', sans-serif;
+  display: flex;
+  align-items: center;
 `;
 
 const UserBadge = styled.div`
@@ -83,8 +86,9 @@ export const NavHeader = ({ updateCollapse, showDrawer }) => {
           <HiOutlineMenuAlt2 />
         </CollapseBtn>
         <PageTitle className="ResponMobile">
-          Temple Management System
-        </PageTitle>
+            <img src={SvgIcons.Logoimg} alt="logo" style={{ width: 28, height: 28, marginRight: 8, verticalAlign: 'middle', flexShrink: 0 }} />
+            Temple Management System
+          </PageTitle>
       </Flex>
 
       <div className="Btnresponsive">
