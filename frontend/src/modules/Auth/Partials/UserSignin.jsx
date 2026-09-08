@@ -188,7 +188,7 @@ const UserSignin = () => {
 
   const token = useSelector(selectCurrentUser);
   useEffect(() => {
-    if (token) navigate('/signin')
+    if (token) navigate('/')
   }, [token])
 
   return (
