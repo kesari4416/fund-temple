@@ -33,6 +33,65 @@ from festival.models import ADDFestivalDetails
 
 # calculate sum
 from django.db.models import Sum
+from sub_tariff.models import ADDSubscriptionTariffDetails
+
+
+def _apply_subscription_tariff_penalty_for_member(member, management):
+    """
+    On-demand subscription tariff penalty check for a single member.
+    Mirrors _apply_festival_penalty_for_member above, scoped to
+    subscription tariffs instead of festivals. Fully idempotent: safe to
+    call on every page load. Replaces the old nightly
+    sub_tariff/apply_subscription_tariff_penalty scheduled endpoint.
+    """
+    today = datetime.date.today()
+    expired_tariffs = ADDSubscriptionTariffDetails.objects.filter(
+        management_profile=management,
+        to_date__lt=today,
+        action=True,
+    )
+    for tariff in expired_tariffs:
+        bill = PeoplesAmountDetails.objects.filter(
+            sub_tariff=tariff,
+            member=member,
+            paid=False,
+        ).first()
+        if not bill:
+            continue
+
+        expected_total = float(bill.amount_balance) + float(bill.penalty_amount)
+        if not bill.penalty:
+            # First time: apply penalty
+            bill.penalty = True
+            bill.amount_balance = float(bill.amount_balance) + float(bill.penalty_amount)
+            bill.total_bal_amt = float(bill.total_bal_amt) + float(bill.penalty_amount)
+            bill.save()
+        elif float(bill.total_bal_amt) < expected_total:
+            # Stale record: penalty flag was set by old code but total_bal_amt was never updated
+            bill.amount_balance = float(bill.amount_balance) + float(bill.penalty_amount)
+            bill.total_bal_amt = float(bill.total_bal_amt) + float(bill.penalty_amount)
+            bill.save()
+
+        already_in_ledger = TempleMemberReport.objects.filter(
+            members=member,
+            sub_tariff=tariff,
+            type_choice="subscription Tariff Penalty",
+        ).exists()
+        if already_in_ledger:
+            continue
+
+        last_rep = TempleMemberReport.objects.filter(members=member).last()
+        prev_bal = float(last_rep.balance_amt) if last_rep else 0
+        TempleMemberReport.objects.create(
+            management_profile=management,
+            members=member,
+            sub_tariff=tariff,
+            reportdate=tariff.to_date + datetime.timedelta(days=1),
+            credit_amt=bill.penalty_amount,
+            balance_amt=prev_bal + float(bill.penalty_amount),
+            type_choice="subscription Tariff Penalty",
+            created_by=bill.created_by,
+        )
 
 
 def _apply_festival_penalty_for_member(member, management):
@@ -62,26 +121,19 @@ def _apply_festival_penalty_for_member(member, management):
         if not bill:
             continue
 
-        # Apply penalty to running balance.
-        # Also self-heal stale records where the old scheduler set penalty=True
-        # but forgot to update amount_balance / total_bal_amt (they were commented out).
-        # Detection: if total_bal_amt doesn't yet include penalty_amount, add it now.
-        needs_balance_update = (
-            float(bill.penalty_amount) > 0
-            and abs(float(bill.total_bal_amt) - float(bill.amount_balance)) < 0.01
-            and float(bill.total_bal_amt) < float(bill.amount_balance) + float(bill.penalty_amount)
-        )
+        expected_total = float(bill.amount_balance) + float(bill.penalty_amount)
         if not bill.penalty:
             bill.penalty = True
             bill.amount_balance = float(bill.amount_balance) + float(bill.penalty_amount)
             bill.total_bal_amt  = float(bill.total_bal_amt)  + float(bill.penalty_amount)
+            bill.penalty_applied_date = fest.end_date + datetime.timedelta(days=1)
             bill.save()
-        elif needs_balance_update:
+        elif float(bill.total_bal_amt) < expected_total:
             # Stale record: penalty flag is set but balances were never updated
             bill.amount_balance = float(bill.amount_balance) + float(bill.penalty_amount)
             bill.total_bal_amt  = float(bill.total_bal_amt)  + float(bill.penalty_amount)
+            bill.penalty_applied_date = fest.end_date + datetime.timedelta(days=1)
             bill.save()
-        # else: already correctly applied — nothing to do
 
         # Create the "Festival Penalty" ledger row (idempotent).
         already_in_ledger = TempleMemberReport.objects.filter(
@@ -98,7 +150,7 @@ def _apply_festival_penalty_for_member(member, management):
             management_profile=management,
             members=member,
             festivals=fest,
-            reportdate=today,
+            reportdate=fest.end_date + datetime.timedelta(days=1),
             credit_amt=bill.penalty_amount,
             balance_amt=prev_bal + float(bill.penalty_amount),
             type_choice="Festival Penalty",
@@ -1283,33 +1335,36 @@ def single_member_view(request,pk):
         # take_fund_object=FundMemberDetailss.objects.filter(fund_group__management_profile=management,fund_member=mer) 
         
         
-        reports=TempleMemberReport.objects.filter(members=mer)
-        serial2=TempleMemberReportSerializer(reports,many=True)
-        member_id=PeoplesJOININGAmountDetails.objects.filter(member=pk).first()
-        if member_id:
-            user_id=User.objects.filter(id=member_id.created_by).first()
-               
-        dict32={}
-        dict32['profile']=serializer1.data
-        dict32['family_no']=mer.family.family_no
-        dict32['address']=mer.family.address
-        dict32['balance_sheet']=ser.data
-        dict32['penalty_histry']=serializer3.data
-        dict32['penalty_amt_total']=total_penalty_amount_value
-        dict32['pending']=serializer4.data
-        dict32['pending_amt_total']=total_amount_balance_value  # not include penalty balance amt
-        dict32['paid_histry']=serializer5.data
-        dict32['paid_amt_total']=total_paid_amount_value
-        dict32['member_rental_lease']=out
-        dict32['balancesheet_total']=total_bal_amt_value
-        dict32['temple_mem_balancesheet']=serial2.data
-        dict32['temple_mem_pending_amt']=t_m_pen_bal
-        if member_id:
-            dict32['bill_by_name']=user_id.username
-        else:
-            dict32['bill_by_name']=""
+        reports = TempleMemberReport.objects.filter(members=mer)
+        serial2 = TempleMemberReportSerializer(reports, many=True)
 
-        return Response(dict32,status=status.HTTP_200_OK)
+        # --- FIX: guard against a created_by value that doesn't resolve to
+        # an existing User (deleted user / stale id). Previously this
+        # dereferenced `user_id.username` even when the lookup returned
+        # None, causing an unhandled AttributeError -> 500. ---
+        member_id = PeoplesJOININGAmountDetails.objects.filter(member=pk).first()
+        user_id = None
+        if member_id:
+            user_id = User.objects.filter(id=member_id.created_by).first()
+
+        dict32 = {}
+        dict32['profile'] = serializer1.data
+        dict32['family_no'] = mer.family.family_no
+        dict32['address'] = mer.family.address
+        dict32['balance_sheet'] = ser.data
+        dict32['penalty_histry'] = serializer3.data
+        dict32['penalty_amt_total'] = total_penalty_amount_value
+        dict32['pending'] = serializer4.data
+        dict32['pending_amt_total'] = total_amount_balance_value  # not include penalty balance amt
+        dict32['paid_histry'] = serializer5.data
+        dict32['paid_amt_total'] = total_paid_amount_value
+        dict32['member_rental_lease'] = out
+        dict32['balancesheet_total'] = total_bal_amt_value
+        dict32['temple_mem_balancesheet'] = serial2.data
+        dict32['temple_mem_pending_amt'] = t_m_pen_bal
+        dict32['bill_by_name'] = user_id.username if user_id else ""
+
+        return Response(dict32, status=status.HTTP_200_OK)
     
 
 @api_view(['GET'])

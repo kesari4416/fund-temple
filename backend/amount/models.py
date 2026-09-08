@@ -62,6 +62,7 @@ class PeoplesAmountDetails(models.Model):
     created_by=models.CharField(max_length=255,null=True,blank=True)
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at = models.DateTimeField(auto_now=True,null=True,blank=True)
+    penalty_applied_date = models.DateField(null=True, blank=True)
 
 
 class PeoplesJOININGAmountDetails(models.Model):

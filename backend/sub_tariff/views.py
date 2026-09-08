@@ -76,7 +76,7 @@ def add_tariff_details(request):
                 temp_family.subscription_no=f'{month_list.strftime("%b")}-{year}'
                 temp_family.save()   
 
-                get_tax_members=Member_Details.objects.filter(management_profile=management,member_tax_eligible=True,death=False)
+                get_tax_members=Member_Details.objects.filter(management_profile=management,member_tax_eligible=True,death=False,member_gender="Male")
                 for mem_tax in get_tax_members:
                     people_amount=PeoplesAmountDetails.objects.create(total_bal_amt=temp_family.tariff_amount,created_by=rejin.id,management_profile=management,amount_balance=temp_family.tariff_amount,member=mem_tax,sub_tariff=temp_family,amount=temp_family.tariff_amount,name='Subscription Tariff')
                     if temp_family.exp_amount_type=="Amount":

@@ -1,5 +1,6 @@
 import { CustomStandardTable } from "@components/form/CustomStandardTable"
-import { Fragment } from "react"
+import { Fragment, useState } from "react"
+import { MdKeyboardArrowRight, MdOutlineKeyboardArrowDown } from 'react-icons/md'
 
 export const ChitfundInvesView = ({ datas }) => {
     const ColumnTable = [
@@ -123,18 +124,33 @@ export const ChitFundExpenseView = ({ datas }) => {
     )
 }
 
+// Feb 2026: "From Collection" lists a total per chit fund, but each
+// chit fund's total is made up of many individual person-level
+// collections (backend now sends these as `member_details` on each
+// row — see balancesheet_chitfundview). This mirrors the same
+// per-row click-to-expand pattern used for "Chit Fund Investment"
+// in SheetPage.jsx, but keeps the expand state local to this
+// component since the parent doesn't need to know about it.
 export const FromCollectionView = ({ datas }) => {
 
     const ValuesData = datas?.From_Collection?.details || []
+    const [expandedRows, setExpandedRows] = useState([])
 
-    const ColumnTable = [
+    const toggleRow = (name) => {
+        setExpandedRows(prev =>
+            prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
+        )
+    }
+
+    const MemberColumnTable = [
         {
             title: 'Sl No',
             render: (value, item, index) => index + 1,
         },
         {
-            title: 'Name',
-            dataIndex: 'name'
+            title: 'Person Name',
+            dataIndex: 'person_name',
+            render: (val) => val || '-',
         },
         {
             title: 'Amount',
@@ -144,7 +160,42 @@ export const FromCollectionView = ({ datas }) => {
 
     return (
         <div>
-            <CustomStandardTable columns={ColumnTable} data={ValuesData} pagination={false} />
+            {ValuesData.map((item, index) => {
+                const isOpen = expandedRows.includes(item?.name)
+                const hasMembers = (item?.member_details?.length || 0) > 0
+                return (
+                    <div key={index} style={{ marginBottom: '10px' }}>
+                        <div
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                cursor: hasMembers ? 'pointer' : 'default',
+                                padding: '6px 0',
+                            }}
+                            onClick={() => hasMembers && toggleRow(item?.name)}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <span style={{ fontWeight: 700 }}>{index + 1}.&nbsp;</span>
+                                <span style={{ fontWeight: 700 }}>{item?.name}</span>
+                                {hasMembers ? (
+                                    isOpen
+                                        ? <MdOutlineKeyboardArrowDown fontSize={20} />
+                                        : <MdKeyboardArrowRight fontSize={20} />
+                                ) : null}
+                            </div>
+                            <div style={{ fontWeight: 700 }}>{item?.amount}</div>
+                        </div>
+                        {isOpen && hasMembers ? (
+                            <CustomStandardTable
+                                columns={MemberColumnTable}
+                                data={item?.member_details || []}
+                                pagination={false}
+                            />
+                        ) : null}
+                    </div>
+                )
+            })}
         </div>
     )
 }

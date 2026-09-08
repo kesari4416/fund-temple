@@ -70,6 +70,7 @@ def add_festival_details(request):
                 get_tax_members = Member_Details.objects.filter(
                     management_profile=management,
                     member_age__gte=18,
+                    member_gender="Male"
                 ).exclude(death=True)
                 for mem_tax in get_tax_members:
                     try:
