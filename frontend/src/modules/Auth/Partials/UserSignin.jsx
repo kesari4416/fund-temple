@@ -8,6 +8,7 @@ import { baseRequest } from '@request/request'
 import { OpenNotification } from '@components/common'
 import { toast } from 'react-toastify'
 import { APIURLS } from '@request/apiUrls/urls'
+import { SvgIcons } from '@assets/Svg'
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(20px); }
@@ -217,7 +218,7 @@ const UserSignin = () => {
       <RightPanel>
         <SignInCard>
           <BrandRow>
-            <BrandIcon>&#9765;</BrandIcon>
+            <img src={SvgIcons.Logoimg} width="46px" alt="Temple Logo" style={{ flexShrink: 0 }} />
             <BrandName>Temple</BrandName>
           </BrandRow>
           <WelcomeText>Welcome back</WelcomeText>

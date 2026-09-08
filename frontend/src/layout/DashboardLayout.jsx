@@ -84,14 +84,12 @@ const DashboardLayout = ({ children }) => {
             <Layout>
                 <SideMenuLayout width={'280'} trigger={null} collapsible collapsed={collapsed}>
                     <HeaderNav onClick={() => setCollapsed(!collapsed)}>
-                        <div style={{
-                            width: collapsed ? 36 : 38, height: collapsed ? 36 : 38,
-                            borderRadius: 9, background: 'linear-gradient(135deg,#800000 0%,#5A0000 100%)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            flexShrink: 0, fontSize: 18, color: '#C5A059',
-                            boxShadow: '0 2px 8px rgba(128,0,0,0.5)',
-                            transition: 'all 0.2s',
-                        }}>&#9765;</div>
+                        <img
+                            src={SvgIcons.Logoimg}
+                            width={collapsed ? '40px' : '50px'}
+                            style={{ marginLeft: collapsed ? '8px' : '4px', flexShrink: 0, transition: 'all 0.2s' }}
+                            alt="Temple Logo"
+                        />
                         <h3 className={collapsed ? 'active' : ''}>Temple</h3>
                     </HeaderNav>
                     <SideMenu collapsed={collapsed} />
