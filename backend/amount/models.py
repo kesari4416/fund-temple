@@ -57,6 +57,7 @@ class PeoplesAmountDetails(models.Model):
     name=models.CharField(max_length=255,null=True,blank=True,choices=NAME_CHOICES)
     amount_balance=models.DecimalField(max_digits=65,decimal_places=2,default=0)
     penalty_balance=models.DecimalField(max_digits=65,decimal_places=2,default=0)
+    penalty_applied_date = models.DateField(null=True, blank=True)
     total_paid_amt=models.DecimalField(max_digits=65,decimal_places=2,default=0)
     total_bal_amt=models.DecimalField(max_digits=65,decimal_places=2,default=0)
     created_by=models.CharField(max_length=255,null=True,blank=True)

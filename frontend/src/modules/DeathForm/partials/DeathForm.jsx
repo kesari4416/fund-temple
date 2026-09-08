@@ -9,7 +9,7 @@ import {
 } from "@components/form";
 import { CustomCardView, CustomRow, Flex } from "@components/others";
 import { CustomPageTitle } from "@components/others/CustomPageTitle";
-import { useSelector } from "react-redux/es/hooks/useSelector";
+import { useSelector } from "react-redux";
 import { Col, Form, Spin } from "antd";
 import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
