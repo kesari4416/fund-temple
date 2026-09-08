@@ -196,7 +196,9 @@ const UserSignin = () => {
       <LeftPanel>
         <TempleIllustration />
         <LeftContent>
-          <div style={{ fontSize: 52, marginBottom: 12 }}>🕌</div>
+          <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
+            <img src={SvgIcons.Logoimg} width="72px" height="72px" alt="Temple Logo" />
+          </div>
           <h2 style={{ color: '#C5A059', fontSize: 32, fontWeight: 800, margin: 0, letterSpacing: '-0.5px' }}>
             Temple Management
           </h2>
