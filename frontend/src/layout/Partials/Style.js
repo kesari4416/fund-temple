@@ -1,4 +1,3 @@
-import { THEME } from "@theme/index";
 import { Layout, Menu } from "antd";
 import styled from "styled-components";
 
@@ -7,49 +6,40 @@ export const MainLayout = styled.section`
   display: flex;
   width: 100%;
   overflow: hidden;
-  transition: 0.5s;
-  /* overflow-y: hidden !important; */
+  background: var(--bg-app);
 `;
+
 export const ImageProfile = styled.div`
   cursor: pointer;
   & img {
-    width: 50px;
-    margin: auto;
+    width: 44px;
     border-radius: 50%;
+    border: 2px solid rgba(197,160,89,0.4);
   }
 `;
 
 export const MenuImageProfile = styled.div`
   width: 160px;
   height: 160px;
-  background: red;
+  background: #5A0000;
   position: relative;
-  border-radius: 15px;
+  border-radius: 12px;
   overflow: hidden;
   margin-bottom: 20px;
-  box-shadow: rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   transition: 0.3s;
-
-  & img {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  &.active {
-    color: white !important;
-    width: 50px;
-    height: 50px;
-  }
+  & img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+  &.active { width: 44px; height: 44px; }
 `;
 
 export const MenuHolder = styled.div`
-  /* height:calc(100vh - 380px);  // NO Img calc(100vh - 100px) */
-  height: calc(100vh - 120px); // NO Img calc(100vh - 100px)
-  overflow: auto;
+  height: calc(100vh - 130px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 0;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
 `;
 
 export const MenuBottom = styled.div`
@@ -58,20 +48,17 @@ export const MenuBottom = styled.div`
   bottom: 0;
   display: flex;
   justify-content: center;
-  padding: 13px 20px;
-  background: ${THEME.primary};
+  align-items: center;
+  padding: 14px 20px;
+  background: rgba(0,0,0,0.25);
+  border-top: 1px solid rgba(197,160,89,0.15);
   cursor: pointer;
-  & svg {
-    color: #000;
-    font-size: 20px;
-    margin-right: 10px;
-  }
-  & h1 {
-    color: #fff;
-  }
-  :hover {
-    opacity: 0.8;
-  }
+  transition: background 0.2s;
+
+  &:hover { background: rgba(197,160,89,0.15); }
+
+  & svg { color: #C5A059 !important; font-size: 20px; margin-right: 10px; }
+  & h1 { color: rgba(255,255,255,0.85); font-size: 14px; font-weight: 600; letter-spacing: 0.02em; }
 `;
 
 export const LogoutBottom = styled.div`
@@ -80,10 +67,17 @@ export const LogoutBottom = styled.div`
   bottom: 0;
   display: flex;
   justify-content: center;
-  padding: 13px 20px;
-  color: #000;
-  background: ${THEME.primary};
-  
+  align-items: center;
+  padding: 14px 20px;
+  background: rgba(0,0,0,0.2);
+  cursor: pointer;
+  border-top: 1px solid rgba(197,160,89,0.15);
+  gap: 10px;
+  color: rgba(255,255,255,0.8);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
+  &:hover { background: rgba(197,160,89,0.15); }
 `;
 
 export const Profile = styled.div`
@@ -91,126 +85,70 @@ export const Profile = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 20px 0 10px 0px;
+  margin: 16px 0 10px;
   gap: 10px;
   padding: 5px 20px;
 `;
 
 export const MenuText = styled.div`
-  font-size: 16px;
-  color: #545454;
-  padding-left: 7px;
-  margin-top: 10px;
+  font-size: 14px;
+  color: rgba(255,255,255,0.55);
+  padding: 8px 24px 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 11px;
+  margin-top: 6px;
 `;
 
 export const HeaderNav = styled.div`
   display: flex;
   align-items: center;
-  padding: 13px 21px;
-  z-index: 999;
-  background: #ffffff;
+  padding: 18px 20px 14px;
+  background: var(--sidebar-header);
+  border-bottom: 1px solid rgba(197,160,89,0.15);
+  min-height: 70px;
+  gap: 10px;
+  cursor: pointer;
 
-  & span {
-    padding: 2px;
-    cursor: pointer;
-
-    :hover {
-      & svg {
-        fill: #fff;
-      }
-    }
-  }
-
-  & h3 {
-    padding-left: 10px;
-    font-size: 20px;
-    margin-left: 10px;
+  h3 {
+    font-size: 22px;
     font-weight: 800;
-    color: #990000;
-    visibility: visible;
+    color: #C5A059;
+    letter-spacing: -0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: all 0.2s;
     opacity: 1;
-    width: 100%;
-    transition: 0.3s;
+    width: auto;
+    font-family: 'Plus Jakarta Sans', sans-serif;
 
     &.active {
-      color: white !important;
-      width: 0px;
-      visibility: hidden;
+      width: 0;
       opacity: 0;
-      transition: 0.3s;
+      overflow: hidden;
     }
   }
-
-& p {
-  font-size: 10px;
-
-}
 `;
 
 export const NavTopDraw = styled.div`
   height: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  width: 100%;
 
-  .ant-btn {
-    border-radius: 0px !important;
+  .DrawBtn { cursor: pointer; }
+
+  .Btnresponsive {
+    display: flex;
+    align-items: center;
+    gap: 14px;
   }
-
-  .notify {
-    cursor: pointer;
-  }
-  .ResponMobile {
-    font-size: 1.5vw;
-    letter-spacing: 1px;
-    word-spacing: 5px;
-  }
-
-  @media screen and (max-width: 800px) {
-    .ResponMobile {
-      font-size: 2vw;
-    }
-  }
-
-  @media screen and (max-width: 431px) {
-    .ResponMobile {
-      /* font-size: 1vw; */
-      display: 'none';
-    }
-  }
-
-
 
   @media (min-width: 901px) {
-    .DrawBtn {
-      display: none;
-    }
-  
-    .Btnresponsive {
-      width: 30%;
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 15px !important;
-    }
-  }
-
-  @media (max-width: 901px) {
-    .DrawBtn {
-      cursor: pointer;
-      padding: 5px;
-    }
-    p{
-      display: none;
-    }
-
-    .Btnresponsive {
-      display: flex;
-      align-items: center;
-      gap: 15px !important;
-    }
-  }
-
-  &.btnborder .icon {
-    font-size: 3px;
-    margin-right: 10px;
+    .DrawBtn { display: none; }
   }
 `;
 
@@ -221,114 +159,42 @@ export const SideMenuLayout = styled(Layout.Sider)`
   top: 0;
   bottom: 0;
   z-index: 100;
+  background: var(--sidebar-bg) !important;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.25);
 
   @media (max-width: 900px) {
     display: none;
   }
 
-  .ant-btn-text:not(:disabled):not(.ant-btn-disabled):hover {
-    background-color: ${THEME.primary};
-  }
-  .ant-btn-text:not(:disabled):not(.ant-btn-disabled):hover .anticon svg {
-    color: ${THEME.black} !important;
-  }
-  .ant-btn {
-    border-radius: 0px !important;
-  }
-  .anticon svg {
-    font-size: 18px;
-    color: ${THEME.primary} !important;
-  }
-  .anticon svg:hover {
-    color: ${THEME.black} !important;
-  }
-  .ant-layout .ant-layout-sider-children {
-    background: #fff !important;
-  }
   .ant-layout-sider-children {
-    /* background: red !important; */
-    background: #fff;
-
-    /* 0 0 4px 4px rgba(0, 0, 0, 0.08) */
-    border-right: 1px solid #e8e8e8;
-  }
-  .ant-menu-dark {
-    background: #ffffff !important;
+    background: var(--sidebar-bg) !important;
+    display: flex;
+    flex-direction: column;
   }
 
-  .ant-menu-light:not(.ant-menu-horizontal)
-    .ant-menu-item:not(.ant-menu-item-selected):active {
-    color: white !important;
-    background-color: #990000 !important;
-    border-radius: 10px !important;
-  }
-
-  .ant-menu-light {
-    /* background: #000 !important; */
-
-    // background: linear-gradient(0deg, rgb(239 127 26 / 0%) 0%, rgb(243 188 46 / 0%) 29%, rgba(0, 2, 5, 0.992) 87%);
-    // color: #fff;
-  }
-  .ant-menu-light .ant-menu-item-selected {
-    background-color: ${THEME.primary};
-    color: ${THEME.secondary};
-    border-radius: 10px solid;
-  }
-  /* .ant-menu-light .ant-menu-item-selected {} */
-
-  .ant-menu .ant-menu-item {
-    /* border-radius: 15% !important; */
-
-    /* border-right: 1px solid; */
-  }
-  .ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title {
-    color: ${THEME.primary};
-  }
-
-  .ant-menu-light .ant-menu-item-selected {
-    border-right: 2px solid !important;
-    border-radius: 15px;
-    margin-left: -21px;
-  }
-
-  .ant-menu-light
-    .ant-menu-item:not(.ant-menu-item-selected):not(
-      .ant-menu-submenu-selected
-    ):hover {
-    color: ${THEME.primary} !important;
-  }
-  .ant-menu-light:not(.ant-menu-horizontal)
-    .ant-menu-item:not(.ant-menu-item-selected):hover {
-    background-color: transparent !important;
-  }
-  .ant-menu-light:not(.ant-menu-horizontal) .ant-menu-submenu-title:hover {
-    background-color: transparent !important;
-  }
-  .ant-menu-light.ant-menu-inline .ant-menu-sub.ant-menu-inline {
-    background-color: transparent !important;
-  }
-  .ant-menu-item .ant-menu-item-icon + span {
-    margin-inline-start: 20px !important;
-  }
-  .ant-menu .ant-menu-submenu-title .ant-menu-item-icon + span {
-    margin-inline-start: 20px !important;
+  .ant-layout-sider-trigger {
+    background: rgba(0,0,0,0.3) !important;
+    border-top: 1px solid rgba(197,160,89,0.15);
   }
 `;
 
 export const TopHeader = styled(Layout.Header)`
-  height: 70px !important;
-  box-shadow: 0 0 4px 4px rgba(0, 0, 0, 0.08) !important;
-  background: ${THEME.white};
-  line-height: 0;
+  height: 66px !important;
+  background: #fff !important;
+  line-height: 1 !important;
+  padding: 0 !important;
   position: sticky;
   top: 0;
   z-index: 50;
+  box-shadow: 0 1px 0 #E2D9CC, 0 2px 8px rgba(0,0,0,0.05) !important;
+  display: flex;
+  align-items: center;
 `;
 
 export const ContentLayout = styled(Layout)`
-  /* Offset for the fixed-position sidebar so content does NOT overlap */
   margin-left: ${(props) => (props.$collapsed ? '80px' : '280px')};
   min-height: 100vh;
+  background: var(--bg-app) !important;
   transition: margin-left 0.2s ease-in-out;
 
   @media (max-width: 900px) {
@@ -337,72 +203,47 @@ export const ContentLayout = styled(Layout)`
 `;
 
 export const BodyContent = styled(Layout.Content)`
-  min-height: calc(100vh - 70px);
+  min-height: calc(100vh - 66px);
   overflow-y: auto;
-  & .ant-menu-item-icon {
-    font-size: 20px !important;
-  }
-  & .ant-menu .ant-menu-item .ant-menu-item-icon {
-    font-size: 20px !important;
-  }
+  background: var(--bg-app) !important;
 
   @media (max-width: 900px) {
-    & .ant-layout-content {
-      width: 100% !important;
-      margin: 0 !important;
-    }
+    width: 100% !important;
+    margin: 0 !important;
   }
 `;
 
 export const AntdStyledMenu = styled(Menu)`
   position: absolute !important;
   right: 3px;
-  box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 5px -3px,
-    rgba(0, 0, 0, 0.14) 0px 8px 10px 1px, rgba(0, 0, 0, 0.12) 0px 3px 14px 2px !important;
-  .ant-dropdown-menu-item {
-    padding: 10px 12px !important;
-    color: "#757575" !important;
-  }
-  .ant-dropdown-menu-item-icon {
-    margin-inline-end: 16px !important;
-  }
+  border-radius: 10px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08) !important;
+  overflow: hidden;
+  min-width: 160px;
+  .ant-dropdown-menu-item { padding: 10px 16px !important; font-size: 14px; }
 `;
 
 export const BtnProfile = styled.div`
-  margin: 0 10px;
-  padding: 9px;
   display: flex;
-  color: black !important;
-  border-radius: 25px;
-  cursor: pointer;
   align-items: center;
-  justify-content: flex-end;
-  padding-right: 20px;
-
-  
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 40px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid transparent;
 
   & h1 {
-    display: flex;
-    justify-content: flex-start;
+    font-size: 14px;
     font-weight: 600;
-    padding-right: 9px;
+    color: #1E293B;
+    white-space: nowrap;
   }
 
-  & svg {
-    font-size: 1.5rem;
-    color: "#111827";
-  }
+  & svg { font-size: 1.3rem; color: #64748B; }
 
   &:hover {
-    background: #d9d9e75e;
-  }
-
-  & .header__icon {
-    font-size: 26px;
-    color: "white";
-  }
-
-  .sc-kTbCBX.fwiJiO {
-    background-color: #ffffff;
+    background: #F1EEE8;
+    border-color: #E2D9CC;
   }
 `;

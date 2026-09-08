@@ -943,5 +943,15 @@ Selecting Category="Balance" + Balance Type="Other" in the Collection form showe
 2. Removed `max={maxLease}` from the `TotalAmt` (disabled display) `CustomInputNumber` — max constraint only belongs on the editable `amount` input.
 3. `handleBalanceChange` / `handleBalanceIntChange`: Added `setMaxLease(undefined)` + `form.resetFields(["amount"])` — each new member selection starts with a clean amount field and no clamping.
 
+## GUI Redesign (Sep 2026)
+### Changes
+- **Login**: Split-screen layout — left panel with real temple (gopuram) photo + crimson overlay + gold typography; right panel clean linen form
+- **Sidebar**: Deep dark red (#2A0407) with gold (#C5A059) active indicators, Plus Jakarta Sans font, smooth collapse, gold-highlighted active items
+- **Top Header**: White sticky bar with user initials badge, role pill, and sidebar toggle
+- **Global AntD Theme**: ConfigProvider with crimson primary, gold accents, linen background, plus Jakarta Sans
+- **GlobalStyle**: Overhauled — table headers warm taupe, hover rows linen, buttons crimson gradient, inputs crimson focus ring, scrollbars subtle crimson
+- **Color palette**: `--primary: #800000`, `--gold: #C5A059`, `--sidebar-bg: #2A0407`, `--bg-app: #FAF8F5`
+- **Typography**: Plus Jakarta Sans 400/500/600/700/800
+
 ### Verified
-Build passes (`yarn build` exit 0). Frontend hot-reloaded successfully.
+Build passes (`yarn build` ✓), frontend redeployed.

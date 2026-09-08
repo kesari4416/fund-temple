@@ -2,15 +2,15 @@ const ROOT = {
 
     // =====  PRIMARY COLORS  ===========
   
-    primary: '#990000',
-    primary_color_dark: '#990000',
-    primary_color_light: '#333333',
-    primary_color_gray1: '#323232',
-    primary_color_gray2: '#878787',
+    primary: '#800000',
+    primary_color_dark: '#5A0000',
+    primary_color_light: '#A31C1C',
+    primary_color_gray1: '#334155',
+    primary_color_gray2: '#64748B',
     
-    secondary: '#ffffff',
-    secondary_color_dark: '#FF2A00',
-    secondary_color_light: '#FF6651',
+    secondary: '#C5A059',
+    secondary_color_dark: '#B8902A',
+    secondary_color_light: '#E5C889',
 
   
     // ======  Color  ======

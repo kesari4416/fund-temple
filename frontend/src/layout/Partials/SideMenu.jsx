@@ -77,20 +77,6 @@ export const SideMenu = ({ collapsed }) => {
 
     return (
         <Fragment>
-            {/* <Profile>
-                <div>
-                    <MenuImageProfile className={collapsed ? 'active' : ''}>
-                        <img src={AvImg} alt="Profile" />
-                    </MenuImageProfile>
-                    {!collapsed && (
-                        <>
-                            <p style={{ fontSize: "16px", color: "#545454" }}>Rolex</p>
-                            <p style={{ fontSize: "11px", color: "#545454" }}>admin</p>
-                        </>
-                    )}
-                </div>
-            </Profile> */}
-
             <MenuHolder>
                 <Menu
                     onClick={onClick}
@@ -98,7 +84,9 @@ export const SideMenu = ({ collapsed }) => {
                     onOpenChange={onOpenChange}
                     selectedKeys={[activeTab]}
                     mode="inline"
+                    theme="dark"
                     items={items}
+                    style={{ border: 'none', background: 'transparent' }}
                 />
             </MenuHolder>
         </Fragment>

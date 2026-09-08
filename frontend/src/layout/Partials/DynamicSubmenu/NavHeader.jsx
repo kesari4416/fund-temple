@@ -1,66 +1,99 @@
-import React, { useEffect } from "react";
-import { NavTopDraw } from "../Style";
-import { RiMenu4Line } from "react-icons/ri";
-import { useDispatch, useSelector } from "react-redux";
+import React from "react";
+import styled from "styled-components";
 import { Flex } from "@components/others";
+import { NavTopDraw, BtnProfile } from "@layout/Partials/Style";
+import { useSelector } from "react-redux";
 import { selectCurrentUser } from "@modules/Auth/authSlice";
-import {
-  getManagement,
-  selectManagementDetails,
-} from "@modules/Management/ManagementSlice";
+import { MdMenu } from "react-icons/md";
+import { HiOutlineMenuAlt2 } from "react-icons/hi";
 
-export const NavHeader = ({ showDrawer }) => {
-  const dispatch = useDispatch();
+const PageTitle = styled.h2`
+  font-size: 18px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+  letter-spacing: -0.2px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+`;
 
-  const AllManagementDetails = useSelector(selectManagementDetails);
-  const nameDetails = useSelector(selectCurrentUser);
+const UserBadge = styled.div`
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #800000, #5A0000);
+  color: #C5A059;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(128,0,0,0.3);
+`;
 
-  useEffect(() => {
-    dispatch(getManagement());
-  }, []);
+const RoleBadge = styled.span`
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(128,0,0,0.08);
+  color: #800000;
+  border: 1px solid rgba(128,0,0,0.15);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+`;
+
+const CollapseBtn = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  color: #64748B;
+  font-size: 20px;
+  transition: all 0.15s;
+  padding: 0;
+
+  &:hover {
+    background: #F1EEE8;
+    color: #800000;
+  }
+`;
+
+export const NavHeader = ({ updateCollapse, showDrawer }) => {
+  const user = useSelector(selectCurrentUser);
+  const initials = user?.username ? user.username.slice(0, 2).toUpperCase() : "AD";
 
   return (
     <NavTopDraw>
-      <Flex
-        spacebetween={"true"}
-        aligncenter={"true"}
-        H_100={"true"}
-        style={{ width: "100%", gap: 12, paddingRight: 8 }}
-      >
-        <span className="DrawBtn" onClick={showDrawer}>
-          <RiMenu4Line style={{ fontSize: "20px" }} />
-        </span>
-        <h3
-          style={{
-            color: "#990000",
-            fontFamily: '"Raleway", sans-serif',
-            fontWeight: 700,
-            margin: 0,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            flex: 1,
-            minWidth: 0,
-          }}
-          className="ResponMobile"
-          title={AllManagementDetails?.temple_name}
+      <Flex aligncenter="true" gap="14px">
+        <CollapseBtn className="DrawBtn" onClick={showDrawer} aria-label="Open menu">
+          <MdMenu />
+        </CollapseBtn>
+        <CollapseBtn
+          style={{ display: 'flex' }}
+          className="DesktopCollapse"
+          onClick={updateCollapse}
+          aria-label="Toggle sidebar"
         >
-          {AllManagementDetails?.temple_name}
-        </h3>
-        <p
-          style={{
-            color: "#990000",
-            fontFamily: '"Raleway", sans-serif',
-            fontSize: 20,
-            fontWeight: 700,
-            margin: 0,
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-          }}
-        >
-          {nameDetails}
-        </p>
+          <HiOutlineMenuAlt2 />
+        </CollapseBtn>
+        <PageTitle className="ResponMobile">
+          Temple Management System
+        </PageTitle>
       </Flex>
+
+      <div className="Btnresponsive">
+        <RoleBadge>{user?.my_role || "Admin"}</RoleBadge>
+        <BtnProfile data-testid="user-profile-btn">
+          <UserBadge>{initials}</UserBadge>
+          <h1 className="ResponMobile">{user?.username || "Admin"}</h1>
+        </BtnProfile>
+      </div>
     </NavTopDraw>
   );
 };

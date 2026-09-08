@@ -83,58 +83,54 @@ const DashboardLayout = ({ children }) => {
         <MainLayout>
             <Layout>
                 <SideMenuLayout width={'280'} trigger={null} collapsible collapsed={collapsed}>
-                    <HeaderNav style={{ padding: '17px 21px 0px' }}>
-                        {/* <span icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                            onClick={() => setCollapsed(!collapsed)}
-                        /> */}
-                        <span onClick={() => setCollapsed(!collapsed)}>
-                            {collapsed ? <img src={SvgIcons.Logoimg} width={'40px'} style={{ marginLeft: '10px' }} /> : <img src={SvgIcons.Logoimg} width={'50px'} style={{ marginLeft: '10px' }} />}
-                        </span>
-
-                        <h3 className={collapsed ? 'active' : ''} style={{ fontFamily: 'rubik', fontSize: 32, fontWeight: 600, paddingLeft: 0 }}>Temple</h3>
+                    <HeaderNav onClick={() => setCollapsed(!collapsed)}>
+                        <div style={{
+                            width: collapsed ? 36 : 38, height: collapsed ? 36 : 38,
+                            borderRadius: 9, background: 'linear-gradient(135deg,#800000 0%,#5A0000 100%)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0, fontSize: 18, color: '#C5A059',
+                            boxShadow: '0 2px 8px rgba(128,0,0,0.5)',
+                            transition: 'all 0.2s',
+                        }}>&#9765;</div>
+                        <h3 className={collapsed ? 'active' : ''}>Temple</h3>
                     </HeaderNav>
                     <SideMenu collapsed={collapsed} />
                     <MenuBottom onClick={AdminLogOut}>
-                        <Flex aligncenter={true} >
-                            <HiOutlineLogout style={{ fontSize: '22px', color: '#fff' }} />
-                            {collapsed ? '' : <h1 style={{ color: '#fff' }}>Log Out</h1>}
-                        </Flex>
+                        <HiOutlineLogout style={{ fontSize: '20px', color: '#C5A059' }} />
+                        {collapsed ? '' : <h1>Log Out</h1>}
                     </MenuBottom>
                 </SideMenuLayout>
 
                 <Drawer
-                    title="TEMPLE"
+                    title={
+                        <span style={{ color: '#C5A059', fontWeight: 800, fontSize: 18, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                            &#9765; Temple
+                        </span>
+                    }
                     placement={placement}
-                    closable={false}
+                    closable={true}
                     onClose={onClose}
                     open={open}
                     key={placement}
-                    width={250}>
-                    <SideMenu collapsed={collapsed} />
+                    width={260}
+                    styles={{ body: { padding: 0, background: '#2A0407' }, header: { background: '#1E0205', borderBottom: '1px solid rgba(197,160,89,0.15)' } }}>
+                    <SideMenu collapsed={false} />
                     <LogoutBottom onClick={AdminLogOut}>
-                        <Flex aligncenter={true} style={{ gap: '10px' }} >
-                            <HiOutlineLogout size={20} />
-                            <h1 style={{ fontSize: 'large' }}>Log Out</h1>
-                        </Flex>
+                        <HiOutlineLogout size={18} />
+                        <span>Log Out</span>
                     </LogoutBottom>
                 </Drawer>
                 <ContentLayout $collapsed={collapsed}>
-                    <TopHeader
-                    >
-
+                    <TopHeader>
                         <NavHeader updateCollapse={updateCollapse} showDrawer={showDrawer} />
                     </TopHeader>
-                    <BodyContent
-                        style={{
-                            margin: '1px 1px',
-                            padding: 24,
-                        }}>
+                    <BodyContent style={{ padding: '24px 24px' }}>
                         {children}
                     </BodyContent>
                 </ContentLayout>
             </Layout>
             <CustomModal isVisible={isModalOpen} handleOk={handleOk} handleCancel={handleCancel}
-                width={600} modalTitle={modalTitle} modalContent={modalContent} />
+                width={520} modalTitle={modalTitle} modalContent={modalContent} />
         </MainLayout>
     )
 }

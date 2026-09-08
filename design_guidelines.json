@@ -1,0 +1,201 @@
+{
+  "project_title": "Temple Management System - GUI Redesign & Architectural Guidelines",
+  "app_type": "dashboard / saas_app (Internal Financial & Administrative System for Hindu Temple Trust)",
+  "design_archetype": "Organic & Earthy meets High-Precision Swiss Financial Dashboard (Kumkum Crimson, Antique Gold, Warm Linen Parchment, Obsidian Charcoal)",
+  "color_palette": {
+    "primary": {
+      "main": "#800000",
+      "dark": "#5A0000",
+      "light": "#A31C1C",
+      "gradient": "linear-gradient(135deg, #800000 0%, #5A0000 100%)",
+      "subtle_bg": "#FAF0F0"
+    },
+    "accent_gold": {
+      "main": "#C5A059",
+      "dark": "#9E7B32",
+      "light": "#E5C889",
+      "glow": "rgba(197, 160, 89, 0.25)"
+    },
+    "backgrounds": {
+      "app_layout": "#FAF8F5",
+      "card_surface": "#FFFFFF",
+      "sidebar_dark": "#2A0407",
+      "sidebar_header": "#1E0205",
+      "table_zebra": "#F7F4EF",
+      "table_header": "#EFEAE1"
+    },
+    "text": {
+      "heading": "#1E293B",
+      "body": "#334155",
+      "muted": "#64748B",
+      "inverse": "#FFFFFF",
+      "inverse_muted": "#CBD5E1"
+    },
+    "borders": {
+      "subtle": "#E2D9CC",
+      "card": "rgba(197, 160, 89, 0.2)",
+      "focus": "#800000",
+      "divider": "#EFE8DC"
+    },
+    "status": {
+      "success": "#15803D",
+      "success_bg": "#F0FDF4",
+      "warning": "#B45309",
+      "warning_bg": "#FFFBEB",
+      "danger": "#B91C1C",
+      "danger_bg": "#FEF2F2",
+      "info": "#0369A1",
+      "info_bg": "#F0F9FF"
+    }
+  },
+  "typography": {
+    "font_family_heading": "Plus Jakarta Sans, Outfit, sans-serif",
+    "font_family_body": "Plus Jakarta Sans, -apple-system, BlinkMacSystemFont, sans-serif",
+    "font_family_mono": "IBM Plex Mono, JetBrains Mono, monospace",
+    "scale": {
+      "h1": "font-size: 28px; line-height: 36px; font-weight: 700; letter-spacing: -0.02em;",
+      "h2": "font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.01em;",
+      "h3": "font-size: 18px; line-height: 24px; font-weight: 600;",
+      "body_large": "font-size: 15px; line-height: 22px; font-weight: 400;",
+      "body_default": "font-size: 14px; line-height: 20px; font-weight: 400;",
+      "small_label": "font-size: 12px; line-height: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;"
+    }
+  },
+  "layout_architecture": {
+    "sidebar": {
+      "width_expanded": "280px",
+      "width_collapsed": "80px",
+      "background": "#2A0407",
+      "brand_header": {
+        "height": "70px",
+        "background": "#1E0205",
+        "border_bottom": "1px solid rgba(197, 160, 89, 0.25)"
+      },
+      "active_item": {
+        "background": "linear-gradient(90deg, rgba(197, 160, 89, 0.2) 0%, rgba(128, 0, 0, 0.4) 100%)",
+        "color": "#FFFFFF",
+        "border_left": "4px solid #C5A059"
+      },
+      "hover_item": {
+        "background": "rgba(255, 255, 255, 0.06)",
+        "color": "#F1F5F9"
+      }
+    },
+    "top_header": {
+      "height": "70px",
+      "background": "rgba(255, 255, 255, 0.9)",
+      "backdrop_filter": "blur(12px)",
+      "border_bottom": "1px solid #E2D9CC",
+      "shadow": "0 2px 10px rgba(0, 0, 0, 0.03)"
+    },
+    "content_area": {
+      "background": "#FAF8F5",
+      "padding": "24px 32px",
+      "max_width": "1600px",
+      "card_style": {
+        "background": "#FFFFFF",
+        "border": "1px solid #E2D9CC",
+        "border_radius": "10px",
+        "box_shadow": "0 4px 20px rgba(0, 0, 0, 0.03)",
+        "padding": "24px"
+      }
+    }
+  },
+  "antd_config_provider_tokens": {
+    "token": {
+      "colorPrimary": "#800000",
+      "colorSuccess": "#15803D",
+      "colorWarning": "#B45309",
+      "colorError": "#B91C1C",
+      "colorInfo": "#0369A1",
+      "colorTextBase": "#1E293B",
+      "colorTextSecondary": "#64748B",
+      "colorBgBase": "#FFFFFF",
+      "colorBgLayout": "#FAF8F5",
+      "colorBgContainer": "#FFFFFF",
+      "colorBorder": "#E2D9CC",
+      "colorBorderSecondary": "#EFE8DC",
+      "borderRadius": 8,
+      "fontFamily": "Plus Jakarta Sans, sans-serif",
+      "fontSize": 14,
+      "controlHeight": 38,
+      "boxShadowSecondary": "0 4px 12px rgba(0,0,0,0.05)"
+    },
+    "components": {
+      "Table": {
+        "headerBg": "#EFEAE1",
+        "headerColor": "#1E293B",
+        "rowHoverBg": "#FAF3E8",
+        "borderColor": "#E2D9CC",
+        "padding": 12
+      },
+      "Button": {
+        "fontWeight": 600,
+        "borderRadius": 6,
+        "primaryShadow": "0 2px 6px rgba(128, 0, 0, 0.25)"
+      },
+      "Card": {
+        "padding": 24,
+        "colorBorderSecondary": "#E2D9CC"
+      },
+      "Input": {
+        "colorBorder": "#CBD5E1",
+        "hoverBorderColor": "#800000",
+        "activeBorderColor": "#800000"
+      },
+      "Select": {
+        "colorBorder": "#CBD5E1"
+      }
+    }
+  },
+  "login_page_redesign": {
+    "layout": "Split Screen or Elevated Glassmorphic Center Card",
+    "background_image": "https://images.unsplash.com/photo-1554554497-0095c34db3ec?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "overlay": "linear-gradient(135deg, rgba(42, 4, 7, 0.88) 0%, rgba(30, 2, 5, 0.94) 100%)",
+    "card": {
+      "background": "#FFFFFF",
+      "border": "1px solid rgba(197, 160, 89, 0.4)",
+      "border_radius": "16px",
+      "box_shadow": "0 20px 40px rgba(0, 0, 0, 0.25)",
+      "padding": "40px"
+    },
+    "branding": {
+      "title": "TEMPLE TRUST FINANCIAL PORTAL",
+      "subtitle": "Internal Financial & Administration System",
+      "badge": "OFFICIAL TRUSTEE ACCESS"
+    }
+  },
+  "key_files_to_update": [
+    "/app/frontend/src/theme/index.js",
+    "/app/frontend/src/layout/DashboardLayout.jsx",
+    "/app/frontend/src/layout/Partials/Style.js",
+    "/app/frontend/src/layout/Partials/SideMenu.jsx",
+    "/app/frontend/src/layout/Partials/DynamicSubmenu/NavHeader.jsx",
+    "/app/frontend/src/modules/Auth/Login/Login.jsx"
+  ],
+  "image_urls": {
+    "login_hero_bg": "https://images.unsplash.com/photo-1554554497-0095c34db3ec?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "temple_architecture": "https://images.unsplash.com/photo-1677434654722-69e7ba88b4ef?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "heritage_structure": "https://images.unsplash.com/photo-1529733772151-bab41484710a?crop=entropy&cs=srgb&fm=jpg&q=85"
+  },
+  "data_testid_convention": {
+    "rule": "Every interactive button, input, menu item, table row action, modal trigger, and key stat metric MUST have data-testid in kebab-case.",
+    "examples": {
+      "login_email": "login-email-input",
+      "login_submit": "login-submit-button",
+      "sidebar_item": "sidebar-menu-item-{moduleName}",
+      "header_logout": "header-logout-button",
+      "dashboard_stat_card": "dashboard-stat-card-{metricKey}",
+      "table_search": "table-search-input",
+      "table_action_edit": "table-action-edit-button"
+    }
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Maintain 100% existing module functionality - update only layout, styling, theme tokens, and component wrappers.",
+    "Use AntD ConfigProvider with the specified custom theme tokens at the app root level.",
+    "Ensure high contrast for non-technical temple admin staff (all body text meets WCAG AA 4.5:1 minimum).",
+    "Format tabular numbers in ledger/financial tables with font-feature-settings: 'tnum' or monospace alignment.",
+    "Never use raw transparent backgrounds on headers or dropdowns that float over content.",
+    "Add data-testid attributes to all interactive elements."
+  ]
+}
