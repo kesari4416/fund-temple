@@ -418,7 +418,7 @@ def edit_management(request,pk):
                             treasure.save()
                         elif get_new_balance<get_old_balance:
                             calculated_bal=get_old_balance-get_new_balance
-                            treasure.cash_in_hand-=calculated_bal
+                            treasure.cash_in_hand = max(0, float(treasure.cash_in_hand) - float(calculated_bal))
                             treasure.save()
                             
                     elif get_old_bal_type=='Debit' and new_bal_type=='Debit':
@@ -428,24 +428,24 @@ def edit_management(request,pk):
                             treasure.save()
                         elif get_new_balance<get_old_balance:
                             calculated_bal=get_old_balance-get_new_balance
-                            treasure.expence_amt-=calculated_bal
+                            treasure.expence_amt = max(0, float(treasure.expence_amt) - float(calculated_bal))
                             treasure.save()
                                
                     elif get_old_bal_type=='Credit' and new_bal_type=='Debit':
-                        treasure.cash_in_hand-=get_old_balance
+                        treasure.cash_in_hand = max(0, float(treasure.cash_in_hand) - float(get_old_balance))
                         treasure.expence_amt+=get_new_balance
                         treasure.save()
                     elif get_old_bal_type=='Debit' and new_bal_type=='Credit':
                         treasure.cash_in_hand+=get_new_balance
-                        treasure.expence_amt-=get_old_balance
+                        treasure.expence_amt = max(0, float(treasure.expence_amt) - float(get_old_balance))
                         treasure.save()
                         
                     elif get_old_bal_type=='Credit' and new_bal_type==None and get_new_balance<=0:
-                        treasure.cash_in_hand-=get_old_balance
+                        treasure.cash_in_hand = max(0, float(treasure.cash_in_hand) - float(get_old_balance))
                         treasure.save()
                         
                     elif get_old_bal_type=='Debit' and new_bal_type==None and get_new_balance<=0:
-                        treasure.expence_amt-=get_old_balance
+                        treasure.expence_amt = max(0, float(treasure.expence_amt) - float(get_old_balance))
                         treasure.save()
                         
                     elif new_bal_type=='Credit':

@@ -4037,8 +4037,7 @@ def collection_amountdetails_filter_by_user(request):
             dic['total_amount'] = float(sub_amount) + float(festi_amount) + float(death_amount) + float(
                 marriage_amount) + float(rent_amount) + float(bal_amount) + float(lease_amount) + float(
                 move_amount) + float(rent_advance) + float(income_amount) + float(join_amt) + float(
-                move_receive_amt) + float(fund_amount) + float(chit_amount) + float(manageinter_amount) + float(
-                chit_amount) + float(manageinter_amount) + float(fund_amount)
+                move_receive_amt) + float(fund_amount) + float(chit_amount) + float(manageinter_amount)
             dic['debit_amount'] = float(expense_amount) + float(settlement_amt) + float(move_pay_amt)
             dic['user_id'] = user_id
             if user_obj.is_superuser == True:
@@ -4081,39 +4080,6 @@ def collection_amountdetails_filter_by_user(request):
                     dic['user'] = user_obj.name
                 list.append(dic)
             return Response(list, status=status.HTTP_200_OK)
-
-
-@api_view(['GET', 'POST'])
-def fund_member_details(request):
-    rejin = token_checking(request)
-    if not rejin:
-        return Response({"message": "No User Found"}, status=status.HTTP_401_UNAUTHORIZED)
-    if not rejin.is_active:
-        return Response({"message": "Not Authorized Please Contact Admin"}, status=status.HTTP_401_UNAUTHORIZED)
-    get_role = rejin.user_role
-    if rejin.my_role != None:
-        permiss = Permisions.objects.filter(role_link_id=rejin.my_role.id).first()
-        if permiss:
-            perm = Permisions.objects.get(role_link_id=rejin.my_role.id)
-    check_management = ManagementDetails.objects.all()
-    if not check_management:
-        dict6 = {}
-        dict6['message'] = "First Add Management Profile details"
-        return Response(dict6, status=status.HTTP_406_NOT_ACCEPTABLE)
-    else:
-        management = ManagementDetails.objects.all().first()
-    if request.method == "POST":
-        type = request.data['type']
-
-        fund_member = FundMemberDetailss.objects.filter(fund_group_id=type, action=True)
-        fund_mem_list = []
-        for fund in fund_member:
-            mem_obj = FundMembersBalanceSheet.objects.get(fund_m_id=fund.id, fund_id=type)
-            if mem_obj.balance_amt > 0:
-                fund_mem_list.append(mem_obj.fund_m)
-        serializer = FundMemberDetailssSerializer(fund_mem_list, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
 
 @api_view(['GET', 'POST'])
 def management_interest_member_details(request):
