@@ -158,69 +158,69 @@ def _apply_festival_penalty_for_member(member, management):
 def _apply_death_penalty_for_member(member, management):
     """
     On-demand death tariff penalty check for a single member.
-    Mirrors _apply_festival_penalty_for_member / _apply_subscription_tariff_penalty_for_member,
-    but the penalty isn't precomputed on the bill — it's derived from
-    DeathDetails.tariff_peanalty, which is either a flat Amount or a
-    Percentage of death_tariff_amt. Fully idempotent: safe to call on
-    every page load.
+    Mirrors _apply_festival_penalty_for_member / _apply_subscription_tariff_penalty_for_member.
+
+    IMPORTANT: DeathDetails.member is a OneToOneField to the person who
+    DIED — it is NOT the member who owes the death-tariff bill. Bills are
+    created against every tax-eligible *living* member in
+    death/views.py::add_death_details, linked via PeoplesAmountDetails.death.
+    So we must find this member's unpaid death-tariff bills first, then
+    walk bill.death to get the relevant DeathDetails record — not filter
+    DeathDetails by member=member (that only ever matches the deceased
+    person themselves, who never has a bill since bills exclude death=True).
+    Fully idempotent: safe to call on every page load.
     """
     today = datetime.date.today()
 
-    death_rec = DeathDetails.objects.filter(
+    bills = PeoplesAmountDetails.objects.filter(
         member=member,
-        mangement=management,
-        action=True,
-        penalty_apply_date__isnull=False,
-        penalty_apply_date__lt=today,
-    ).first()
-    if not death_rec:
-        return
-
-    bill = PeoplesAmountDetails.objects.filter(
-        death=death_rec,
-        member=member,
-        paid=False,
-    ).first()
-    if not bill:
-        return
-
-    if not bill.penalty:
-        # Compute the penalty amount from the death tariff config.
-        if death_rec.pen_amt_type == 'Percentage':
-            penalty_value = float(death_rec.death_tariff_amt or 0) * float(death_rec.tariff_peanalty or 0) / 100
-        else:  # 'Amount'
-            penalty_value = float(death_rec.tariff_peanalty or 0)
-
-        death_rec.calculated_tariff_peanalty_amt = penalty_value
-        death_rec.save()
-
-        bill.penalty = True
-        bill.penalty_amount = penalty_value
-        bill.amount_balance = float(bill.amount_balance) + penalty_value
-        bill.total_bal_amt = float(bill.total_bal_amt) + penalty_value
-        bill.save()
-
-    already_in_ledger = TempleMemberReport.objects.filter(
-        members=member,
-        death_tariff=death_rec,
-        type_choice="Death Tariff Penalty",
-    ).exists()
-    if already_in_ledger:
-        return
-
-    last_rep = TempleMemberReport.objects.filter(members=member).last()
-    prev_bal = float(last_rep.balance_amt) if last_rep else 0
-    TempleMemberReport.objects.create(
         management_profile=management,
-        members=member,
-        death_tariff=death_rec,
-        reportdate=death_rec.penalty_apply_date + datetime.timedelta(days=1),
-        credit_amt=bill.penalty_amount,
-        balance_amt=prev_bal + float(bill.penalty_amount),
-        type_choice="Death Tariff Penalty",
-        created_by=bill.created_by,
+        death__isnull=False,
+        paid=False,
     )
 
+    for bill in bills:
+        death_rec = bill.death
+        if not death_rec or not death_rec.action:
+            continue
+        if not death_rec.penalty_apply_date or death_rec.penalty_apply_date >= today:
+            continue
+
+        if not bill.penalty:
+            if death_rec.pen_amt_type == 'Percentage':
+                penalty_value = float(death_rec.tariff_peanalty or 0) * (float(death_rec.death_tariff_amt or 0) / 100)
+            else:  # 'Amount'
+                penalty_value = float(death_rec.tariff_peanalty or 0)
+
+            death_rec.calculated_tariff_peanalty_amt = penalty_value
+            death_rec.save()
+
+            bill.penalty = True
+            bill.penalty_amount = penalty_value
+            bill.amount_balance = float(bill.amount_balance) + penalty_value
+            bill.total_bal_amt = float(bill.total_bal_amt) + penalty_value
+            bill.save()
+
+        already_in_ledger = TempleMemberReport.objects.filter(
+            members=member,
+            death_tariff=death_rec,
+            type_choice="Death Tariff Penalty",
+        ).exists()
+        if already_in_ledger:
+            continue
+
+        last_rep = TempleMemberReport.objects.filter(members=member).last()
+        prev_bal = float(last_rep.balance_amt) if last_rep else 0
+        TempleMemberReport.objects.create(
+            management_profile=management,
+            members=member,
+            death_tariff=death_rec,
+            reportdate=death_rec.penalty_apply_date + datetime.timedelta(days=1),
+            credit_amt=bill.penalty_amount,
+            balance_amt=prev_bal + float(bill.penalty_amount),
+            type_choice="Death Tariff Penalty",
+            created_by=bill.created_by,
+        )
 
 def death_no():
     l=DeathDetails.objects.last()

@@ -275,57 +275,140 @@ def edit_management(request,pk):
                     temp_family.opening_balance_type=None
                     temp_family.save()
                 
-                if get_old_bal_type=='Credit' and get_old_balance>0:   
-                    chit_funds_with_management_amt = ChitFundsDetails.objects.filter(management_profile=customer,management_amt__gt=0)
-                    check_man_interest_given=PeopleInterestDetails.objects.filter(management_profile=customer,interest_type='Management Interest',principal_amt__gt=0)
+                if get_old_bal_type == 'Credit' and get_old_balance > 0:
+                    chit_funds_with_management_amt = ChitFundsDetails.objects.filter(
+                        management_profile=customer, management_amt__gt=0
+                    )
+                    check_man_interest_given = PeopleInterestDetails.objects.filter(
+                        management_profile=customer,
+                        interest_type='Management Interest',
+                        principal_amt__gt=0,
+                    )
                     if chit_funds_with_management_amt or check_man_interest_given:
-                        temp_family.opening_balance_type=get_old_bal_type
-                        temp_family.opening_balance=get_old_balance
-                        temp_family.save()
+                        return Response(
+                            {
+                                "message": (
+                                    "Cannot change the opening balance while chit funds or "
+                                    "management interest records are linked to the current "
+                                    "Credit balance. Please clear or reassign those records "
+                                    "first."
+                                )
+                            },
+                            status=status.HTTP_409_CONFLICT,
+                        )
+                
                     
-                check_opnbal_object_all=ManagementBalanceSheet.objects.filter(management_profile=customer)
+                check_opnbal_object_all = ManagementBalanceSheet.objects.filter(management_profile=customer)
+                
                 if check_opnbal_object_all:
-                    check_opnbal_object=ManagementBalanceSheet.objects.filter(management_profile=customer).first()
-                    if check_opnbal_object.managee and len(check_opnbal_object_all)==1:
-                        if get_old_bal_type=='Credit' and get_new_balance<=0:
+                    check_opnbal_object = ManagementBalanceSheet.objects.filter(
+                        management_profile=customer, managee=True
+                    ).order_by('id').first()
+                
+                    if check_opnbal_object:
+                        if get_old_bal_type == 'Credit' and get_new_balance <= 0:
                             check_opnbal_object.delete()
-                        elif get_old_bal_type=='Debit'  and get_new_balance<=0:
+                        elif get_old_bal_type == 'Debit' and get_new_balance <= 0:
                             check_opnbal_object.delete()
                         else:
-                            if temp_family.opening_balance>0 and temp_family.opening_balance_type!=None:
-                                check_opnbal_object.opening_balance_amt=temp_family.opening_balance
-                                check_opnbal_object.opening_balance_type=temp_family.opening_balance_type
+                            if temp_family.opening_balance > 0 and temp_family.opening_balance_type is not None:
+                                check_opnbal_object.opening_balance_amt = temp_family.opening_balance
+                                check_opnbal_object.opening_balance_type = temp_family.opening_balance_type
                                 check_opnbal_object.save()
-                                if check_opnbal_object.opening_balance_type=='Credit':
-                                    repoo=Report.objects.filter(management_profile=customer,mangebalancesheet=check_opnbal_object).first()
+                
+                                if check_opnbal_object.opening_balance_type == 'Credit':
+                                    repoo = Report.objects.filter(
+                                        management_profile=customer, mangebalancesheet=check_opnbal_object
+                                    ).first()
                                     if repoo:
-                                        repoo.amount=check_opnbal_object.opening_balance_amt
-                                        repoo.type_choice='Addition'
-                                        repoo.created_by=rejin.id
+                                        repoo.amount = check_opnbal_object.opening_balance_amt
+                                        repoo.type_choice = 'Addition'
+                                        repoo.created_by = rejin.id
                                         repoo.save()
+                                    else:
+                                        Report.objects.create(
+                                            type_choice="Addition",
+                                            management_profile=temp_family,
+                                            amount=check_opnbal_object.opening_balance_amt,
+                                            created_by=rejin.id,
+                                            mangebalancesheet=check_opnbal_object,
+                                        )
                                 else:
-                                    repoo3=Report.objects.filter(management_profile=customer,mangebalancesheet=check_opnbal_object).first()
+                                    repoo3 = Report.objects.filter(
+                                        management_profile=customer, mangebalancesheet=check_opnbal_object
+                                    ).first()
                                     if repoo3:
-                                        repoo3.amount=check_opnbal_object.opening_balance_amt
-                                        repoo3.type_choice='Reduction'
-                                        repoo3.created_by=rejin.id
+                                        repoo3.amount = check_opnbal_object.opening_balance_amt
+                                        repoo3.type_choice = 'Reduction'
+                                        repoo3.created_by = rejin.id
                                         repoo3.save()
+                                    else:
+                                        Report.objects.create(
+                                            type_choice="Reduction",
+                                            management_profile=temp_family,
+                                            amount=check_opnbal_object.opening_balance_amt,
+                                            created_by=rejin.id,
+                                            mangebalancesheet=check_opnbal_object,
+                                        )
                     else:
-                        print('unwanted')
-                        temp_family.opening_balance=0
-                        temp_family.opening_balance_type=None
-                        temp_family.save()
-                        
+                        if (
+                            temp_family.opening_balance is not None
+                            and temp_family.opening_balance > 0
+                            and temp_family.opening_balance_type is not None
+                        ):
+                            todayy = datetime.datetime.now()
+                            ki = ManagementBalanceSheet.objects.create(
+                                management_profile=temp_family,
+                                managee=True,
+                                opening_balance_amt=temp_family.opening_balance,
+                                date=todayy,
+                                opening_balance_type=temp_family.opening_balance_type,
+                            )
+                            if ki.opening_balance_type == 'Credit':
+                                Report.objects.create(
+                                    type_choice="Addition",
+                                    management_profile=temp_family,
+                                    amount=temp_family.opening_balance,
+                                    created_by=rejin.id,
+                                    mangebalancesheet=ki,
+                                )
+                            else:
+                                Report.objects.create(
+                                    type_choice="Reduction",
+                                    management_profile=temp_family,
+                                    amount=temp_family.opening_balance,
+                                    created_by=rejin.id,
+                                    mangebalancesheet=ki,
+                                )
+                
                 else:
                     print('wakanda')
-                    if temp_family.opening_balance!=None or temp_family.opening_balance>0:
-                        todayy=datetime.datetime.now()
-                        ki=ManagementBalanceSheet.objects.create(management_profile=temp_family,managee=True,opening_balance_amt=temp_family.opening_balance,date=todayy,opening_balance_type=temp_family.opening_balance_type)
-                        if ki.opening_balance_type=='Credit':
-                            Report.objects.create(type_choice="Addition",management_profile=temp_family,amount=temp_family.opening_balance,created_by=rejin.id,mangebalancesheet=ki) 
-                        else: 
-                            Report.objects.create(type_choice="Reduction",management_profile=temp_family,amount=temp_family.opening_balance,created_by=rejin.id,mangebalancesheet=ki)     
-                            
+                    if temp_family.opening_balance is not None and temp_family.opening_balance > 0:
+                        todayy = datetime.datetime.now()
+                        ki = ManagementBalanceSheet.objects.create(
+                            management_profile=temp_family,
+                            managee=True,
+                            opening_balance_amt=temp_family.opening_balance,
+                            date=todayy,
+                            opening_balance_type=temp_family.opening_balance_type,
+                        )
+                        if ki.opening_balance_type == 'Credit':
+                            Report.objects.create(
+                                type_choice="Addition",
+                                management_profile=temp_family,
+                                amount=temp_family.opening_balance,
+                                created_by=rejin.id,
+                                mangebalancesheet=ki,
+                            )
+                        else:
+                            Report.objects.create(
+                                type_choice="Reduction",
+                                management_profile=temp_family,
+                                amount=temp_family.opening_balance,
+                                created_by=rejin.id,
+                                mangebalancesheet=ki,
+                            )
+                                            
                 treasure=ManagementTreasure.objects.filter(management_profile=customer).first()  
                 if treasure:
                     if get_old_bal_type=='Credit' and new_bal_type=='Credit':
@@ -441,38 +524,42 @@ def edit_management(request,pk):
                     treasure34=ManagementTreasure.objects.filter(management_profile=customer).first()  
                     for bank_det1 in bank1:
                         bank_obj1=BankDetails.objects.get(id=bank_det1.id)
-                        if bank_obj1.bank_opening_balance_type == "Credit":
-                            bank_obj1.credit_amt=float(bank_obj1.credit_amt) + float(bank_obj1.bank_opening_balance_amt)
-                            bank_obj1.save()
-                            if treasure34:
-                                treasure34.bank_amt=float(treasure34.bank_amt)+float(bank_obj1.bank_opening_balance_amt)
-                                treasure34.save()
-                                
-                            check_bank_rep=Report.objects.filter(banks=bank_obj1,management_profile=temp_family,managee=True).first()
-                            if check_bank_rep:
-                                check_bank_rep.amount=bank_obj1.bank_opening_balance_amt
-                                check_bank_rep.created_by=rejin.id
-                                check_bank_rep.type_choice='Addition'
-                                check_bank_rep.save()
-                            else:
-                                Report.objects.create(type_choice="Addition",banks=bank_obj1,management_profile=temp_family,amount=bank_obj1.bank_opening_balance_amt,created_by=rejin.id,managee=True)
-                                
-                                
-                        elif bank_obj1.bank_opening_balance_type == "Debit":
-                            bank_obj1.loan_amt=float(bank_obj1.loan_amt) + float(bank_obj1.bank_opening_balance_amt)
-                            bank_obj1.save()
-                            if treasure34:
-                                treasure34.loan_amt=float(treasure34.loan_amt)+float(bank_obj1.bank_opening_balance_amt)
-                                treasure34.save()
-                                
-                            check_bank_rep=Report.objects.filter(banks=bank_obj1,management_profile=temp_family,managee=True).first()
-                            if check_bank_rep:
-                                check_bank_rep.amount=bank_obj1.bank_opening_balance_amt
-                                check_bank_rep.created_by=rejin.id
-                                check_bank_rep.type_choice='Reduction'
-                                check_bank_rep.save()
-                            else:
-                                Report.objects.create(type_choice="Reduction",banks=bank_obj1,management_profile=temp_family,amount=bank_obj1.bank_opening_balance_amt,created_by=rejin.id,managee=True)
+
+                        check_trans983=CashTransactionDetails.objects.filter(banks=bank_obj1)
+                        check_trans984=CashTransactionDetails.objects.filter(banks2=bank_obj1)
+                        if not check_trans983 and not check_trans984:
+                            if bank_obj1.bank_opening_balance_type == "Credit":
+                                bank_obj1.credit_amt=float(bank_obj1.credit_amt) + float(bank_obj1.bank_opening_balance_amt)
+                                bank_obj1.save()
+                                if treasure34:
+                                    treasure34.bank_amt=float(treasure34.bank_amt)+float(bank_obj1.bank_opening_balance_amt)
+                                    treasure34.save()
+                                    
+                                check_bank_rep=Report.objects.filter(banks=bank_obj1,management_profile=temp_family,managee=True).first()
+                                if check_bank_rep:
+                                    check_bank_rep.amount=bank_obj1.bank_opening_balance_amt
+                                    check_bank_rep.created_by=rejin.id
+                                    check_bank_rep.type_choice='Addition'
+                                    check_bank_rep.save()
+                                else:
+                                    Report.objects.create(type_choice="Addition",banks=bank_obj1,management_profile=temp_family,amount=bank_obj1.bank_opening_balance_amt,created_by=rejin.id,managee=True)
+                                    
+                                    
+                            elif bank_obj1.bank_opening_balance_type == "Debit":
+                                bank_obj1.loan_amt=float(bank_obj1.loan_amt) + float(bank_obj1.bank_opening_balance_amt)
+                                bank_obj1.save()
+                                if treasure34:
+                                    treasure34.loan_amt=float(treasure34.loan_amt)+float(bank_obj1.bank_opening_balance_amt)
+                                    treasure34.save()
+                                    
+                                check_bank_rep=Report.objects.filter(banks=bank_obj1,management_profile=temp_family,managee=True).first()
+                                if check_bank_rep:
+                                    check_bank_rep.amount=bank_obj1.bank_opening_balance_amt
+                                    check_bank_rep.created_by=rejin.id
+                                    check_bank_rep.type_choice='Reduction'
+                                    check_bank_rep.save()
+                                else:
+                                    Report.objects.create(type_choice="Reduction",banks=bank_obj1,management_profile=temp_family,amount=bank_obj1.bank_opening_balance_amt,created_by=rejin.id,managee=True)
                                 
                 return Response(serializer876.data,status=status.HTTP_201_CREATED)
             else:

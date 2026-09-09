@@ -1,8 +1,12 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from.serializers import ADDExpenseCategorySerializer,ADDExpenseNamesSerializer,ADDExpenseDetailsSerializer
-from .models import ADDExpenseCategory,ADDExpenseNames,ADDExpenseDetails
+from .serializers import (
+    ADDExpenseCategorySerializer,
+    ADDExpenseNamesSerializer,
+    ADDExpenseDetailsSerializer,
+)
+from .models import ADDExpenseCategory, ADDExpenseNames, ADDExpenseDetails
 from .chit_fund_hooks import (
     check_chit_fund_cash,
     apply_chit_fund_expense,
@@ -18,634 +22,705 @@ from reports.models import Report
 from management.models import BankDetails
 from datetime import datetime
 
-@api_view(['GET','POST'])
-def add_expen_categry(request):
-    rejin=token_checking(request)
-    if not rejin:
-        return Response({"message":"No User Found"},status=status.HTTP_401_UNAUTHORIZED)
-    if not rejin.is_active:
-        return Response({"message":"Not Authorized Please Contact Admin"},status=status.HTTP_401_UNAUTHORIZED)
-    print(f'token---{rejin}')
-    get_role=rejin.user_role
-    if rejin.my_role!=None:
-        permiss=Permisions.objects.filter(role_link_id=rejin.my_role.id).first()
-        if permiss:
-            perm=Permisions.objects.get(role_link_id=rejin.my_role.id)
-    check_management=ManagementDetails.objects.all()
+
+def _get_permission(rejin):
+    """Fetch the Permisions row for this user's role, or None if not set."""
+    if rejin.my_role is not None:
+        return Permisions.objects.filter(role_link_id=rejin.my_role.id).first()
+    return None
+
+
+def _get_management_or_error():
+    """Return (management, error_response). error_response is None on success."""
+    check_management = ManagementDetails.objects.all()
     if not check_management:
-        dict6={}
-        dict6['message']= "First Add Management Profile details"
-        return Response(dict6,status=status.HTTP_406_NOT_ACCEPTABLE)
-    else:
-        management=ManagementDetails.objects.all().first()
-    if request.method =='POST':   
-        if get_role=="User" and perm.expense_add ==True or get_role=="Admin" or rejin.is_superuser == True:  
-            category_name=request.data['category_name']   
-            category_check=ADDExpenseCategory.objects.filter(management_profile=management,category_name=category_name)
-            if category_check:
-                return Response({'message': 'Similar category name already exists'},status=status.HTTP_302_FOUND)
-            serializer876 = ADDExpenseCategorySerializer(data=request.data)
-            if serializer876.is_valid():
-                temp_family=serializer876.save()
-                temp_family.created_by=rejin.id
-                temp_family.management_profile=management
-                temp_family.save()
-                return Response(serializer876.data,status=status.HTTP_201_CREATED)
-            else:
-                return Response(serializer876.errors,status=status.HTTP_400_BAD_REQUEST)
-        return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
+        return None, Response(
+            {'message': "First Add Management Profile details"},
+            status=status.HTTP_406_NOT_ACCEPTABLE,
+        )
+    return check_management.first(), None
+
+
+# --------------------------------------------------------------------------
+# Expense Category
+# --------------------------------------------------------------------------
+@api_view(['GET', 'POST'])
+def add_expen_categry(request):
+    rejin = token_checking(request)
+    if not rejin:
+        return Response({"message": "No User Found"}, status=status.HTTP_401_UNAUTHORIZED)
+    if not rejin.is_active:
+        return Response({"message": "Not Authorized Please Contact Admin"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    get_role = rejin.user_role
+    perm = _get_permission(rejin)
+
+    management, err = _get_management_or_error()
+    if err:
+        return err
+
+    if request.method == 'POST':
+        is_authorized = (
+            get_role == "Admin"
+            or rejin.is_superuser is True
+            or (get_role == "User" and perm is not None and perm.expense_add is True)
+        )
+        if not is_authorized:
+            return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
+
+        category_name = request.data.get('category_name')
+        if ADDExpenseCategory.objects.filter(management_profile=management, category_name=category_name).exists():
+            return Response({'message': 'Similar category name already exists'}, status=status.HTTP_302_FOUND)
+
+        serializer876 = ADDExpenseCategorySerializer(data=request.data)
+        if serializer876.is_valid():
+            temp_family = serializer876.save()
+            temp_family.created_by = rejin.id
+            temp_family.management_profile = management
+            temp_family.save()
+            return Response(serializer876.data, status=status.HTTP_201_CREATED)
+        return Response(serializer876.errors, status=status.HTTP_400_BAD_REQUEST)
+
     elif request.method == 'GET':
         our_family = ADDExpenseCategory.objects.filter(management_profile=management)
-        serializer = ADDExpenseCategorySerializer(our_family,many=True)
-        return Response(serializer.data,status=status.HTTP_200_OK)
-        
-        
-@api_view(['GET','PUT','PATCH',"DELETE"])
-def edit_expen_categry(request,pk):
-    rejin=token_checking(request)
+        serializer = ADDExpenseCategorySerializer(our_family, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+def edit_expen_categry(request, pk):
+    rejin = token_checking(request)
     if not rejin:
-        return Response({"message":"No User Found"},status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"message": "No User Found"}, status=status.HTTP_401_UNAUTHORIZED)
     if not rejin.is_active:
-        return Response({"message":"Not Authorized Please Contact Admin"},status=status.HTTP_401_UNAUTHORIZED)
-    get_role=rejin.user_role
-    if rejin.my_role!=None:
-        permiss=Permisions.objects.filter(role_link_id=rejin.my_role.id).first()
-        if permiss:
-            perm=Permisions.objects.get(role_link_id=rejin.my_role.id)
+        return Response({"message": "Not Authorized Please Contact Admin"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    get_role = rejin.user_role
+    perm = _get_permission(rejin)
+
     try:
-        customer = ADDExpenseCategory.objects.get(pk=pk)  
+        customer = ADDExpenseCategory.objects.get(pk=pk)
     except ADDExpenseCategory.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
-    check_management=ManagementDetails.objects.all()
-    if not check_management:
-        dict6={}
-        dict6['message']= "First Add Management Profile details"
-        return Response(dict6,status=status.HTTP_406_NOT_ACCEPTABLE)
-    else:
-        management=ManagementDetails.objects.all().first()
-    
+
+    management, err = _get_management_or_error()
+    if err:
+        return err
+
     if request.method == 'GET':
         serializer = ADDExpenseCategorySerializer(customer)
-        return Response(serializer.data,status=status.HTTP_200_OK)
-    
-    elif request.method == 'PUT':  
-        if get_role=="User" and perm.expense_edit ==True or get_role=="Admin" or rejin.is_superuser == True:
-            category_check=ADDExpenseDetails.objects.filter(category=pk)
-            if category_check:
-                return Response({'message': 'Cannot be edited as it is added in expense details'},status=status.HTTP_302_FOUND) 
-            category_name=request.data['category_name']
-            category_check=ADDExpenseCategory.objects.filter(management_profile=management,category_name=category_name).exclude(id=pk)
-            if category_check:
-                return Response({'message': 'Similar category namae already exists'},status=status.HTTP_302_FOUND)
-            serializer876 = ADDExpenseCategorySerializer(customer,data=request.data)
-            if serializer876.is_valid():
-                temp_family=serializer876.save()
-                temp_family.created_by=rejin.id
-                temp_family.management_profile=management
-                temp_family.save()
-                return Response(serializer876.data,status=status.HTTP_201_CREATED)
-            else:
-                return Response(serializer876.errors,status=status.HTTP_400_BAD_REQUEST)
-        return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
-    
-    elif request.method == 'PATCH': 
-        if get_role=="User" and perm.expense_edit ==True or get_role=="Admin" or rejin.is_superuser == True:  
-            serializer876 = ADDExpenseCategorySerializer(customer,data=request.data,partial=True)
-            if serializer876.is_valid():
-                temp_family=serializer876.save()
-                temp_family.created_by=rejin.id
-                temp_family.management_profile=management
-                temp_family.save()
-                return Response(serializer876.data,status=status.HTTP_201_CREATED)
-            else:
-                return Response(serializer876.errors,status=status.HTTP_400_BAD_REQUEST)
-        return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
-            
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    elif request.method == 'PUT':
+        is_authorized = get_role == "Admin" or rejin.is_superuser is True or (
+            get_role == "User" and perm is not None and perm.expense_edit is True
+        )
+        if not is_authorized:
+            return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
+
+        if ADDExpenseDetails.objects.filter(category=pk).exists():
+            return Response({'message': 'Cannot be edited as it is added in expense details'}, status=status.HTTP_302_FOUND)
+
+        category_name = request.data.get('category_name')
+        if ADDExpenseCategory.objects.filter(management_profile=management, category_name=category_name).exclude(id=pk).exists():
+            return Response({'message': 'Similar category name already exists'}, status=status.HTTP_302_FOUND)
+
+        serializer876 = ADDExpenseCategorySerializer(customer, data=request.data)
+        if serializer876.is_valid():
+            temp_family = serializer876.save()
+            temp_family.created_by = rejin.id
+            temp_family.management_profile = management
+            temp_family.save()
+            return Response(serializer876.data, status=status.HTTP_201_CREATED)
+        return Response(serializer876.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'PATCH':
+        is_authorized = get_role == "Admin" or rejin.is_superuser is True or (
+            get_role == "User" and perm is not None and perm.expense_edit is True
+        )
+        if not is_authorized:
+            return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
+
+        serializer876 = ADDExpenseCategorySerializer(customer, data=request.data, partial=True)
+        if serializer876.is_valid():
+            temp_family = serializer876.save()
+            temp_family.created_by = rejin.id
+            temp_family.management_profile = management
+            temp_family.save()
+            return Response(serializer876.data, status=status.HTTP_201_CREATED)
+        return Response(serializer876.errors, status=status.HTTP_400_BAD_REQUEST)
+
     elif request.method == 'DELETE':
-        if get_role=="User" and perm.expense_edit ==True or get_role=="Admin" or rejin.is_superuser == True or get_role=="User" and perm.expense_delete ==True:
-            category_check=ADDExpenseDetails.objects.filter(category=pk)
-            if category_check:
-                return Response({'message': 'Cannot be deleted as it is added in expense details'},status=status.HTTP_302_FOUND)
-            customer.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
-    
-    
-@api_view(['GET','POST'])
+        is_authorized = get_role == "Admin" or rejin.is_superuser is True or (
+            get_role == "User" and perm is not None and (perm.expense_edit is True or perm.expense_delete is True)
+        )
+        if not is_authorized:
+            return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
+
+        if ADDExpenseDetails.objects.filter(category=pk).exists():
+            return Response({'message': 'Cannot be deleted as it is added in expense details'}, status=status.HTTP_302_FOUND)
+
+        customer.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# --------------------------------------------------------------------------
+# Expense Names
+# --------------------------------------------------------------------------
+@api_view(['GET', 'POST'])
 def add_expen_names(request):
-    rejin=token_checking(request)
+    rejin = token_checking(request)
     if not rejin:
-        return Response({"message":"No User Found"},status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"message": "No User Found"}, status=status.HTTP_401_UNAUTHORIZED)
     if not rejin.is_active:
-        return Response({"message":"Not Authorized Please Contact Admin"},status=status.HTTP_401_UNAUTHORIZED)
-    print(f'token---{rejin}')
-    get_role=rejin.user_role
-    if rejin.my_role!=None:
-        permiss=Permisions.objects.filter(role_link_id=rejin.my_role.id).first()
-        if permiss:
-            perm=Permisions.objects.get(role_link_id=rejin.my_role.id)
-    check_management=ManagementDetails.objects.all()
-    if not check_management:
-        dict6={}
-        dict6['message']= "First Add Management Profile details"
-        return Response(dict6,status=status.HTTP_406_NOT_ACCEPTABLE)
-    else:
-        management=ManagementDetails.objects.all().first()
-    if request.method =='POST': 
-        if get_role=="User" and perm.expense_add ==True or get_role=="Admin" or rejin.is_superuser == True:  
-            expense_name=request.data['expense_name']
-            expense_check=ADDExpenseNames.objects.filter(management_profile=management,expense_name=expense_name)
-            if expense_check:
-                return Response({'message': 'Similar expense namae already exists'},status=status.HTTP_302_FOUND)  
-            serializer876 = ADDExpenseNamesSerializer(data=request.data)
-            if serializer876.is_valid():
-                temp_family=serializer876.save()
-                temp_family.created_by=rejin.id
-                temp_family.management_profile=management                
-                temp_family.save()
-                return Response(serializer876.data,status=status.HTTP_201_CREATED)
-            else:
-                return Response(serializer876.errors,status=status.HTTP_400_BAD_REQUEST)
-        return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
+        return Response({"message": "Not Authorized Please Contact Admin"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    get_role = rejin.user_role
+    perm = _get_permission(rejin)
+
+    management, err = _get_management_or_error()
+    if err:
+        return err
+
+    if request.method == 'POST':
+        is_authorized = get_role == "Admin" or rejin.is_superuser is True or (
+            get_role == "User" and perm is not None and perm.expense_add is True
+        )
+        if not is_authorized:
+            return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
+
+        expense_name = request.data.get('expense_name')
+        if ADDExpenseNames.objects.filter(management_profile=management, expense_name=expense_name).exists():
+            return Response({'message': 'Similar expense name already exists'}, status=status.HTTP_302_FOUND)
+
+        serializer876 = ADDExpenseNamesSerializer(data=request.data)
+        if serializer876.is_valid():
+            temp_family = serializer876.save()
+            temp_family.created_by = rejin.id
+            temp_family.management_profile = management
+            temp_family.save()
+            return Response(serializer876.data, status=status.HTTP_201_CREATED)
+        return Response(serializer876.errors, status=status.HTTP_400_BAD_REQUEST)
+
     elif request.method == 'GET':
         our_family = ADDExpenseNames.objects.filter(management_profile=management)
-        serializer = ADDExpenseNamesSerializer(our_family,many=True)
-        return Response(serializer.data,status=status.HTTP_200_OK)
-        
-        
-@api_view(['GET','PUT','PATCH',"DELETE"])
-def edit_expen_names(request,pk):
-    rejin=token_checking(request)
+        serializer = ADDExpenseNamesSerializer(our_family, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+def edit_expen_names(request, pk):
+    rejin = token_checking(request)
     if not rejin:
-        return Response({"message":"No User Found"},status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"message": "No User Found"}, status=status.HTTP_401_UNAUTHORIZED)
     if not rejin.is_active:
-        return Response({"message":"Not Authorized Please Contact Admin"},status=status.HTTP_401_UNAUTHORIZED)
-    get_role=rejin.user_role
-    if rejin.my_role!=None:
-        permiss=Permisions.objects.filter(role_link_id=rejin.my_role.id).first()
-        if permiss:
-            perm=Permisions.objects.get(role_link_id=rejin.my_role.id)
+        return Response({"message": "Not Authorized Please Contact Admin"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    get_role = rejin.user_role
+    perm = _get_permission(rejin)
+
     try:
-        customer = ADDExpenseNames.objects.get(pk=pk)  
+        customer = ADDExpenseNames.objects.get(pk=pk)
     except ADDExpenseNames.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
-    check_management=ManagementDetails.objects.all()
-    if not check_management:
-        dict6={}
-        dict6['message']= "First Add Management Profile details"
-        return Response(dict6,status=status.HTTP_406_NOT_ACCEPTABLE)
-    else:
-        management=ManagementDetails.objects.all().first()
-    
+
+    management, err = _get_management_or_error()
+    if err:
+        return err
+
     if request.method == 'GET':
         serializer = ADDExpenseNamesSerializer(customer)
-        return Response(serializer.data,status=status.HTTP_200_OK)
-    
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     elif request.method == 'PUT':
-        if get_role=="User" and perm.expense_edit ==True or get_role=="Admin" or rejin.is_superuser == True:   
-            category_check=ADDExpenseDetails.objects.filter(expense=pk)
-            if category_check:
-                return Response({'message': 'Cannot be edited as it is added in expense details'},status=status.HTTP_302_FOUND) 
-            expense_name=request.data['expense_name']
-            expense_check=ADDExpenseNames.objects.filter(management_profile=management,expense_name=expense_name).exclude(id=pk)
-            if expense_check:
-                return Response({'message': 'Similar expense namae already exists'},status=status.HTTP_302_FOUND)
-            serializer876 = ADDExpenseNamesSerializer(customer,data=request.data)
-            if serializer876.is_valid():
-                temp_family=serializer876.save()
-                temp_family.created_by=rejin.id
-                temp_family.management_profile=management
-                temp_family.save()
-                return Response(serializer876.data,status=status.HTTP_201_CREATED)
-            else:
-                return Response(serializer876.errors,status=status.HTTP_400_BAD_REQUEST)
-        return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
-    
-    elif request.method == 'PATCH': 
-        if get_role=="User" and perm.expense_edit ==True or get_role=="Admin" or rejin.is_superuser == True:  
-            serializer876 = ADDExpenseNamesSerializer(customer,data=request.data,partial=True)
-            if serializer876.is_valid():
-                temp_family=serializer876.save()
-                temp_family.created_by=rejin.id
-                temp_family.management_profile=management
-                temp_family.save()
-                return Response(serializer876.data,status=status.HTTP_201_CREATED)
-            else:
-                return Response(serializer876.errors,status=status.HTTP_400_BAD_REQUEST)
-        return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
-            
+        is_authorized = get_role == "Admin" or rejin.is_superuser is True or (
+            get_role == "User" and perm is not None and perm.expense_edit is True
+        )
+        if not is_authorized:
+            return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
+
+        if ADDExpenseDetails.objects.filter(expense=pk).exists():
+            return Response({'message': 'Cannot be edited as it is added in expense details'}, status=status.HTTP_302_FOUND)
+
+        expense_name = request.data.get('expense_name')
+        if ADDExpenseNames.objects.filter(management_profile=management, expense_name=expense_name).exclude(id=pk).exists():
+            return Response({'message': 'Similar expense name already exists'}, status=status.HTTP_302_FOUND)
+
+        serializer876 = ADDExpenseNamesSerializer(customer, data=request.data)
+        if serializer876.is_valid():
+            temp_family = serializer876.save()
+            temp_family.created_by = rejin.id
+            temp_family.management_profile = management
+            temp_family.save()
+            return Response(serializer876.data, status=status.HTTP_201_CREATED)
+        return Response(serializer876.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'PATCH':
+        is_authorized = get_role == "Admin" or rejin.is_superuser is True or (
+            get_role == "User" and perm is not None and perm.expense_edit is True
+        )
+        if not is_authorized:
+            return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
+
+        serializer876 = ADDExpenseNamesSerializer(customer, data=request.data, partial=True)
+        if serializer876.is_valid():
+            temp_family = serializer876.save()
+            temp_family.created_by = rejin.id
+            temp_family.management_profile = management
+            temp_family.save()
+            return Response(serializer876.data, status=status.HTTP_201_CREATED)
+        return Response(serializer876.errors, status=status.HTTP_400_BAD_REQUEST)
+
     elif request.method == 'DELETE':
-        if get_role=="User" and perm.expense_delete ==True or get_role=="Admin" or rejin.is_superuser == True or get_role=="User" and perm.expense_edit ==True :
-            category_check=ADDExpenseDetails.objects.filter(expense=pk)
-            if category_check:
-                return Response({'message': 'Cannot be deleted as it is added in expense details'},status=status.HTTP_302_FOUND) 
-            customer.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
-    
-@api_view(['GET','POST'])
+        is_authorized = get_role == "Admin" or rejin.is_superuser is True or (
+            get_role == "User" and perm is not None and (perm.expense_delete is True or perm.expense_edit is True)
+        )
+        if not is_authorized:
+            return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
+
+        if ADDExpenseDetails.objects.filter(expense=pk).exists():
+            return Response({'message': 'Cannot be deleted as it is added in expense details'}, status=status.HTTP_302_FOUND)
+
+        customer.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# --------------------------------------------------------------------------
+# Expense Details (the core "add expense" transaction)
+# --------------------------------------------------------------------------
+@api_view(['GET', 'POST'])
 def add_expen_details(request):
-    rejin=token_checking(request)
+    rejin = token_checking(request)
     if not rejin:
-        return Response({"message":"No User Found"},status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"message": "No User Found"}, status=status.HTTP_401_UNAUTHORIZED)
     if not rejin.is_active:
-        return Response({"message":"Not Authorized Please Contact Admin"},status=status.HTTP_401_UNAUTHORIZED)
-    print(f'token---{rejin}')
-    get_role=rejin.user_role
-    if rejin.my_role!=None:
-        permiss=Permisions.objects.filter(role_link_id=rejin.my_role.id).first()
-        if permiss:
-            perm=Permisions.objects.get(role_link_id=rejin.my_role.id)
-    
-    check_management=ManagementDetails.objects.all()
-    if not check_management:
-        dict6={}
-        dict6['message']= "First Add Management Profile details"
-        return Response(dict6,status=status.HTTP_406_NOT_ACCEPTABLE)
-    else:
-        management=ManagementDetails.objects.all().first()
-    
-    if request.method =='POST':
-        if get_role=="User" and perm.expense_add ==True or get_role=="Admin" or rejin.is_superuser == True:     
-            serializer876 = ADDExpenseDetailsSerializer(data=request.data)
-            if serializer876.is_valid():
-                print(request.data)
+        return Response({"message": "Not Authorized Please Contact Admin"}, status=status.HTTP_401_UNAUTHORIZED)
 
-                # ----------------------------------------------------------
-                # Owner rule (Feb 2026): if this is a "Chit Fund Expense"
-                # linked to a specific chit fund, guard against negative
-                # cash-in-hand BEFORE saving.  The debit itself happens
-                # AFTER save() so we operate on the persisted row.
-                # ----------------------------------------------------------
-                _sub = (request.data.get('expense_subcategory') or '').strip()
-                _chit_id = request.data.get('chitt_fund') or None
-                _chit_obj = None
-                if _sub == 'Chit Fund Expense' and _chit_id:
-                    try:
-                        _chit_obj = ChitFundsDetails.objects.get(
-                            id=_chit_id, management_profile=management
+    get_role = rejin.user_role
+    perm = _get_permission(rejin)
+
+    management, err = _get_management_or_error()
+    if err:
+        return err
+
+    if request.method == 'POST':
+        is_authorized = get_role == "Admin" or rejin.is_superuser is True or (
+            get_role == "User" and perm is not None and perm.expense_add is True
+        )
+        if not is_authorized:
+            return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
+
+        serializer876 = ADDExpenseDetailsSerializer(data=request.data)
+        if not serializer876.is_valid():
+            return Response(serializer876.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # ------------------------------------------------------------
+        # Owner rule (Feb 2026): if this is a "Chit Fund Expense"
+        # linked to a specific chit fund, guard against negative
+        # cash-in-hand BEFORE saving. The debit itself happens
+        # AFTER save() so we operate on the persisted row.
+        # ------------------------------------------------------------
+        expense_subcategory = (request.data.get('expense_subcategory') or '').strip()
+        chit_fund_id = request.data.get('chitt_fund') or None
+        chit_fund_obj = None
+        if expense_subcategory == 'Chit Fund Expense' and chit_fund_id:
+            try:
+                chit_fund_obj = ChitFundsDetails.objects.get(id=chit_fund_id, management_profile=management)
+            except ChitFundsDetails.DoesNotExist:
+                return Response({'message': 'Selected chit fund not found'}, status=status.HTTP_400_BAD_REQUEST)
+            ok, msg = check_chit_fund_cash(chit_fund_obj, request.data.get('expense_amt') or 0)
+            if not ok:
+                return Response({'message': msg}, status.HTTP_302_FOUND)
+
+        # ------------------------------------------------------------
+        # FIX: explicit numeric validation instead of relying on a
+        # bare except to route bank-vs-cash. A missing/invalid amount
+        # now fails loudly instead of silently becoming a cash entry.
+        # ------------------------------------------------------------
+        raw_expense_amt = request.data.get('expense_amt')
+        if raw_expense_amt is None:
+            return Response({'message': 'expense_amt is required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            expense_amt = float(raw_expense_amt)
+        except (TypeError, ValueError):
+            return Response({'message': 'expense_amt must be a valid number'}, status=status.HTTP_400_BAD_REQUEST)
+
+        bank_id = request.data.get('bank')  # None (or falsy) => cash expense
+
+        manage_get = ManagementTreasure.objects.filter(management_profile=management).first()
+
+        bank_obj = None
+        if bank_id:
+            bank_obj = BankDetails.objects.filter(id=bank_id).first()
+            if bank_obj is None:
+                return Response({'message': 'Selected bank not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # FIX: Decimal and float now both coerced to float before
+            # comparing, so this check actually runs instead of raising
+            # a silently-swallowed TypeError.
+            if float(bank_obj.credit_amt) < expense_amt:
+                return Response(
+                    {
+                        'message': (
+                            "Insufficient bank amount, Only "
+                            + f'{int(bank_obj.credit_amt)}'
+                            + " rupees is available in selected bank"
                         )
-                    except ChitFundsDetails.DoesNotExist:
-                        return Response(
-                            {'message': 'Selected chit fund not found'},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-                    _ok, _msg = check_chit_fund_cash(
-                        _chit_obj, request.data.get('expense_amt') or 0
-                    )
-                    if not _ok:
-                        return Response({'message': _msg}, status.HTTP_302_FOUND)
+                    },
+                    status.HTTP_302_FOUND,
+                )
 
-                try:
-                    bank=request.data['bank']
-                except Exception:
-                    pass
-                expense_amt=request.data['expense_amt']
-                manage=ManagementTreasure.objects.filter(management_profile=management)
-                if manage:
-                    manage_get=ManagementTreasure.objects.filter(management_profile=management).first()
-                    try:
-                        if bank != None:
-                            bank_check=BankDetails.objects.filter(id=bank).first()
-                            if bank_check.credit_amt >= float(expense_amt):                        
-                                manage_get.bank_amt =float(manage_get.bank_amt) - float(expense_amt)
-                                # manage_get.bank_withdraw_amt=float(manage_get.bank_withdraw_amt) + float(expense_amt)
-                                manage_get.save()
-                                bank=BankDetails.objects.filter(id=bank).first()
-                                bank.debit_amt = float(bank.debit_amt) + float(expense_amt)
-                                bank.credit_amt = float(bank.credit_amt) - float(expense_amt)
-                                bank.save()
-                                manage_get.reduce_expence_amt = float(manage_get.reduce_expence_amt) + float(expense_amt)
-                                manage_get.save()
-                            else:
-                                return Response({'message':"Insufficient bank amount, Only " + f'{int(bank_check.credit_amt)}' + " rupees is available in selected bank"},status.HTTP_302_FOUND) 
+            if manage_get is not None:
+                manage_get.bank_amt = float(manage_get.bank_amt) - expense_amt
+                manage_get.reduce_expence_amt = float(manage_get.reduce_expence_amt) + expense_amt
+                manage_get.save()
 
-                    except Exception:
-                            # print("jjjjjjjjjjjjjjjjjjj")
-                            # if manage_get.cash_in_hand >= float(expense_amt):
-                            #     manage_get.cash_in_hand =float(manage_get.cash_in_hand) - float(expense_amt)
-                            #     manage_get.save()
-                                manage_get.expence_amt = float(manage_get.expence_amt) + float(expense_amt)
-                                manage_get.save()
-                            # else:
-                    
-                            #     return Response({'message':"Insufficient cash amount, Only " + f'{int(manage_get.cash_in_hand)}' + " rupees is available in treasure cashinhand"},status.HTTP_302_FOUND) 
-                    
-                temp_family=serializer876.save()
-                temp_family.created_by=rejin.id
-                temp_family.management_profile=management
-                temp_family.save()
+            bank_obj.debit_amt = float(bank_obj.debit_amt) + expense_amt
+            bank_obj.credit_amt = float(bank_obj.credit_amt) - expense_amt
+            bank_obj.save()
 
-                # Chit-Fund debit (Feb 2026 owner rule): apply the
-                # profit_amount + cash_inhand_amount deduction on the
-                # linked chit fund now that the expense row is persisted.
-                if _chit_obj is not None:
-                    apply_chit_fund_expense(_chit_obj, temp_family.expense_amt)
+        else:
+            # Cash expense
+            if manage_get is not None:
+                manage_get.expence_amt = float(manage_get.expence_amt) + expense_amt
+                manage_get.save()
 
-                Report.objects.create(banks=temp_family.bank,type_choice="Reduction",management_profile=temp_family.management_profile,expenses=temp_family,amount=temp_family.expense_amt,created_by=rejin.id)                
-                return Response(serializer876.data,status=status.HTTP_201_CREATED)
-            else:
-                return Response(serializer876.errors,status=status.HTTP_400_BAD_REQUEST)
-        return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
+        temp_family = serializer876.save()
+        temp_family.created_by = rejin.id
+        temp_family.management_profile = management
+        temp_family.save()
+
+        # Chit-Fund debit (Feb 2026 owner rule): apply the
+        # profit_amount + cash_inhand_amount deduction on the
+        # linked chit fund now that the expense row is persisted.
+        if chit_fund_obj is not None:
+            apply_chit_fund_expense(chit_fund_obj, temp_family.expense_amt)
+
+        Report.objects.create(
+            banks=temp_family.bank,
+            type_choice="Reduction",
+            management_profile=temp_family.management_profile,
+            expenses=temp_family,
+            amount=temp_family.expense_amt,
+            created_by=rejin.id,
+        )
+        return Response(serializer876.data, status=status.HTTP_201_CREATED)
+
     elif request.method == 'GET':
         our_family = ADDExpenseDetails.objects.filter(management_profile=management)
-        serializer = ADDExpenseDetailsSerializer(our_family,many=True)
-        return Response(serializer.data,status=status.HTTP_200_OK)
-        
-        
-@api_view(['GET','PUT','PATCH',"DELETE"])
-def edit_expen_details(request,pk):
-    rejin=token_checking(request)
-    check_management=ManagementDetails.objects.all()
-    if not check_management:
-        dict6={}
-        dict6['message']= "First Add Management Profile details"
-        return Response(dict6,status=status.HTTP_406_NOT_ACCEPTABLE)
-    else:
-        management=ManagementDetails.objects.all().first()
-    if not rejin:
-        return Response({"message":"No User Found"},status=status.HTTP_401_UNAUTHORIZED)
-    if not rejin.is_active:
-        return Response({"message":"Not Authorized Please Contact Admin"},status=status.HTTP_401_UNAUTHORIZED)
-    get_role=rejin.user_role
-    if rejin.my_role!=None:
-        permiss=Permisions.objects.filter(role_link_id=rejin.my_role.id).first()
-        if permiss:
-            perm=Permisions.objects.get(role_link_id=rejin.my_role.id)
-    try:
-        customer = ADDExpenseDetails.objects.get(pk=pk)  
-        amount_check=customer.expense_amt
-        bank_check_get=customer.bank
+        serializer = ADDExpenseDetailsSerializer(our_family, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+def edit_expen_details(request, pk):
+    rejin = token_checking(request)
+    management, err = _get_management_or_error()
+    if err:
+        return err
+    if not rejin:
+        return Response({"message": "No User Found"}, status=status.HTTP_401_UNAUTHORIZED)
+    if not rejin.is_active:
+        return Response({"message": "Not Authorized Please Contact Admin"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    get_role = rejin.user_role
+    perm = _get_permission(rejin)
+
+    try:
+        customer = ADDExpenseDetails.objects.get(pk=pk)
     except ADDExpenseDetails.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
-    
+
+    previous_amount = customer.expense_amt
+    previous_bank = customer.bank  # BankDetails instance or None
+
     if request.method == 'GET':
         serializer = ADDExpenseDetailsSerializer(customer)
-        return Response(serializer.data,status=status.HTTP_200_OK)
-    
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     elif request.method == 'PUT':
-        if get_role=="User" and perm.expense_edit ==True or get_role=="Admin" or rejin.is_superuser == True: 
-            date_check=  (customer.date.month != datetime.now().month and customer.date.year != datetime.now().year)  or  (customer.date.month != datetime.now().month and customer.date.year == datetime.now().year)   or (customer.date.month == datetime.now().month and customer.date.year != datetime.now().year)     
-            if date_check:
-                return Response({'message':"Cannot be edited"},status.HTTP_302_FOUND)   
-            serializer876 = ADDExpenseDetailsSerializer(customer,data=request.data)
-            if serializer876.is_valid():
-                # ----------------------------------------------------------
-                # Owner rule (Feb 2026): reverse-then-reapply chit-fund
-                # debit on edit. Handles category switch (Chit Fund →
-                # Temple), amount change, chit-fund switch, etc.
-                # ----------------------------------------------------------
-                _prev_chit = customer.chitt_fund
-                _prev_amt = customer.expense_amt
-                _prev_was_chit = (customer.expense_subcategory == 'Chit Fund Expense') and (_prev_chit is not None)
+        is_authorized = get_role == "Admin" or rejin.is_superuser is True or (
+            get_role == "User" and perm is not None and perm.expense_edit is True
+        )
+        if not is_authorized:
+            return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
 
-                _new_sub = (request.data.get('expense_subcategory') or '').strip()
-                _new_chit_id = request.data.get('chitt_fund') or None
-                _new_chit_obj = None
-                if _new_sub == 'Chit Fund Expense' and _new_chit_id:
-                    try:
-                        _new_chit_obj = ChitFundsDetails.objects.get(
-                            id=_new_chit_id, management_profile=management
-                        )
-                    except ChitFundsDetails.DoesNotExist:
-                        return Response(
-                            {'message': 'Selected chit fund not found'},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-                    # Preview: available cash on target chit AFTER reversing
-                    # the previous debit (if the same chit-fund) so a same-
-                    # chit amount-tweak doesn't false-flag.
-                    _new_amt = request.data.get('expense_amt') or 0
-                    _preview_avail = None
-                    if _prev_was_chit and _prev_chit and _prev_chit.id == _new_chit_obj.id:
-                        _preview_avail = (
-                            float(_new_chit_obj.cash_inhand_amount or 0)
-                            + float(_prev_amt or 0)
-                        )
-                        if _preview_avail < float(_new_amt or 0):
-                            return Response(
-                                {'message': 'Insufficient chit-fund cash. Only Rs. '
-                                            + f'{_preview_avail:.2f}' + ' available in '
-                                            + f'{_new_chit_obj.chit_name}'},
-                                status.HTTP_302_FOUND,
+        now = datetime.now()
+        same_month_and_year = (customer.date.month == now.month and customer.date.year == now.year)
+        if not same_month_and_year:
+            return Response({'message': "Cannot be edited"}, status.HTTP_302_FOUND)
+
+        serializer876 = ADDExpenseDetailsSerializer(customer, data=request.data)
+        if not serializer876.is_valid():
+            return Response(serializer876.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # ------------------------------------------------------------
+        # Owner rule (Feb 2026): reverse-then-reapply chit-fund debit
+        # on edit. Handles category switch (Chit Fund -> Temple),
+        # amount change, chit-fund switch, etc.
+        # ------------------------------------------------------------
+        prev_chit = customer.chitt_fund
+        prev_was_chit = (customer.expense_subcategory == 'Chit Fund Expense') and (prev_chit is not None)
+
+        new_sub = (request.data.get('expense_subcategory') or '').strip()
+        new_chit_id = request.data.get('chitt_fund') or None
+        new_chit_obj = None
+        if new_sub == 'Chit Fund Expense' and new_chit_id:
+            try:
+                new_chit_obj = ChitFundsDetails.objects.get(id=new_chit_id, management_profile=management)
+            except ChitFundsDetails.DoesNotExist:
+                return Response({'message': 'Selected chit fund not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+            new_amt_raw = request.data.get('expense_amt') or 0
+            try:
+                new_amt = float(new_amt_raw)
+            except (TypeError, ValueError):
+                return Response({'message': 'expense_amt must be a valid number'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Preview: available cash on target chit AFTER reversing the
+            # previous debit (if same chit-fund), so a same-chit amount
+            # tweak doesn't false-flag as insufficient.
+            if prev_was_chit and prev_chit and prev_chit.id == new_chit_obj.id:
+                preview_avail = float(new_chit_obj.cash_inhand_amount or 0) + float(previous_amount or 0)
+                if preview_avail < new_amt:
+                    return Response(
+                        {
+                            'message': (
+                                'Insufficient chit-fund cash. Only Rs. '
+                                + f'{preview_avail:.2f}'
+                                + ' available in '
+                                + f'{new_chit_obj.chit_name}'
                             )
-                    else:
-                        _ok, _msg = check_chit_fund_cash(_new_chit_obj, _new_amt)
-                        if not _ok:
-                            return Response({'message': _msg}, status.HTTP_302_FOUND)
-
-                if customer.payment_mode == "Online":
-                    customer.bank=None
-                    customer.transaction_no=None
-                    customer.transaction_date=None
-                    customer.transaction_type=None
-                    customer.bank_name=None
-                    customer.bank_pay=None
-                    customer.save()
-                elif customer.payment_mode == "Offline":
-                    if customer.transaction_type == "Cheque":
-                        customer.transaction_no=None
-                        customer.transaction_date=None
-                        customer.cheque_no =None
-                        customer.save()
-                manage=ManagementTreasure.objects.filter(management_profile=management)
-                if manage:
-                    manage_get=ManagementTreasure.objects.filter(management_profile=management).first()
-                    if bank_check_get != None:                 
-                        
-                            manage_get.bank_amt =float(manage_get.bank_amt) + float(amount_check)                            
-                            bank_previous=BankDetails.objects.filter(id=bank_check_get).first()
-                            if bank_previous:
-                                bank_previous.debit_amt = float(bank_previous.debit_amt) -  float(amount_check)
-                                bank_previous.credit_amt = float(bank_previous.credit_amt) + float(amount_check)
-                            # bank.save()                                           
-
-                    else:
-                                               
-                        manage_get.expence_amt = float(manage_get.expence_amt) - float(amount_check)
-                        # manage_get.save()
-                       
-                print(request.data)
-                try:
-                    bank=request.data['bank']
-                except Exception:
-                    pass
-                expense_amt=request.data['expense_amt']
-                
-                manage1=ManagementTreasure.objects.filter(management_profile=management)
-                if manage1:
-                    manage_get1=ManagementTreasure.objects.filter(management_profile=management).first()
-                    try:
-                        if bank != None:
-
-                            bank_check=BankDetails.objects.filter(id=bank).first()
-                            if bank_check.credit_amt >= float(expense_amt): 
-                                manage_get1.bank_amt =float(manage_get1.bank_amt) - float(expense_amt)
-                                # manage_get1.bank_withdraw_amt=float(manage_get1.bank_withdraw_amt) + float(expense_amt)
-                                manage_get1.save()
-                                bank1=BankDetails.objects.filter(id=bank).first()
-                                bank1.debit_amt = float(bank1.debit_amt) +  float(expense_amt)
-                                bank1.credit_amt = float(bank1.credit_amt) - float(expense_amt)
-                                bank1.save()                               
-                                manage_get.save()
-                                print("tttttttttttttttt")
-                                print(bank_check)
-                                if bank_check_get != None:
-                                    print(bank_previous)
-
-                                    bank_previous.save()                                                  
-
-                            else:
-                                return Response({'message':"Insufficient bank amount, Only " + f'{int(bank_check.credit_amt)}' + " rupees is available in selected bank"},status.HTTP_302_FOUND) 
-                    except Exception:
-                            
-                            # if manage_get1.cash_in_hand >= float(expense_amt):
-                            #     manage_get1.cash_in_hand =float(manage_get1.cash_in_hand) - float(expense_amt)
-                            #     manage_get1.save()
-                                manage_get1.expence_amt = float(manage_get1.expence_amt) + float(expense_amt)
-                                manage_get1.save()
-                                manage_get.save()
-                                if bank_check_get != None:
-                                    bank_previous.save()
-
-                                
-                            # else:
-                            #     return Response({'message':"Insufficient cash amount, Only " + f'{int(manage_get.cash_in_hand)}' + " rupees is available in treasure cashinhand"},status.HTTP_302_FOUND) 
-                   
-                temp_family=serializer876.save()
-                temp_family.created_by=rejin.id
-                temp_family.management_profile=management
-                temp_family.save()
-
-                # Chit-Fund reverse-then-reapply (Feb 2026 owner rule).
-                if _prev_was_chit:
-                    # Refresh so reverse writes against the latest
-                    # in-DB balances (avoids stale ORM instance stomping
-                    # the row when prev + new point to the same chit).
-                    _prev_chit.refresh_from_db()
-                    reverse_chit_fund_expense(_prev_chit, _prev_amt)
-                if _new_chit_obj is not None:
-                    _new_chit_obj.refresh_from_db()
-                    apply_chit_fund_expense(_new_chit_obj, temp_family.expense_amt)
-
-                report_check=Report.objects.filter(expenses=pk)
-                if report_check:
-                    report_checks=Report.objects.filter(expenses=pk).first()
-                    report_checks.amount=temp_family.expense_amt
-                    report_checks.expenses_id=pk
-                    report_checks.banks=temp_family.bank
-                    report_checks.management_profile=temp_family.management_profile
-                    report_checks.type_choice="Reduction"
-                    report_checks.created_by=rejin.id
-                    report_checks.save()
-                return Response(serializer876.data,status=status.HTTP_201_CREATED)
+                        },
+                        status.HTTP_302_FOUND,
+                    )
             else:
-                return Response(serializer876.errors,status=status.HTTP_400_BAD_REQUEST)
-        return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
-    
-    elif request.method == 'PATCH': 
-        if get_role=="User" and perm.expense_edit ==True or get_role=="Admin" or rejin.is_superuser == True:  
-            serializer876 = ADDExpenseDetailsSerializer(customer,data=request.data,partial=True)
-            if serializer876.is_valid():
-                # Chit-Fund reverse-then-reapply (partial edit).
-                _prev_chit = customer.chitt_fund
-                _prev_amt = customer.expense_amt
-                _prev_was_chit = (customer.expense_subcategory == 'Chit Fund Expense') and (_prev_chit is not None)
+                ok, msg = check_chit_fund_cash(new_chit_obj, new_amt)
+                if not ok:
+                    return Response({'message': msg}, status.HTTP_302_FOUND)
 
-                temp_family=serializer876.save()
-                temp_family.created_by=rejin.id
-                temp_family.management_profile=management
-                temp_family.save()
+        # Clear stale payment-mode-specific fields from the OLD record
+        # before applying the new data (unchanged from original intent).
+        if customer.payment_mode == "Online":
+            customer.bank = None
+            customer.transaction_no = None
+            customer.transaction_date = None
+            customer.transaction_type = None
+            customer.bank_name = None
+            customer.bank_pay = None
+            customer.save()
+        elif customer.payment_mode == "Offline":
+            if customer.transaction_type == "Cheque":
+                customer.transaction_no = None
+                customer.transaction_date = None
+                customer.cheque_no = None
+                customer.save()
 
-                _new_was_chit = (temp_family.expense_subcategory == 'Chit Fund Expense') and (temp_family.chitt_fund is not None)
-                if _prev_was_chit:
-                    _prev_chit.refresh_from_db()
-                    reverse_chit_fund_expense(_prev_chit, _prev_amt)
-                if _new_was_chit:
-                    temp_family.chitt_fund.refresh_from_db()
-                    apply_chit_fund_expense(temp_family.chitt_fund, temp_family.expense_amt)
+        # ------------------------------------------------------------
+        # Step 1: reverse the PREVIOUS effect on treasure/bank.
+        # ------------------------------------------------------------
+        manage_get = ManagementTreasure.objects.filter(management_profile=management).first()
+        previous_amount_f = float(previous_amount or 0)
 
-                manage=ManagementTreasure.objects.filter(management_profile=management)
-                if manage:
-                    manage_get=ManagementTreasure.objects.filter(management_profile=management).first()
-                    # manage_get.expence_amt = float(manage_get.expence_amt) + float(temp_family.expense_amt) - float(amount)
-                    manage_get.save()
-                return Response(serializer876.data,status=status.HTTP_201_CREATED)
+        if manage_get is not None:
+            if previous_bank is not None:
+                manage_get.bank_amt = float(manage_get.bank_amt) + previous_amount_f
+                manage_get.save()
+
+                bank_previous = BankDetails.objects.filter(id=previous_bank.id).first()
+                if bank_previous is not None:
+                    bank_previous.debit_amt = float(bank_previous.debit_amt) - previous_amount_f
+                    bank_previous.credit_amt = float(bank_previous.credit_amt) + previous_amount_f
+                    bank_previous.save()
             else:
-                return Response(serializer876.errors,status=status.HTTP_400_BAD_REQUEST)
-        return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
-            
+                manage_get.expence_amt = float(manage_get.expence_amt) - previous_amount_f
+                manage_get.save()
+
+        # ------------------------------------------------------------
+        # Step 2: apply the NEW effect on treasure/bank.
+        # ------------------------------------------------------------
+        raw_new_expense_amt = request.data.get('expense_amt')
+        if raw_new_expense_amt is None:
+            return Response({'message': 'expense_amt is required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            new_expense_amt = float(raw_new_expense_amt)
+        except (TypeError, ValueError):
+            return Response({'message': 'expense_amt must be a valid number'}, status=status.HTTP_400_BAD_REQUEST)
+
+        new_bank_id = request.data.get('bank')
+
+        if new_bank_id:
+            new_bank_obj = BankDetails.objects.filter(id=new_bank_id).first()
+            if new_bank_obj is None:
+                return Response({'message': 'Selected bank not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # FIX: same Decimal/float coercion fix as add_expen_details.
+            if float(new_bank_obj.credit_amt) < new_expense_amt:
+                return Response(
+                    {
+                        'message': (
+                            "Insufficient bank amount, Only "
+                            + f'{int(new_bank_obj.credit_amt)}'
+                            + " rupees is available in selected bank"
+                        )
+                    },
+                    status.HTTP_302_FOUND,
+                )
+
+            if manage_get is not None:
+                manage_get.bank_amt = float(manage_get.bank_amt) - new_expense_amt
+                manage_get.save()
+
+            new_bank_obj.debit_amt = float(new_bank_obj.debit_amt) + new_expense_amt
+            new_bank_obj.credit_amt = float(new_bank_obj.credit_amt) - new_expense_amt
+            new_bank_obj.save()
+
+        else:
+            if manage_get is not None:
+                manage_get.expence_amt = float(manage_get.expence_amt) + new_expense_amt
+                manage_get.save()
+
+        temp_family = serializer876.save()
+        temp_family.created_by = rejin.id
+        temp_family.management_profile = management
+        temp_family.save()
+
+        # Chit-Fund reverse-then-reapply (Feb 2026 owner rule).
+        if prev_was_chit:
+            prev_chit.refresh_from_db()
+            reverse_chit_fund_expense(prev_chit, previous_amount)
+        if new_chit_obj is not None:
+            new_chit_obj.refresh_from_db()
+            apply_chit_fund_expense(new_chit_obj, temp_family.expense_amt)
+
+        report_checks = Report.objects.filter(expenses=pk).first()
+        if report_checks is not None:
+            report_checks.amount = temp_family.expense_amt
+            report_checks.expenses_id = pk
+            report_checks.banks = temp_family.bank
+            report_checks.management_profile = temp_family.management_profile
+            report_checks.type_choice = "Reduction"
+            report_checks.created_by = rejin.id
+            report_checks.save()
+
+        return Response(serializer876.data, status=status.HTTP_201_CREATED)
+
+    elif request.method == 'PATCH':
+        is_authorized = get_role == "Admin" or rejin.is_superuser is True or (
+            get_role == "User" and perm is not None and perm.expense_edit is True
+        )
+        if not is_authorized:
+            return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
+
+        serializer876 = ADDExpenseDetailsSerializer(customer, data=request.data, partial=True)
+        if not serializer876.is_valid():
+            return Response(serializer876.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        prev_chit = customer.chitt_fund
+        prev_amt = customer.expense_amt
+        prev_was_chit = (customer.expense_subcategory == 'Chit Fund Expense') and (prev_chit is not None)
+
+        temp_family = serializer876.save()
+        temp_family.created_by = rejin.id
+        temp_family.management_profile = management
+        temp_family.save()
+
+        new_was_chit = (temp_family.expense_subcategory == 'Chit Fund Expense') and (temp_family.chitt_fund is not None)
+        if prev_was_chit:
+            prev_chit.refresh_from_db()
+            reverse_chit_fund_expense(prev_chit, prev_amt)
+        if new_was_chit:
+            temp_family.chitt_fund.refresh_from_db()
+            apply_chit_fund_expense(temp_family.chitt_fund, temp_family.expense_amt)
+
+        # NOTE: unchanged from original — this branch does not touch
+        # bank/cash treasure balances for partial updates. If PATCH is
+        # expected to change expense_amt or bank, that balance logic
+        # needs to be added here following the same pattern as PUT.
+        manage_get = ManagementTreasure.objects.filter(management_profile=management).first()
+        if manage_get is not None:
+            manage_get.save()
+
+        return Response(serializer876.data, status=status.HTTP_201_CREATED)
+
     elif request.method == 'DELETE':
-        if get_role=="User" and perm.expense_edit ==True or get_role=="Admin" or rejin.is_superuser == True or get_role=="User" and perm.expense_delete ==True:
-            date_check=  (customer.date.month != datetime.now().month and customer.date.year != datetime.now().year)  or  (customer.date.month != datetime.now().month and customer.date.year == datetime.now().year)   or (customer.date.month == datetime.now().month and customer.date.year != datetime.now().year)     
-            if date_check:
-                return Response({'message':"Cannot be deleted"},status.HTTP_302_FOUND) 
+        is_authorized = get_role == "Admin" or rejin.is_superuser is True or (
+            get_role == "User" and perm is not None and (perm.expense_edit is True or perm.expense_delete is True)
+        )
+        if not is_authorized:
+            return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
 
-            # Chit-Fund credit-back (Feb 2026 owner rule): if the deleted
-            # row was a Chit Fund Expense linked to a chit fund, restore
-            # profit_amount + cash_inhand_amount before the row vanishes.
-            if (customer.expense_subcategory == 'Chit Fund Expense'
-                    and customer.chitt_fund is not None):
-                reverse_chit_fund_expense(customer.chitt_fund, customer.expense_amt)
+        now = datetime.now()
+        same_month_and_year = (customer.date.month == now.month and customer.date.year == now.year)
+        if not same_month_and_year:
+            return Response({'message': "Cannot be deleted"}, status.HTTP_302_FOUND)
 
-            manage1=ManagementTreasure.objects.filter(management_profile=management)
-            if manage1:
-                manage_get=ManagementTreasure.objects.filter(management_profile=management).first()
-                if customer.bank != None:
-                    manage_get.bank_amt =float(manage_get.bank_amt) + float(amount_check)
-                    # manage_get.bank_withdraw_amt=float(manage_get.bank_withdraw_amt) - float(amount_check)
-                    manage_get.reduce_expence_amt = float(manage_get.reduce_expence_amt) - float(amount_check)
-                    manage_get.save()
-                    bank=BankDetails.objects.filter(id=customer.bank.id).first()
-                    bank.debit_amt = float(bank.debit_amt) - float(amount_check)
-                    bank.credit_amt = float(bank.credit_amt) + float(amount_check)
+        # Chit-Fund credit-back (Feb 2026 owner rule): if the deleted
+        # row was a Chit Fund Expense linked to a chit fund, restore
+        # profit_amount + cash_inhand_amount before the row vanishes.
+        if customer.expense_subcategory == 'Chit Fund Expense' and customer.chitt_fund is not None:
+            reverse_chit_fund_expense(customer.chitt_fund, customer.expense_amt)
+
+        manage_get = ManagementTreasure.objects.filter(management_profile=management).first()
+        if manage_get is not None:
+            if customer.bank is not None:
+                manage_get.bank_amt = float(manage_get.bank_amt) + float(previous_amount)
+                manage_get.reduce_expence_amt = float(manage_get.reduce_expence_amt) - float(previous_amount)
+                manage_get.save()
+
+                bank = BankDetails.objects.filter(id=customer.bank.id).first()
+                if bank is not None:
+                    bank.debit_amt = float(bank.debit_amt) - float(previous_amount)
+                    bank.credit_amt = float(bank.credit_amt) + float(previous_amount)
                     bank.save()
-                else:
-                    # manage_get.cash_in_hand =float(manage_get.cash_in_hand) + float(amount_check)
-                    # manage_get.save()
-                    manage_get.expence_amt = float(manage_get.expence_amt) - float(amount_check)
-                    manage_get.save()
-            customer.delete()
-            report_check=Report.objects.filter(expenses=pk)
-            if report_check:
-                report_checks=Report.objects.filter(expenses=pk).first()
-                report_checks.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
-    
+            else:
+                manage_get.expence_amt = float(manage_get.expence_amt) - float(previous_amount)
+                manage_get.save()
+
+        customer.delete()
+
+        report_checks = Report.objects.filter(expenses=pk).first()
+        if report_checks is not None:
+            report_checks.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-
-@api_view(['GET','POST'])
+@api_view(['GET', 'POST'])
 def expense_detail_filter(request):
-    rejin=token_checking(request)
+    rejin = token_checking(request)
     if not rejin:
-        return Response({"message":"No User Found"},status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"message": "No User Found"}, status=status.HTTP_401_UNAUTHORIZED)
     if not rejin.is_active:
-        return Response({"message":"Not Authorized Please Contact Admin"},status=status.HTTP_401_UNAUTHORIZED)
-    print(f'token---{rejin}')
-    get_role=rejin.user_role
-    if rejin.my_role!=None:
-        permiss=Permisions.objects.filter(role_link_id=rejin.my_role.id).first()
-        if permiss:
-            perm=Permisions.objects.get(role_link_id=rejin.my_role.id) 
-    check_management=ManagementDetails.objects.all()
-    if not check_management:
-        dict6={}
-        dict6['message']= "First Add Management Profile details"
-        return Response(dict6,status=status.HTTP_406_NOT_ACCEPTABLE)
-    else:
-        management=ManagementDetails.objects.all().first()
-    
+        return Response({"message": "Not Authorized Please Contact Admin"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    management, err = _get_management_or_error()
+    if err:
+        return err
+
     if request.method == 'POST':
-        jj=request.data['range']
-        end_date=jj['end_date']
-        start_date=jj['start_date']
-        if start_date and end_date:
+        date_range = request.data.get('range') or {}
+        start_date = date_range.get('start_date')
+        end_date = date_range.get('end_date')
+
+        if not (start_date and end_date):
+            return Response({'message': 'start_date and end_date are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
             start_date_time_obj = datetime.strptime(str(start_date), '%Y-%m-%d').date()
             end_date_time_obj = datetime.strptime(str(end_date), '%Y-%m-%d').date()
-            our_family = ADDExpenseDetails.objects.filter(management_profile=management,date__gte=start_date_time_obj,date__lte=end_date_time_obj)
-            serializer = ADDExpenseDetailsSerializer(our_family,many=True)
-            return Response(serializer.data,status=status.HTTP_200_OK)
-            
+        except ValueError:
+            return Response({'message': 'Dates must be in YYYY-MM-DD format'}, status=status.HTTP_400_BAD_REQUEST)
+
+        our_family = ADDExpenseDetails.objects.filter(
+            management_profile=management,
+            date__gte=start_date_time_obj,
+            date__lte=end_date_time_obj,
+        )
+        serializer = ADDExpenseDetailsSerializer(our_family, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    elif request.method == 'GET':
+        our_family = ADDExpenseDetails.objects.filter(management_profile=management)
+        serializer = ADDExpenseDetailsSerializer(our_family, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

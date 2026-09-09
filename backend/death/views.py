@@ -76,7 +76,7 @@ def add_death_details(request):
                     print('death member geting error')
                     pass
                 
-                get_tax_members=Member_Details.objects.filter(management_profile=management,member_tax_eligible=True,death=False)
+                get_tax_members=Member_Details.objects.filter(management_profile=management,member_tax_eligible=True,death=False,member_gender="Male")
                 for mem_tax in get_tax_members:
                     people_amount=PeoplesAmountDetails.objects.create(management_profile=management,member=mem_tax,death=temp_family,amount=temp_family.death_tariff_amt,name='Death',created_by=rejin.id,total_bal_amt=temp_family.death_tariff_amt,amount_balance=temp_family.death_tariff_amt)
                     if temp_family.pen_amt_type=="Amount":
