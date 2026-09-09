@@ -1,3 +1,0 @@
-python manage.py makemigrations  --settings=temple_proj.settings.dev
-python manage.py migrate  --settings=temple_proj.settings.dev
-python manage.py runserver  --settings=temple_proj.settings.dev
