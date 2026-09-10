@@ -39,7 +39,6 @@ urlpatterns = [
     path('collection_amountdetails_filter_by_user_list/', views.collection_amountdetails_filter_by_user_list,name='collection_amountdetails_filter_by_user_list'),
     path('collection_amountdetails_filter_by_user/', views.collection_amountdetails_filter_by_user,name='collection_amountdetails_filter_by_user'),
 
-    path('fund_member_details/', views.fund_member_details,name='fund_member_details'),
     path('management_interest_member_details/', views.management_interest_member_details,name='management_interest_member_details'),
     path('chitfund_interest_member_details/', views.chitfund_interest_member_details,name='chitfund_interest_member_details'),
     path('chit_fund_details/', views.chit_fund_details,name='chit_fund_details'),
