@@ -196,9 +196,12 @@ export const ContentLayout = styled(Layout)`
   min-height: 100vh;
   background: var(--bg-app) !important;
   transition: margin-left 0.2s ease-in-out;
+  overflow-x: hidden;
 
   @media (max-width: 900px) {
     margin-left: 0;
+    width: 100%;
+    overflow-x: hidden;
   }
 `;
 

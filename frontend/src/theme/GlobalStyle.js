@@ -29,7 +29,8 @@ const GlobalStyle = createGlobalStyle`
 
   .ant-drawer .ant-drawer-body {
     padding: 0 !important;
-    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overflow-y: auto ! important;
     background: #2A0407 !important;
   }
 
