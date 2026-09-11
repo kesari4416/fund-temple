@@ -11,7 +11,7 @@ import {
   Flex,
 } from "@components/others";
 import { CustomPageTitle } from "@components/others/CustomPageTitle";
-import { Col, Form, Tooltip } from "antd";
+import { Col, Form, Tabs, Tooltip } from "antd";
 import {
   getCollectionList,
   getCollectionListError,
@@ -80,6 +80,10 @@ export const CollectionUserList = () => {
   const ResetTrigger = () => {
     form.resetFields();
   };
+
+  const CHIT_CATEGORIES = ['Chit Interest', 'Chit Fund'];
+  const chitData  = dataSource.filter(r => CHIT_CATEGORIES.includes(r.collection_category));
+  const otherData = dataSource.filter(r => !CHIT_CATEGORIES.includes(r.collection_category));
 
   const showModal = () => {
     setIsModalOpen(true);
@@ -458,8 +462,33 @@ export const CollectionUserList = () => {
         </Form>
         <CustomRow>
           <Col span={24} md={24}>
-            {superUsers || role === userRolesConfig.ADMIN ? content : null}
-            {role === userRolesConfig.USER ? content1 : null}
+            <Tabs
+              defaultActiveKey="other"
+              items={[
+                {
+                  key: 'other',
+                  label: 'Collection',
+                  children: (
+                    <CustomStandardTable
+                      columns={TableColumn}
+                      data={otherData}
+                      rowKey={(record) => record.id}
+                    />
+                  ),
+                },
+                {
+                  key: 'chit',
+                  label: 'Chit Fund Collection',
+                  children: (
+                    <CustomStandardTable
+                      columns={TableColumn}
+                      data={chitData}
+                      rowKey={(record) => record.id}
+                    />
+                  ),
+                },
+              ]}
+            />
           </Col>
         </CustomRow>
 
