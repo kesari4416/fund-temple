@@ -26,6 +26,7 @@ export const CustomStandardTable = ({ columns, data, footer, components, paginat
                     onRow={onRow}
                     pagination={pagination}
                     rowClassName={rowClassName || getRowClassName}
+                    scroll={{ x: 'max-content' }}
                 />
             </div>
 
