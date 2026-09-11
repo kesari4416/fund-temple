@@ -1303,11 +1303,25 @@ def add_collection_details(request):
                                                                            balance_amt=bal, created_by=rejin.id,
                                                                            collection=temp_family)
                         else:
-
+                            # FIX: this used to hardcode balance_amt=0 for a
+                            # member's first-ever TempleMemberReport row,
+                            # completely ignoring debit_amt. It should be
+                            # 0 - debit_amt, matching the formula used in
+                            # the "prior report exists" branch above
+                            # (previous_balance - debit_amt, with an implicit
+                            # previous_balance of 0 when there's no prior
+                            # row). Leaving it at 0 made row 1 look like
+                            # nothing was owed even though debit_amt showed
+                            # the actual charge, and every later row's
+                            # running balance stayed permanently short by
+                            # that same amount, since each new balance is
+                            # computed from the previous row's (wrong)
+                            # balance_amt.
                             tem_report = TempleMemberReport.objects.create(management_profile=management,
                                                                            members=temp_family.member,
                                                                            reportdate=temp_family.pay_date,
-                                                                           debit_amt=temp_family.amount, balance_amt=0,
+                                                                           debit_amt=temp_family.amount,
+                                                                           balance_amt=0 - float(temp_family.amount),
                                                                            created_by=rejin.id, collection=temp_family)
                     else:
                         mem_report = TempleMemberReport.objects.filter(members=temp_family.member)
@@ -1321,10 +1335,19 @@ def add_collection_details(request):
                                                                            balance_amt=bal, created_by=rejin.id,
                                                                            collection=temp_family)
                         else:
+                            # FIX: same hardcoded balance_amt=0 bug as the
+                            # sub_tariff branch above — this is the branch
+                            # hit for a member's first-ever Marriage, Death
+                            # Tariff, Festival, or Balance collection.
+                            # Corrected to 0 - debit_amt so the running
+                            # balance starts correctly instead of every
+                            # subsequent row inheriting a balance that's
+                            # short by this amount.
                             tem_report = TempleMemberReport.objects.create(management_profile=management,
                                                                            members=temp_family.member,
                                                                            reportdate=temp_family.pay_date,
-                                                                           debit_amt=temp_family.amount, balance_amt=0,
+                                                                           debit_amt=temp_family.amount,
+                                                                           balance_amt=0 - float(temp_family.amount),
                                                                            created_by=rejin.id, collection=temp_family)
                     if temp_family.sub_tariff != None:
                         tem_report.type_choice = "subscription Tariff"
