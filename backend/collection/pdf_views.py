@@ -66,6 +66,7 @@ from collection.models import CollectionDetails
 from interest.models import PeopleInterestDetails
 from balancesheet.models import PeopleInterestBalanceSheet
 from reports.models import TempleMemberReport
+from reports.models import InterestPeopleReport
 
 # Reuse the HMAC helpers + pending-dues logic from public_views so tokens
 # stay compatible with the HTML public statement.
@@ -524,34 +525,73 @@ def public_interest_statement_pdf(request, token: str):
         return HttpResponseNotFound("interest not found")
 
     since = timezone.now().date() - timedelta(days=365)
-    collections = (
-        CollectionDetails.objects
-        .filter(interest=interest, pay_date__gte=since, action=True)
-        .order_by("-pay_date", "-id")
-    )
-
-    running = 0.0
-    tot_pri = tot_int = tot_pen = 0.0
-    rows = []
-    for c in reversed(list(collections)):
-        pri = float(c.amount or 0)
-        intr = float(c.interst_amount or 0)
-        pen = float(c.penalty_amount or 0)
-        total_paid = pri + intr + pen
-        running += total_paid
-        tot_pri += pri
-        tot_int += intr
-        tot_pen += pen
-        rows.append({
-            "date": c.pay_date.isoformat() if c.pay_date else "-",
-            "category": c.collection_category or "-",
-            "amount": total_paid,
-            "penalty": pen,
-            "running": running,
-        })
-    rows.reverse()
 
     bal = PeopleInterestBalanceSheet.objects.filter(interest=interest).first()
+
+    # ------------------------------------------------------------------
+    # FIX: "1-Year Balance Sheet" now pulls its exact structure and data
+    # straight from InterestPeopleReport — the same authoritative ledger
+    # table used everywhere else in the app (e.g. interest_profile).
+    # Previously this table was reconstructed from CollectionDetails
+    # (individual payments only), which meant interest accruals, penalty
+    # charges, and discounts recorded directly on the ledger (not tied to
+    # a payment row) never appeared here — and the running total shown
+    # didn't match the actual balance_amt column on each ledger entry.
+    #
+    # Columns now mirror InterestPeopleReport's own fields directly:
+    #   reportdate -> Date
+    #   type_choice -> Type   (Initial / Interest / Penalty /
+    #                           Principal Payment / Interest Payment /
+    #                           Principal Interest Payment / Discount / Payment)
+    #   credit_amt -> Credit
+    #   debit_amt  -> Debit
+    #   balance_amt -> Balance  (the ledger's own running balance, not a
+    #                            value recomputed in this view)
+    # ------------------------------------------------------------------
+    ledger_reports = (
+        InterestPeopleReport.objects
+        .filter(interest=interest, reportdate__gte=since)
+        .order_by("reportdate", "created_at", "id")
+    )
+
+    # Carry-forward opening balance — same pattern as the member
+    # statement: pick up the running balance from the LAST ledger row
+    # that predates the 1-year window, so the first visible row's
+    # balance doesn't look like it came from nowhere.
+    prev_ledger_before_window = (
+        InterestPeopleReport.objects
+        .filter(interest=interest, reportdate__lt=since)
+        .order_by("reportdate", "created_at", "id")
+        .last()
+    )
+    opening_balance = (
+        float(prev_ledger_before_window.balance_amt or 0)
+        if prev_ledger_before_window else 0.0
+    )
+
+    ledger_rows = []
+    tot_credit = 0.0
+    tot_debit = 0.0
+    for r in ledger_reports:
+        credit = float(r.credit_amt or 0)
+        debit = float(r.debit_amt or 0)
+        ledger_rows.append({
+            "date": r.reportdate.isoformat() if r.reportdate else "-",
+            "type": r.type_choice or "-",
+            "credit": credit,
+            "debit": debit,
+            "balance": float(r.balance_amt or 0),
+        })
+        tot_credit += credit
+        tot_debit += debit
+
+    # Closing balance for the totals row: the LAST ledger row's own
+    # balance_amt (not recomputed) — falls back to the balance-sheet's
+    # current balance_amt if there are no ledger rows in the window.
+    if ledger_rows:
+        closing_balance = ledger_rows[-1]["balance"]
+    else:
+        closing_balance = float(bal.balance_amt or 0) if bal else 0.0
 
     title = f"Loan_Statement_{interest.id}_{timezone.now().date().isoformat()}.pdf"
     doc, buf, styles = _styled_doc(title)
@@ -596,10 +636,16 @@ def public_interest_statement_pdf(request, token: str):
     story.append(Spacer(1, 6 * mm))
 
     # Outstanding card
+    # FIX: "Principal issued" previously showed only bal.principal_amt.
+    # Relabeled and changed to Principal + Interest (principal_amt +
+    # intrest_amt) per owner request — this reflects the borrower's full
+    # original obligation (principal borrowed + total interest billed on
+    # the loan), not just the principal component.
     if bal:
+        total_issued = float(bal.principal_amt or 0) + float(bal.intrest_amt or 0)
         outs = [
             ["Outstanding balance", ""],
-            ["Principal issued", _rupee(bal.principal_amt)],
+            ["Total Issued (Principal + Interest)", _rupee(total_issued)],
             ["Principal paid", _rupee(bal.principal_paid)],
             ["Principal balance", _rupee(bal.principal_balance)],
             ["Penalty balance", _rupee(bal.penalty_balance_amt)],
@@ -626,28 +672,40 @@ def public_interest_statement_pdf(request, token: str):
         story.append(o_tbl)
         story.append(Spacer(1, 6 * mm))
 
-    # 1-year balance sheet
+    # 1-year balance sheet — now the exact structure/data from
+    # InterestPeopleReport (see FIX comment above).
     story.append(Paragraph("1-Year Balance Sheet", styles["H2"]))
-    if not rows:
-        story.append(Paragraph("No payments in the last 12 months.", styles["Muted"]))
+    if not ledger_rows and abs(opening_balance) <= 0.005:
+        story.append(Paragraph("No entries in the last 12 months.", styles["Muted"]))
     else:
-        headers = ["Date", "Category", "Amount", "Penalty", "Running Total"]
+        headers = ["Date", "Type", "Credit", "Debit", "Balance"]
         data = [headers]
-        for r in rows:
+        # Opening-balance row, same pattern as the member statement, so
+        # the first visible row's balance doesn't look like it came from
+        # nowhere when the loan has history before this 1-year window.
+        if abs(opening_balance) > 0.005:
+            data.append([
+                since.strftime("%Y-%m-%d"),
+                "Opening Balance",
+                f"{0.0:,.2f}",
+                f"{0.0:,.2f}",
+                f"{opening_balance:,.2f}",
+            ])
+        for r in ledger_rows:
             data.append([
                 r["date"],
-                str(r["category"])[:30],
-                f"{r['amount']:,.2f}",
-                f"{r['penalty']:,.2f}",
-                f"{r['running']:,.2f}",
+                str(r["type"])[:28],
+                f"{r['credit']:,.2f}",
+                f"{r['debit']:,.2f}",
+                f"{r['balance']:,.2f}",
             ])
         data.append([
-            "", "TOTAL",
-            f"{running:,.2f}",
-            f"{tot_pen:,.2f}",
-            "",
+            "", "Total",
+            f"{tot_credit:,.2f}",
+            f"{tot_debit:,.2f}",
+            f"{closing_balance:,.2f}",
         ])
-        tbl = Table(data, colWidths=[28 * mm, 55 * mm, 32 * mm, 28 * mm, 35 * mm])
+        tbl = Table(data, colWidths=[26 * mm, 55 * mm, 30 * mm, 30 * mm, 32 * mm])
         style = _table_style_header()
         for col in (2, 3, 4):
             style.add("ALIGN", (col, 0), (col, -1), "RIGHT")
