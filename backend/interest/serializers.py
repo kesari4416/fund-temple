@@ -90,97 +90,41 @@ class PeopleInterestBalanceDetailsSerializer(serializers.ModelSerializer):
         model =PeopleInterestDetails
         fields = ['id','management_profile','intrest_no','interest_category','interest_type','chitt_fund',
                         'chit_name','photo','people_type','people_member','people_name','people_address','people_email','people_mobile','principal_amt','interest_amt','interest_period','interest_period_type','installment_amt','amount']
-    
+
     def get_amount(self, obj):
-        # Retrieve the related PeopleInterestbalansesheet object
-        if obj.interest_category == "Interest":
-            interest_balance_sheet = PeopleInterestBalanceSheet.objects.filter(interest=obj).first()
-            if interest_balance_sheet:
-                print(interest_balance_sheet.intrest_balance_amt)
-                print(obj.interest_amt)
-                # Calculate the difference between interest_balance and interest_amt
-                return interest_balance_sheet.intrest_balance_amt - obj.interest_amt
+        # FIX (Feb 2026): the previous implementation computed a
+        # different, incorrect figure per interest_category:
+        #   - "Interest": returned intrest_balance_amt - obj.interest_amt,
+        #     which ignored principal_balance and penalty_balance_amt
+        #     entirely, and produced 0 or negative values whenever the
+        #     borrower's current-period interest matched interest_amt.
+        #   - "Interest with capital": no branch existed at all, so this
+        #     always returned None (falls through to the implicit
+        #     `return None` at the end of the function) — the "Total
+        #     Balance Amount" field on the frontend showed blank/NaN.
+        #   - "Installment Interest": reconstructed an estimate from
+        #     interest_date/paid_counts date arithmetic, entirely
+        #     disconnected from principal_balance / intrest_balance_amt /
+        #     penalty_balance_amt actually maintained by every payment
+        #     path in collection/views.py — never included penalty, and
+        #     could drift from the real ledger on partial payments,
+        #     overpayments, or discount-waived collections.
+        #
+        # Every collection/payment/reversal branch elsewhere in this
+        # codebase (add_collection_details, edit_collections_details,
+        # the overdue accrual engine in interest/overdue_views.py) reads
+        # and writes principal_balance, intrest_balance_amt, and
+        # penalty_balance_amt as the authoritative outstanding-balance
+        # fields for ALL three interest_category values uniformly. This
+        # replaces the three divergent, category-specific calculations
+        # with a single explicit sum of those three fields — which is
+        # what "Total Balance Amount" actually means everywhere else in
+        # the app.
+        interest_balance_sheet = PeopleInterestBalanceSheet.objects.filter(interest=obj).first()
+        if not interest_balance_sheet:
             return None
-        elif obj.interest_category ==  "Installment Interest":
-            interest_balance_sheet = PeopleInterestBalanceSheet.objects.filter(interest=obj).first()
-            if interest_balance_sheet:
-                print(obj)
-                print(obj.interest_date)
-                print(obj.paid_counts)
-                # print(((interest_balance_sheet.interest_apply_date + relativedelta(obj.paid_counts)).month))
-                print((datetime.date.today().month))
-                print(((datetime.date.today()).day))
-                
-                if interest_balance_sheet.interest.interest_period_type=="Days":
-                    print(((obj.interest_date + relativedelta(days=obj.paid_counts)).day) )
-                    terminating_date=(obj.interest_date + relativedelta(days=obj.interest_period))
-                    # date1 = datetime.strptime(date_str1, '%Y-%m-%d')
-                    
-                    print("sssssssffffffffffffffffffffffffffffffff")
-                    # print(count)
-                    principal=obj.final_amt_given/interest_balance_sheet.interest.interest_period
-                    print(principal)
-                    # print(count.days * (interest_balance_sheet.interest.installment_amt))
-                    if datetime.date.today() > terminating_date:
-                        count= abs(((obj.interest_date + relativedelta(days=obj.paid_counts)))  - terminating_date)
-                        return round((count.days) * (principal))
-                    else:
-                        print("saaleee")
-                        days_check=abs((obj.interest_date + relativedelta(days=obj.paid_counts))  - datetime.date.today())
-                        print(days_check)
-                        return round(((days_check.days)-1) * (principal))
-
-
-               
-
-                        
-                elif interest_balance_sheet.interest.interest_period_type=="Week":
-                    principal=obj.final_amt_given/interest_balance_sheet.interest.interest_period
-
-                    
-                    paid_counts=obj.paid_counts
-                    count= abs((obj.interest_date + relativedelta(days=obj.paid_counts)  - (datetime.date.today())))
-                    print(count)
-                    print("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")
-                    weeks = (count.days // 7) 
-                    print(weeks)
-                    print("uuuuuuuuuuuuuuuu")
-                    days_cal=((obj.interest_date)  + relativedelta(weeks=weeks))
-                    days_cal_limit=((obj.interest_date)  + relativedelta(weeks=weeks+1))
-                    dates = []
-                    current_date = days_cal
-                    print(current_date)
-                    while current_date >= days_cal and current_date < days_cal_limit:                                    
-                        dates.append(current_date)
-                        current_date += timedelta(days=1)
-                    print(dates)
-                    pay_date_check=CollectionDetails.objects.filter(interest=obj)
-                    if pay_date_check:
-                        pay_date_checking= CollectionDetails.objects.filter(interest=obj).last()
-                        print("tttttttttt")
-                        print(pay_date_checking)
-                        if pay_date_checking.pay_date in dates: 
-                            print(round(abs((weeks)-1) * ((interest_balance_sheet.interest.installment_amt))))
-                            return round(abs((weeks)-1) * ((principal)))
-                    else:
-                        return round(abs((weeks)-1) * ((principal)))
-                elif interest_balance_sheet.interest.interest_period_type=="Month":
-                    print('yesyes')
-                    principal=obj.final_amt_given/interest_balance_sheet.interest.interest_period
-
-                    count= abs(((obj.interest_date + relativedelta(months=obj.paid_counts)))  - ((datetime.date.today())))
-                    print(count)
-                    print("hhhhhhhhhhhhhhhhhhhhhhh")
-                    diff = relativedelta((((obj.interest_date + relativedelta(months=obj.paid_counts))), ((date.today()))))
-                    month_diff = diff.years * 12 + diff.months
-                    # month_diff=int(count.days/30)
-                    print(month_diff)
-                    pay_date_check=CollectionDetails.objects.filter(interest=obj)
-                    if pay_date_check:
-                        pay_date_checking=CollectionDetails.objects.filter(interest=obj).last()
-                        if pay_date_checking.pay_date.month == (datetime.date.today().month) and pay_date_checking.pay_date.year == (datetime.date.today().year):
-
-                            return round(((month_diff)) * ((principal)))
-
-                    else:
-                        return round(((month_diff)-1) * ((principal))) 
+        return (
+            float(interest_balance_sheet.principal_balance or 0)
+            + float(interest_balance_sheet.intrest_balance_amt or 0)
+            + float(interest_balance_sheet.penalty_balance_amt or 0)
+        )
