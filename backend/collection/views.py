@@ -5029,98 +5029,23 @@ def interest_balance_collection(request):
     else:
         management = ManagementDetails.objects.all().first()
     if request.method == "POST":
-        # category=request.data="Balance"
 
-        people_int = PeopleInterestDetails.objects.filter(management_profile=management)
+        people_int = PeopleInterestDetails.objects.filter(management_profile=management, action=True)
         bal = []
         for qqq in people_int:
-            if qqq.interest_category == "Interest":
-                check_balaaa = PeopleInterestBalanceSheet.objects.filter(management_profile=management,
-                                                                         interest_id=qqq.id).first()
+            check_balaaa = PeopleInterestBalanceSheet.objects.filter(
+                management_profile=management, interest_id=qqq.id
+            ).first()
+            if not check_balaaa:
+                continue
 
-                date_check = date.today()
-                date_check_year = date_check.year
-                date_check_month = date_check.month
-                start_date = date(date_check_year, date_check_month, 1)
-                if check_balaaa.intrest_balance_amt > qqq.interest_amt:
-                    # if check_balaaa.intrest_balance_amt > 0 and check_balaaa.intrest_balance_amt != check_balaaa.intrest_amt:
-                    bal.append(qqq)
-
-            elif qqq.interest_category == "Installment Interest":
-
-                check_balaaa = PeopleInterestBalanceSheet.objects.filter(management_profile=management,
-                                                                         interest_id=qqq.id).first()
-                date_check = date.today()
-                date_check_year = date_check.year
-                date_check_month = date_check.month
-                start_date = date(date_check_year, date_check_month, 1)
-
-                if qqq.interest_period_type == "Days":
-                    date_checking = qqq.interest_date + relativedelta(days=qqq.interest_period)
-                    date_checking_initial = qqq.interest_date + relativedelta(days=1)
-                    days_diff = (date.today()) - ((qqq.interest_date + relativedelta(days=qqq.paid_counts)))
-                    days_cal_diff = (days_diff.days)
-                    if (((qqq.interest_date + relativedelta(days=qqq.paid_counts))) < (date.today())) and (
-                            (date.today()) != date_checking_initial) and days_cal_diff > 1:
-                        bal.append(qqq)
-
-                elif qqq.interest_period_type == "Week":
-                    # Calculate the total difference in days and weeks
-                    count = abs((qqq.interest_date) - (date.today()))
-                    weeks_cal = (count.days // 7)
-                    # Determine the starting week and limits
-                    starting_date = (qqq.interest_date) + relativedelta(weeks=weeks_cal)
-                    start_initial_week = (qqq.interest_date) + relativedelta(weeks=1)
-                    start_initial_week_limit = (qqq.interest_date) + relativedelta(weeks=2)
-
-                    # Populate dates for the current week
-                    dates = []
-                    current_date = start_initial_week
-
-                    while current_date >= start_initial_week and current_date < start_initial_week_limit:
-                        dates.append(current_date)
-                        current_date += timedelta(days=1)
-
-                    # Calculate the difference in weeks from the last paid count
-                    week_diff = (date.today()) - ((qqq.interest_date + relativedelta(weeks=qqq.paid_counts)))
-                    weeks_diff_cal = (week_diff.days // 7)
-
-                    # Logic to handle missed or overdue payments
-                    if ((qqq.interest_date + relativedelta(weeks=qqq.paid_counts)) < starting_date
-                            and (date.today() not in dates)
-                            and weeks_diff_cal > 1):
-                        # Log and handle overdue
-                        print(f"Overdue detected for: {qqq}")
-                        bal.append(qqq)
-
-                    # Optional: Notify about missed payment
-                    if weeks_diff_cal > 1:
-                        missed_weeks = weeks_diff_cal
-                        print(f"Missed {missed_weeks} week(s) for: {qqq}")
-
-
-                elif qqq.interest_period_type == "Month":
-
-                    # SeaggggHammlig
-
-                    date_checking = qqq.interest_date + relativedelta(months=qqq.interest_period)
-                    date_checking_month = qqq.interest_date + relativedelta(months=1)
-                    today = datetime.today()
-                    # Find the first day of the current month
-                    first_day = today.replace(day=1)
-                    # Find the last day of the current month
-                    _, last_day = calendar.monthrange(today.year, today.month)
-                    # Generate all dates of the current month
-                    dates_of_month = [(first_day + timedelta(days=d)).date() for d in range(last_day)]
-                    diff = relativedelta(
-                        (((qqq.interest_date + relativedelta(months=qqq.paid_counts))), ((date.today()))))
-                    month_diff = diff.years * 12 + diff.months
-                    first_ddddd = date(today.year, today.month, 1)
-
-                    if (((qqq.interest_date + relativedelta(months=qqq.paid_counts))) < start_date) and (
-                            date_checking_month not in dates_of_month) and month_diff > 1 and (
-                            month_diff > 1 or (month_diff == 1 and (date.today()) > first_ddddd)):
-                        bal.append(qqq)
+            has_balance = (
+                float(check_balaaa.principal_balance or 0) > 0
+                or float(check_balaaa.intrest_balance_amt or 0) > 0
+                or float(check_balaaa.penalty_balance_amt or 0) > 0
+            )
+            if has_balance:
+                bal.append(qqq)
 
         serializer = PeopleInterestBalanceDetailsSerializer(bal, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
