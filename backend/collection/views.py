@@ -2533,11 +2533,20 @@ def get_select_type(request):
                 return Response({'message': "un-authenticate"}, status.HTTP_401_UNAUTHORIZED)
         elif data == "Subscription Tariff":
             if get_role == "User" and perm.sub_tariff == True or get_role == "Admin" or rejin.is_superuser == True:
-                fund = ADDSubscriptionTariffDetails.objects.filter(action=True, management_profile=management)
+                today = date.today()
+                # Only list tariffs whose validity window (from_date..to_date, set
+                # when the tariff was created) currently covers today — same rule
+                # as the Festival branch above.
+                fund = ADDSubscriptionTariffDetails.objects.filter(
+                    action=True,
+                    management_profile=management,
+                    from_date__lte=today,
+                    to_date__gte=today,
+                )
                 fund_list = []
                 for fund_obj in fund:
                     amount_obj = PeoplesAmountDetails.objects.filter(sub_tariff_id=fund_obj.id, penalty=False,
-                                                                     paid=False, management_profile=management)
+                                                                    paid=False, management_profile=management)
                     if amount_obj:
                         fund_list.append(fund_obj)
                 serializer = ADDSubscriptionTariffDetailseSerializer(fund_list, many=True)
@@ -2618,28 +2627,41 @@ def get_select_member_collection(request):
 
         data = request.data['category']
         type = request.data['type']
+        today = date.today()  # <-- add this
 
         # Guard: for Subscription Tariff the "Choose Member" dropdown MUST
-        # be scoped to a single active tariff.  If the caller omitted the
-        # `type` (empty string / null), fall back to the newest active tariff
-        # so we never return members whose current tariff was already paid
-        # but who still have residual unpaid rows for older tariffs.
+        # be scoped to a single active tariff that is currently within its
+        # valid date window (from_date..to_date). If the caller omitted the
+        # `type` (empty string / null), fall back to the newest tariff that
+        # is BOTH action=True AND currently within its date window — not
+        # just the newest action=True row, which could be expired.
         if data == "Subscription Tariff" and not type:
             latest_active = ADDSubscriptionTariffDetails.objects.filter(
-                action=True, management_profile=management,
+                action=True,
+                management_profile=management,
+                from_date__lte=today,
+                to_date__gte=today,
             ).order_by('-id').first()
             if latest_active:
                 type = latest_active.id
+            else:
+                type = None  # no currently-valid tariff -> empty dropdown
 
         member = Member_Details.objects.filter(action=True)
         mem_list = []
         for mem in member:
 
             if data == "Subscription Tariff":
-                # Filter by the SPECIFIC sub_tariff id the user selected
-                # (`type` in the payload).  The block above guarantees `type`
-                # is always populated for Subscription Tariff.
-                sub_filter = {"sub_tariff__action": True, "paid": False}
+                # Only show members whose sub_tariff is action=True AND
+                # currently within its from_date/to_date window. Filtering
+                # on sub_tariff_id=type alone lets expired tariffs' unpaid
+                # rows keep showing up in the dropdown after to_date passes.
+                sub_filter = {
+                    "sub_tariff__action": True,
+                    "sub_tariff__from_date__lte": today,
+                    "sub_tariff__to_date__gte": today,
+                    "paid": False,
+                }
                 if type:
                     sub_filter["sub_tariff_id"] = type
                 amount = PeoplesAmountDetails.objects.filter(

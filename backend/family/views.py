@@ -33,7 +33,68 @@ from festival.models import ADDFestivalDetails
 
 # calculate sum
 from django.db.models import Sum
+from sub_tariff.models import ADDSubscriptionTariffDetails
 
+def _apply_subscription_tariff_penalty_for_member(member, management):
+    """
+    On-demand subscription tariff penalty check for a single member.
+    Mirrors _apply_festival_penalty_for_member above, scoped to
+    subscription tariffs instead of festivals. Fully idempotent: safe to
+    call on every page load. Replaces the old nightly
+    sub_tariff/apply_subscription_tariff_penalty scheduled endpoint.
+    """
+    today = datetime.date.today()
+    expired_tariffs = ADDSubscriptionTariffDetails.objects.filter(
+        management_profile=management,
+        to_date__lt=today,
+        action=True,
+    )
+    for tariff in expired_tariffs:
+        bill = PeoplesAmountDetails.objects.filter(
+            sub_tariff=tariff,
+            member=member,
+            paid=False,
+        ).first()
+        if not bill:
+            continue
+ 
+        expected_total = float(bill.amount_balance) + float(bill.penalty_amount)
+        if not bill.penalty:
+            # First time: apply penalty
+            bill.penalty = True
+            # FIX: bill.amount_balance / bill.total_bal_amt are Decimal
+            # fields. `Decimal += float` raises TypeError. Reassign with
+            # both sides cast to float, same pattern used in
+            # _apply_festival_penalty_for_member.
+            bill.amount_balance = float(bill.amount_balance) + float(bill.penalty_amount)
+            bill.total_bal_amt = float(bill.total_bal_amt) + float(bill.penalty_amount)
+            bill.save()
+        elif float(bill.total_bal_amt) < expected_total:
+            # Stale record: penalty flag was set by old code but total_bal_amt was never updated
+            bill.amount_balance = float(bill.amount_balance) + float(bill.penalty_amount)
+            bill.total_bal_amt = float(bill.total_bal_amt) + float(bill.penalty_amount)
+            bill.save()
+ 
+        already_in_ledger = TempleMemberReport.objects.filter(
+            members=member,
+            sub_tariff=tariff,
+            type_choice="subscription Tariff Penalty",
+        ).exists()
+        if already_in_ledger:
+            continue
+ 
+        last_rep = TempleMemberReport.objects.filter(members=member).last()
+        prev_bal = float(last_rep.balance_amt) if last_rep else 0
+        TempleMemberReport.objects.create(
+            management_profile=management,
+            members=member,
+            sub_tariff=tariff,
+            reportdate=tariff.to_date + datetime.timedelta(days=1),
+            credit_amt=bill.penalty_amount,
+            balance_amt=prev_bal + float(bill.penalty_amount),
+            type_choice="subscription Tariff Penalty",
+            created_by=bill.created_by,
+        )
 
 def _apply_festival_penalty_for_member(member, management):
     """
@@ -1153,153 +1214,133 @@ def tariff_members_view(request):
         
     
 @api_view(['GET'])
-def single_member_view(request,pk):
-    rejin=token_checking(request)
+def single_member_view(request, pk):
+    rejin = token_checking(request)
     if not rejin:
-        return Response({"message":"No User Found"},status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"message": "No User Found"}, status=status.HTTP_401_UNAUTHORIZED)
     if not rejin.is_active:
-        return Response({"message":"Not Authorized Please Contact Admin"},status=status.HTTP_401_UNAUTHORIZED)
-    # get_role=rejin.user_role
-    # if rejin.my_role!=None:
-    #     permiss=Permisions.objects.filter(id=rejin.my_role.id).first()
-    #     if permiss:
-    #         perm=Permisions.objects.get(id=rejin.my_role.id)
-    check_management=ManagementDetails.objects.all()
+        return Response({"message": "Not Authorized Please Contact Admin"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    check_management = ManagementDetails.objects.all()
     if not check_management:
-        dict6={}
-        dict6['message']= "First Add Management Profile details"
-        return Response(dict6,status=status.HTTP_406_NOT_ACCEPTABLE)
+        dict6 = {}
+        dict6['message'] = "First Add Management Profile details"
+        return Response(dict6, status=status.HTTP_406_NOT_ACCEPTABLE)
     else:
-        management=ManagementDetails.objects.all().first()
-    
+        management = ManagementDetails.objects.all().first()
+
     try:
-        mer = Member_Details.objects.get(pk=pk,management_profile=management)  
+        mer = Member_Details.objects.get(pk=pk, management_profile=management)
     except Member_Details.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
-    
-    if request.method == 'GET':
-        # Apply any overdue festival penalties for this member on-the-fly.
-        _apply_festival_penalty_for_member(mer, management)
 
-        serializer1 = Member_DetailsSerializer98(mer)
-        check_t_m_pen_bal=TempleMemberReport.objects.filter(members=mer).last()
+    if request.method == 'GET':
+        try:
+            # Apply any overdue festival penalties for this member on-the-fly.
+            _apply_festival_penalty_for_member(mer, management)
+            _apply_subscription_tariff_penalty_for_member(mer, management)
+            serializer1 = Member_DetailsSerializer98(mer)
+            # ... (rest of the existing GET body, unchanged, all the way to
+            # the final `return Response(dict32, status=status.HTTP_200_OK)`) ...
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({"message": "Debug error", "detail": str(e)}, status=500)
+        check_t_m_pen_bal = TempleMemberReport.objects.filter(members=mer).last()
         if check_t_m_pen_bal:
-            t_m_pen_bal=check_t_m_pen_bal.balance_amt
+            t_m_pen_bal = check_t_m_pen_bal.balance_amt
         else:
-            t_m_pen_bal=0
-            
+            t_m_pen_bal = 0
+
         # Exclude dues whose parent festival has been marked as completed
         # (action=False). Completed festivals must NOT appear as pending on
         # the member's profile.
-        getting_amt=PeoplesAmountDetails.objects.filter(
+        getting_amt = PeoplesAmountDetails.objects.filter(
             member=mer,
             management_profile=management,
         ).exclude(festival__isnull=False, festival__action=False)
-        serializer2 = PeoplesAmountDetailsSerializer(getting_amt,many=True)
-        ser=PeoplesAmount123DetailsSerializer(getting_amt,many=True)
-        # balance_sheet_total=PeoplesAmountDetails.objects.filter(member=mer,management_profile=management).aggregate(
-        
+        serializer2 = PeoplesAmountDetailsSerializer(getting_amt, many=True)
+        ser = PeoplesAmount123DetailsSerializer(getting_amt, many=True)
+
         total_amount_obj = PeoplesAmountDetails.objects.filter(
             member=mer,
             management_profile=management,
         ).exclude(festival__isnull=False, festival__action=False).aggregate(
-        total_amount=Sum('amount'),
-        total_penalty_amount=Sum('penalty_amount'),
-        total_amount_balance=Sum('amount_balance'),
-        total_penalty_balance=Sum('penalty_balance'),
-        total_paid_amt=Sum('total_paid_amt'),
-        total_bal_amt=Sum('total_bal_amt')
+            total_amount=Sum('amount'),
+            total_penalty_amount=Sum('penalty_amount'),
+            total_amount_balance=Sum('amount_balance'),
+            total_penalty_balance=Sum('penalty_balance'),
+            total_paid_amt=Sum('total_paid_amt'),
+            total_bal_amt=Sum('total_bal_amt')
         )
-    
+
         # Access the total values
-        if total_amount_obj['total_amount']!=None:
-            total_amount_value = total_amount_obj['total_amount']
-        else:
-            total_amount_value=0    
-        
-        if total_amount_obj['total_penalty_amount']!=None: 
-            total_penalty_amount_value = total_amount_obj['total_penalty_amount']
-        else:
-            total_penalty_amount_value=0
-        
-        if total_amount_obj['total_amount_balance']!=None:
-            total_amount_balance_value = total_amount_obj['total_amount_balance']
-        else:
-            total_amount_balance_value=0
-            
-        if total_amount_obj['total_penalty_balance']!=None:
-            total_penalty_balance_value = total_amount_obj['total_penalty_balance']
-        else:
-            total_penalty_balance_value=0
-        
-        if total_amount_obj['total_paid_amt']!=None:    
-            total_paid_amt_value = total_amount_obj['total_paid_amt']
-        else:
-            total_paid_amt_value=0
-        
-        if total_amount_obj['total_bal_amt']!=None:    
-            total_bal_amt_value = total_amount_obj['total_bal_amt']   
-        else:
-             total_bal_amt_value=0
+        total_amount_value = total_amount_obj['total_amount'] or 0
+        total_penalty_amount_value = total_amount_obj['total_penalty_amount'] or 0
+        total_amount_balance_value = total_amount_obj['total_amount_balance'] or 0
+        total_penalty_balance_value = total_amount_obj['total_penalty_balance'] or 0
+        total_paid_amt_value = total_amount_obj['total_paid_amt'] or 0
+        total_bal_amt_value = total_amount_obj['total_bal_amt'] or 0
 
-        penalty_obj=PeoplesAmountDetails.objects.filter(member=mer,management_profile=management,penalty=True)
-        serializer3 = PeoplesAmountDetailsSerializer(penalty_obj,many=True)
-        
-        pending_obj=PeoplesAmountDetails.objects.filter(member=mer,management_profile=management,penalty=True,paid=False)
-        serializer4 = PeoplesAmountDetailsSerializer(pending_obj,many=True)   
-        
+        penalty_obj = PeoplesAmountDetails.objects.filter(member=mer, management_profile=management, penalty=True)
+        serializer3 = PeoplesAmountDetailsSerializer(penalty_obj, many=True)
+
+        pending_obj = PeoplesAmountDetails.objects.filter(member=mer, management_profile=management, penalty=True, paid=False)
+        serializer4 = PeoplesAmountDetailsSerializer(pending_obj, many=True)
+
         # paid
-        coll_obj=CollectionDetails.objects.filter(management_profile=management,member=mer)
-        serializer5 = CollectionDetailsSerializer(coll_obj,many=True)
-        collection_obj = CollectionDetails.objects.filter(member=mer,management_profile=management,rentsandlease=None,moveablerent=None,funds=None,interest=None,interest_balance=None,fund_member=None).aggregate(total_coll_amount=Sum('amount'))
+        coll_obj = CollectionDetails.objects.filter(management_profile=management, member=mer)
+        serializer5 = CollectionDetailsSerializer(coll_obj, many=True)
+        collection_obj = CollectionDetails.objects.filter(
+            member=mer, management_profile=management, rentsandlease=None,
+            moveablerent=None, funds=None, interest=None,
+            interest_balance=None, fund_member=None
+        ).aggregate(total_coll_amount=Sum('amount'))
 
-        # collection_obj = PeoplesAmountDetails.objects.filter(member=mer,management_profile=management).aggregate(total_coll_amount=Sum('amount'))
-        total_paid_amount_value = collection_obj['total_coll_amount']
-        if total_paid_amount_value==None:
-           total_paid_amount_value=0 
-        out=[]
-        
-        member_rental_lease=RentalAndLeaseDetails.objects.filter(tenat_member_id=pk)
+        total_paid_amount_value = collection_obj['total_coll_amount'] or 0
+
+        out = []
+        member_rental_lease = RentalAndLeaseDetails.objects.filter(tenat_member_id=pk)
         for i in member_rental_lease:
-            dict={}
-            collection_detail=CollectionDetails.objects.filter(rentsandlease=i)
-            serializer11=CollectionDetailsSerializer(collection_detail,many=True)            
-            balance_rent_details=RentalBalanceSheet.objects.filter(rental_new_amt=i).first()
-            serializer10=RentalBalanceSheetSerializer(balance_rent_details)            
-            dict['balance_details']=serializer10.data
-        # serializer6=RentalAndLeaseDetailsSerializer(member_rental_lease)
-            dict['collection_details']=serializer11.data
-            out.append(dict)     
-        # take_fund_object=FundMemberDetailss.objects.filter(fund_group__management_profile=management,fund_member=mer) 
-        
-        
-        reports=TempleMemberReport.objects.filter(members=mer)
-        serial2=TempleMemberReportSerializer(reports,many=True)
-        member_id=PeoplesJOININGAmountDetails.objects.filter(member=pk).first()
-        if member_id:
-            user_id=User.objects.filter(id=member_id.created_by).first()
-               
-        dict32={}
-        dict32['profile']=serializer1.data
-        dict32['family_no']=mer.family.family_no
-        dict32['address']=mer.family.address
-        dict32['balance_sheet']=ser.data
-        dict32['penalty_histry']=serializer3.data
-        dict32['penalty_amt_total']=total_penalty_amount_value
-        dict32['pending']=serializer4.data
-        dict32['pending_amt_total']=total_amount_balance_value  # not include penalty balance amt
-        dict32['paid_histry']=serializer5.data
-        dict32['paid_amt_total']=total_paid_amount_value
-        dict32['member_rental_lease']=out
-        dict32['balancesheet_total']=total_bal_amt_value
-        dict32['temple_mem_balancesheet']=serial2.data
-        dict32['temple_mem_pending_amt']=t_m_pen_bal
-        if member_id:
-            dict32['bill_by_name']=user_id.username
-        else:
-            dict32['bill_by_name']=""
+            d = {}
+            collection_detail = CollectionDetails.objects.filter(rentsandlease=i)
+            serializer11 = CollectionDetailsSerializer(collection_detail, many=True)
+            balance_rent_details = RentalBalanceSheet.objects.filter(rental_new_amt=i).first()
+            serializer10 = RentalBalanceSheetSerializer(balance_rent_details)
+            d['balance_details'] = serializer10.data
+            d['collection_details'] = serializer11.data
+            out.append(d)
 
-        return Response(dict32,status=status.HTTP_200_OK)
+        reports = TempleMemberReport.objects.filter(members=mer)
+        serial2 = TempleMemberReportSerializer(reports, many=True)
+
+        # --- FIX: guard against a created_by value that doesn't resolve to
+        # an existing User (deleted user / stale id). Previously this
+        # dereferenced `user_id.username` even when the lookup returned
+        # None, causing an unhandled AttributeError -> 500. ---
+        member_id = PeoplesJOININGAmountDetails.objects.filter(member=pk).first()
+        user_id = None
+        if member_id:
+            user_id = User.objects.filter(id=member_id.created_by).first()
+
+        dict32 = {}
+        dict32['profile'] = serializer1.data
+        dict32['family_no'] = mer.family.family_no
+        dict32['address'] = mer.family.address
+        dict32['balance_sheet'] = ser.data
+        dict32['penalty_histry'] = serializer3.data
+        dict32['penalty_amt_total'] = total_penalty_amount_value
+        dict32['pending'] = serializer4.data
+        dict32['pending_amt_total'] = total_amount_balance_value  # not include penalty balance amt
+        dict32['paid_histry'] = serializer5.data
+        dict32['paid_amt_total'] = total_paid_amount_value
+        dict32['member_rental_lease'] = out
+        dict32['balancesheet_total'] = total_bal_amt_value
+        dict32['temple_mem_balancesheet'] = serial2.data
+        dict32['temple_mem_pending_amt'] = t_m_pen_bal
+        dict32['bill_by_name'] = user_id.username if user_id else ""
+
+        return Response(dict32, status=status.HTTP_200_OK)
     
 
 @api_view(['GET'])

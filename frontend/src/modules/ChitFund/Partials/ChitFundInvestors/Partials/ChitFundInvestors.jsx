@@ -164,20 +164,19 @@ export const ChitFundInvestors = () => {
         setSelectedDate(date);
     };
 
-    const handlesharecount = () => {
-        const InvestorAmt = form.getFieldValue('invested_amount')
-        const ShareCount = form.getFieldValue('share_count')
+const handlesharecount = () => {
+    const InvestorAmt = form.getFieldValue('invested_amount')
+    const ShareCount = form.getFieldValue('share_count')
 
-        const InvesMentAmt = InvestorAmt * ShareCount
-        form.setFieldsValue({ investment_amt: InvesMentAmt })
+    const InvesMentAmt = Number((InvestorAmt * ShareCount).toFixed(2))
+    form.setFieldsValue({ investment_amt: InvesMentAmt })
 
-        if (InvesMentAmt < 0) {
-            setSubmitDisable(true)
-        } else {
-            setSubmitDisable(false)
-        }
-
+    if (InvesMentAmt < 0) {
+        setSubmitDisable(true)
+    } else {
+        setSubmitDisable(false)
     }
+}
 
     const AddFundInvestor = async (data) => {
         await request.post(APIURLS.ADD_CHITINVESTOR, data)
