@@ -62,14 +62,21 @@ def add_interest_given_details(request):
                 #     bal_new1=request.data['final_amt_given']
                 # else:
                 #     bal_new1=request.data['principal_amt']
-                if interest_type=="Management Interest":
-                    managefil=ManagementTreasure.objects.filter(management_profile=management)
-                    if managefil:
-                        manage=ManagementTreasure.objects.get(management_profile=management)
-                        if (float(manage.cash_in_hand)-float(manage.expence_amt)) < float(request.data['principal_amt']):
-                            msg={'msg':'Insufficient amount in cash in hand'}
-                            return Response(msg,status=status.HTTP_226_IM_USED)
-                elif interest_type=="Chit fund Interest":
+                # ------------------------------------------------------------
+                # Owner rule (Feb 2026): Management Interest loans are always
+                # allowed to be created — cash_in_hand is debited by the
+                # principal amount regardless of the current balance, and is
+                # permitted to go negative. This makes a cash shortfall
+                # visible directly on the treasury figure instead of
+                # silently blocking the loan via a separate expence_amt
+                # tracker (which previously diverged from cash_in_hand once
+                # any repayment came in via bank transfer instead of cash).
+                # The insufficient-funds block for Chit fund Interest is
+                # untouched — that one is scoped to the chit fund's own
+                # cash_inhand_amount, which is a different, unaffected data
+                # path.
+                # ------------------------------------------------------------
+                if interest_type=="Chit fund Interest":
                     chit_fund_obj= ChitFundsDetails.objects.filter(id=request.data['chitt_fund'])
                     if chit_fund_obj:
                         chit_fund_get=ChitFundsDetails.objects.get(id=request.data['chitt_fund'])
@@ -85,8 +92,9 @@ def add_interest_given_details(request):
                     managefilter=ManagementTreasure.objects.filter(management_profile=management)
                     if managefilter:
                         manage_get=ManagementTreasure.objects.get(management_profile=management)
-                        # manage_get.cash_in_hand = float(manage_get.cash_in_hand) - float(temp_family.principal_amt)
-                        manage_get.expence_amt = float(manage_get.expence_amt) + float(temp_family.principal_amt)
+                        # Debit cash_in_hand directly by the principal given
+                        # out. Allowed to go negative — see owner rule above.
+                        manage_get.cash_in_hand = float(manage_get.cash_in_hand) - float(temp_family.principal_amt)
                         manage_get.save()
 
                     pppp=Report.objects.create(interest=temp_family,management_profile=management,created_by =rejin.id,type_choice='Reduction',amount=temp_family.principal_amt,members=temp_family.people_member)
@@ -447,14 +455,12 @@ def edit_interest_given_details(request,pk):
                 dict6['message']= "Payment happening"
                 return Response(dict6,status=status.HTTP_406_NOT_ACCEPTABLE)
             interest_type= customer.interest_type
-            if interest_type=="Management Interest":
-                managefil=ManagementTreasure.objects.filter(management_profile=management)
-                if managefil:
-                    manage=ManagementTreasure.objects.get(management_profile=management)
-                    if (float(manage.cash_in_hand)-float(manage.expence_amt)) < float(customer.principal_amt):
-                        msg={'msg':'Insufficient amount in cash in hand'}
-                        return Response(msg,status=status.HTTP_226_IM_USED)
-            elif interest_type=="Chit fund Interest":
+            # ------------------------------------------------------------
+            # Owner rule (Feb 2026): Management Interest no longer blocks
+            # on insufficient cash_in_hand — see add_interest_given_details
+            # for rationale. cash_in_hand is allowed to go negative.
+            # ------------------------------------------------------------
+            if interest_type=="Chit fund Interest":
                 chit_fund_obj= ChitFundsDetails.objects.filter(id=customer.chitt_fund.id)
                 if chit_fund_obj:
                     chit_fund_get=ChitFundsDetails.objects.get(id=customer.chitt_fund.id)
@@ -471,12 +477,16 @@ def edit_interest_given_details(request,pk):
                 # NEW principal from `temp_family`. Previous code referenced
                 # `temp_family` here, which was NameError since `temp_family` only
                 # exists after `serializer876.save()`.
+                #
+                # Owner rule (Feb 2026): now credits/debits cash_in_hand
+                # directly instead of expence_amt, matching
+                # add_interest_given_details.
                 # ------------------------------------------------------------------
                 if interest_type=="Management Interest":
                     managefilter=ManagementTreasure.objects.filter(management_profile=management)
                     if managefilter:
                         manage_get=ManagementTreasure.objects.get(management_profile=management)
-                        manage_get.expence_amt = float(manage_get.expence_amt) - float(customer.principal_amt or 0)
+                        manage_get.cash_in_hand = float(manage_get.cash_in_hand) + float(customer.principal_amt or 0)
                         manage_get.save()
                 elif interest_type=="Chit fund Interest":
                     chit_fund_object= ChitFundsDetails.objects.filter(id=customer.chitt_fund.id)
@@ -496,7 +506,7 @@ def edit_interest_given_details(request,pk):
                     managefilter=ManagementTreasure.objects.filter(management_profile=management)
                     if managefilter:
                         manage_get=ManagementTreasure.objects.get(management_profile=management)
-                        manage_get.expence_amt = float(manage_get.expence_amt) + float(temp_family.principal_amt or 0)
+                        manage_get.cash_in_hand = float(manage_get.cash_in_hand) - float(temp_family.principal_amt or 0)
                         manage_get.save()
                 elif interest_type=="Chit fund Interest":
                     chit_fund_object= ChitFundsDetails.objects.filter(id=temp_family.chitt_fund.id)
@@ -586,8 +596,9 @@ def edit_interest_given_details(request,pk):
                 managefilter=ManagementTreasure.objects.filter(management_profile=management)
                 if managefilter:
                     manage_get=ManagementTreasure.objects.get(management_profile=management)
-                    # manage_get.cash_in_hand = flo*at(manage_get.cash_in_hand) - float(temp_family.principal_amt)
-                    manage_get.expence_amt = float(manage_get.expence_amt) - float(customer.principal_amt)
+                    # Owner rule (Feb 2026): credit cash_in_hand back
+                    # directly instead of expence_amt.
+                    manage_get.cash_in_hand = float(manage_get.cash_in_hand) + float(customer.principal_amt)
                     manage_get.save()
             
             elif customer.interest_type=="Chit fund Interest":
