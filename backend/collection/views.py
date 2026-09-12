@@ -1345,6 +1345,16 @@ def add_collection_details(request):
                     elif temp_family.collection_category == "Balance":
                         tem_report.type_choice = "Balance"
                         tem_report.save()
+                        member_obj = Member_Details.objects.filter(id=temp_family.member.id).first()
+                        if member_obj and not member_obj.balance_amt_paid:
+                            if float(member_obj.balance_pending_amt) <= float(temp_family.amount):
+                                member_obj.balance_pending_amt = 0
+                                member_obj.balance_paid_amount = float(member_obj.balance_paid_amount or 0) + float(member_obj.balance_pending_amt)
+                                member_obj.balance_amt_paid = True
+                            else:
+                                member_obj.balance_pending_amt = float(member_obj.balance_pending_amt) - float(temp_family.amount)
+                                member_obj.balance_paid_amount = float(member_obj.balance_paid_amount or 0) + float(temp_family.amount)
+                            member_obj.save()
                 return Response(serializer876.data, status=status.HTTP_201_CREATED)
             else:
                 return Response(serializer876.errors, status=status.HTTP_400_BAD_REQUEST)
