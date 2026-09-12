@@ -3114,8 +3114,8 @@ def get_member_balance(request):
                 for peo_amt in people_amt:
                     amt += float(peo_amt.total_bal_amt or 0)
 
-                if not mem.balance_amt_paid:
-                    amt += float(mem.balance_pending_amt or 0)
+                if mem.balance_pending_amt and float(mem.balance_pending_amt) > 0:
+                    amt += float(mem.balance_pending_amt)
                 dic['list'] = ser.data
                 dic['amount'] = amt
                 if amt > 0:
