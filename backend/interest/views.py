@@ -53,9 +53,12 @@ def add_interest_given_details(request):
             interest_date=request.data['interest_date']
             interest_category=request.data['interest_category']
             date_object = datetime.datetime.strptime(interest_date, "%Y-%m-%d")
-            if interest_category == "Installment Interest" and date_object.month!=datetime.datetime.now().month:
-                msg={'msg':'Installment interest cannot be added for previous month'}
-                return Response(msg,status=status.HTTP_226_IM_USED)
+            # Owner rule (Sep 2026): Installment Interest can now be added
+            # for any past month/year — no longer restricted to the
+            # current calendar month. The serializer's own validate()
+            # (interest/serializers.py) still blocks any interest_date in
+            # the future, and no longer restricts to current/previous
+            # month either.
             if serializer876.is_valid():
                 interest_type= request.data['interest_type']
                 # if request.data['interest_category'] == "Installment Interest":
@@ -229,20 +232,60 @@ def add_interest_given_details(request):
                     new_interest_report = InterestPeopleReport.objects.create(debit_amt=temp_family.interest_amt,credit_amt=temp_family.interest_amt,management_profile=management,interest=temp_family,reportdate=temp_family.interest_date,balance_amt=bal_sheet.balance_amt,type_choice="Interest",created_by =rejin.id)
                     
                     
-                # Bug fix: previously this only ran when interest_date is in the
-                # current calendar year and a previous month of the same year,
-                # which silently skipped penalty/interest application for
-                # records created in earlier years.  We now run whenever the
-                # interest_date is at least one full month in the past.
+                # ------------------------------------------------------------
+                # Bug fix (Sep 2026): this legacy catch-up block re-applies
+                # the FIRST period's interest by computing it fresh from
+                # `checking_day` (the 5th of the month after interest_date),
+                # with no awareness that `apply_first_interest = True` already
+                # recorded that exact same first period's interest a few
+                # lines above (bal_sheet.intrest_amt = temp_family.interest_amt,
+                # plus the "Interest" InterestPeopleReport row just created).
+                #
+                # Once backdating was allowed for any past date/month (not
+                # just current/previous month), `checking_day <= today` became
+                # true far more often at CREATION time itself — causing this
+                # block to unconditionally stack a second interest charge on
+                # top of the one apply_first_interest already applied,
+                # doubling intrest_amt / intrest_balance_amt for that period.
+                #
+                # Guard: skip this whole legacy catch-up block when
+                # apply_first_interest is True — that period is already
+                # accounted for. Any FURTHER overdue periods are handled
+                # correctly and idempotently by the newer engine
+                # (_apply_for_record / _apply_for_installment in
+                # interest/overdue_views.py), which runs whenever the
+                # record's profile is viewed or the nightly cron fires, and
+                # checks for existing InterestPeopleReport rows before
+                # creating new ones.
+                # ------------------------------------------------------------
                 from dateutil.relativedelta import relativedelta as _rdelta
-                if date_object.date() + _rdelta(months=1) <= datetime.date.today():
+                if date_object.date() + _rdelta(months=1) <= datetime.date.today() and not temp_family.apply_first_interest:
                    
                     inter_check=PeopleInterestDetails.objects.filter(id=temp_family.id).first()
                     inter_bal = PeopleInterestBalanceSheet.objects.get(interest_id=inter_check.id)
-                    if interest_type=="Management Interest":
-                        # if inter_check.interest_category == "Installment Interest" :   
-                        #     pass
-                        # else: 
+                    # ------------------------------------------------------------
+                    # Bug fix (Sep 2026): the legacy monthly-interest accrual
+                    # block below is only correct for "Interest" and
+                    # "Interest with capital" categories, where interest is
+                    # billed separately from principal, month over month.
+                    #
+                    # Installment Interest loans already bake interest into
+                    # the fixed installment_amt (principal share + interest
+                    # share per period) — they must NOT also accrue this
+                    # separate monthly interest charge. The exclusion for
+                    # this exact case had been written here previously
+                    # (`if inter_check.interest_category == "Installment
+                    # Interest": pass`) but was left commented out, so it
+                    # never actually ran — every Installment Interest
+                    # Management loan was getting a spurious "Interest" row
+                    # (and a knock-on spurious "Penalty" row) stacked onto
+                    # its balance sheet in addition to its own correct
+                    # installment structure.
+                    #
+                    # This condition now explicitly excludes Installment
+                    # Interest, matching the originally-intended behavior.
+                    # ------------------------------------------------------------
+                    if interest_type=="Management Interest" and inter_check.interest_category != "Installment Interest":
                             checking_dates=temp_family.interest_date + relativedelta(months=1)
                             checking_day=datetime.date(checking_dates.year,checking_dates.month,5)
                             checking_day_penalty=datetime.date(checking_dates.year,checking_dates.month,20)
