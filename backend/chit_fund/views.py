@@ -426,7 +426,11 @@ def edit_chit_fund(request,pk):
                 tre_cash.cash_in_hand += customer.management_amt
                 tre_cash.save()
                 
-                get_investers4=ChitFundInvesters.objects.filter(chitt_fund=customer)
+                # FIX: scope to active (non-settled) investors only — a
+                # settled-out investor's investment/share count must not
+                # be reverted back into the running totals just because
+                # an unrelated field on the parent chit fund was edited.
+                get_investers4=ChitFundInvesters.objects.filter(chitt_fund=customer,action=True)
                 # get_investers4=ChitFundInvesters.objects.filter(first_investers=True,chitt_fund=customer)
                 if get_investers4:
                     for kk in get_investers4:
@@ -496,7 +500,10 @@ def edit_chit_fund(request,pk):
                     Report.objects.create(chit_fund=temp_family,management_profile=management,amount=temp_family.management_amt,type_choice='Reduction',created_by=rejin.id)
                   
                 # get_investers=ChitFundInvesters.objects.filter(first_investers=True,chitt_fund_id=temp_family.id)
-                get_investers=ChitFundInvesters.objects.filter(chitt_fund_id=temp_family.id)
+                # FIX: same active-only scoping on the reapply side, so a
+                # settled-out investor doesn't get re-added into the
+                # fund's running totals here either.
+                get_investers=ChitFundInvesters.objects.filter(chitt_fund_id=temp_family.id,action=True)
                 if get_investers:
                     for kk in get_investers:
                         kk.joining_date=datetime.datetime.today().date()
@@ -531,6 +538,14 @@ def edit_chit_fund(request,pk):
             check_distribution=ChitFundDistribution.objects.filter(chitt_fund=customer)
             if inter or check_settlement or check_distribution:
                 return Response({"Message":"Can't be deleted"},status=status.HTTP_226_IM_USED) 
+            # FIX: add_chit_fund debits management_amt from
+            # ManagementTreasure.cash_in_hand at creation time. Refund it
+            # here so deleting a chit fund doesn't leave that cash
+            # permanently "spent" with nothing to show for it.
+            tre_cash_del = ManagementTreasure.objects.filter(management_profile=management).first()
+            if tre_cash_del:
+                tre_cash_del.cash_in_hand += customer.management_amt
+                tre_cash_del.save()
             customer.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
@@ -600,8 +615,13 @@ def add_chit_fund_investors(request):
         return Response(serializer.data,status=status.HTTP_200_OK)
         
         
-@api_view(['GET','PUT','PATCH',"DELETE"])
+@api_view(['GET','PUT','DELETE'])
 def edit_chit_fund_investors(request,pk):
+    # NOTE: originally declared with 'PATCH' in the method list too, but
+    # no PATCH branch was ever implemented below — any PATCH request
+    # would fall through every if/elif and return None, which DRF turns
+    # into an unhandled 500 instead of a clean 405. Removed 'PATCH' from
+    # the decorator since only GET/PUT/DELETE are actually handled.
     rejin=token_checking(request)
     if not rejin:
         return Response({"message":"No User Found"},status=status.HTTP_401_UNAUTHORIZED)
@@ -626,7 +646,15 @@ def edit_chit_fund_investors(request,pk):
         old=customer.investment_amt
         precount=customer.share_count
         # date=customer.created_at__date
-        date=customer.created_at.date
+        # FIX: this was `customer.created_at.date` (missing the `()`
+        # call), so `date` held a bound method object instead of an
+        # actual date. Filtering `created_at__date__gte=date` against a
+        # method object either errors out at the DB adapter or never
+        # matches correctly — the "investment already used in interest"
+        # guard below was effectively broken. Also renamed away from
+        # `date` so it stops shadowing the `from datetime import date`
+        # import at the top of the file.
+        interest_cutoff_date = customer.created_at.date()
     except ChitFundInvesters.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
     
@@ -636,7 +664,7 @@ def edit_chit_fund_investors(request,pk):
     
     elif request.method == 'PUT':
         if get_role=="User" and perm.chit_fund_edit ==True or get_role=="Admin" or rejin.is_superuser == True: 
-            interest_check=PeopleInterestDetails.objects.filter(created_at__date__gte=date)
+            interest_check=PeopleInterestDetails.objects.filter(created_at__date__gte=interest_cutoff_date)
             check_settlement_apli=ChitFundsettleAplication.objects.filter(investers=customer)
             settlemnt=ChitFundSettlement.objects.filter(investers=customer)
             distri=InvestersProfitDistributionTable.objects.filter(investers=customer)
@@ -655,7 +683,16 @@ def edit_chit_fund_investors(request,pk):
             serializer876 = ChitFundInvestersSerializer2(customer,data=request.data)
             if serializer876.is_valid():
                 # revert
-                chit_amount1=ChitFundsDetails.objects.filter(id=chit_fund).first()
+                # FIX: this used to revert against `chit_fund`, which is
+                # the NEW fund from the request payload. If an investor
+                # is being reassigned to a different chit fund, the OLD
+                # fund's totals were never corrected (still counted an
+                # investor who's no longer part of it), while the NEW
+                # fund got a revert-then-reapply cycle against a fund the
+                # investor wasn't previously attached to. Revert against
+                # the investor's actual current fund (`customer.chitt_fund_id`)
+                # instead, then apply to the new one below as before.
+                chit_amount1=ChitFundsDetails.objects.filter(id=customer.chitt_fund_id).first()
                 chit_amount1.outer_invest_amount -= old 
                 # chit_amount1.total_chitfund_amount=(chit_amount1.management_amt) + (chit_amount1.outer_invest_amount)
                 chit_amount1.cash_inhand_amount-=old
@@ -687,21 +724,14 @@ def edit_chit_fund_investors(request,pk):
                 return Response(serializer876.errors,status=status.HTTP_400_BAD_REQUEST)
         return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
     
-    # elif request.method == 'PATCH':
-    #     if get_role=="User" and perm.chit_fund_edit ==True or get_role=="Admin" or rejin.is_superuser == True:    
-    #         serializer876 = ChitFundInvestersSerializer2(customer,data=request.data,partial=True)
-    #         if serializer876.is_valid():
-    #             temp_family=serializer876.save()
-    #             temp_family.created_by=rejin.id
-    #             temp_family.save()
-    #             return Response(serializer876.data,status=status.HTTP_201_CREATED)
-    #         else:
-    #             return Response(serializer876.errors,status=status.HTTP_400_BAD_REQUEST)
-    #     return Response({'message':"un-authenticate"},status.HTTP_401_UNAUTHORIZED)
+    # PATCH intentionally not implemented — see note on the @api_view
+    # decorator above. If partial updates are needed, add a `PATCH`
+    # branch here (mirroring the PUT logic with `partial=True`) and add
+    # 'PATCH' back to the decorator's method list at the same time.
             
     elif request.method == 'DELETE':
         if get_role=="User" and perm.chit_fund_edit ==True or get_role=="Admin" or rejin.is_superuser == True or get_role=="User" and perm.chit_fund_delete ==True:
-            interest_check=PeopleInterestDetails.objects.filter(created_at__date__gte=date)
+            interest_check=PeopleInterestDetails.objects.filter(created_at__date__gte=interest_cutoff_date)
             check_settlement_apli=ChitFundsettleAplication.objects.filter(investers=customer)
             settlemnt=ChitFundSettlement.objects.filter(investers=customer)
             distri=InvestersProfitDistributionTable.objects.filter(investers=customer)
@@ -809,8 +839,16 @@ def add_chit_fund_settlement_application_details(request):
         return Response(serializer.data,status=status.HTTP_200_OK)
         
         
-@api_view(['GET','PUT','PATCH',"DELETE"])
+@api_view(['GET','DELETE'])
 def edit_chit_fund_settlement_application_details(request,pk):
+    # NOTE: originally declared with 'PUT' and 'PATCH' in the method
+    # list, but both branches are commented out below (see the large
+    # commented PUT block). A PUT/PATCH request would fall through every
+    # if/elif and implicitly return None, which DRF turns into an
+    # unhandled 500 instead of a clean 405. Narrowed the decorator to
+    # GET/DELETE, which are the only methods actually implemented. If
+    # PUT support is restored, uncomment the block below and add 'PUT'
+    # back here.
     rejin=token_checking(request)
     if not rejin:
         return Response({"message":"No User Found"},status=status.HTTP_401_UNAUTHORIZED)
@@ -1038,8 +1076,15 @@ def add_chit_fund_settlement(request):
         return Response(serializer.data,status=status.HTTP_200_OK)
         
         
-@api_view(['GET','PUT','PATCH',"DELETE"])
+@api_view(['GET','DELETE'])
 def edit_chit_fund_settlement(request,pk):
+    # NOTE: originally declared with 'PUT' and 'PATCH' in the method
+    # list, but both branches are fully commented out below. A PUT/PATCH
+    # request would fall through every if/elif and implicitly return
+    # None, which DRF turns into an unhandled 500 instead of a clean
+    # 405. Narrowed the decorator to GET/DELETE, the only implemented
+    # methods. If PUT/PATCH support is restored, uncomment the relevant
+    # blocks and add the methods back here.
     rejin=token_checking(request)
     if not rejin:
         return Response({"message":"No User Found"},status=status.HTTP_401_UNAUTHORIZED)
@@ -1062,7 +1107,13 @@ def edit_chit_fund_settlement(request,pk):
     try:
         customer = ChitFundSettlement.objects.get(pk=pk,management_profile=management)  
         # date_check=customer.created_at__date
-        date_check=customer.created_at.date
+        # FIX: this was `customer.created_at.date` (missing the `()`
+        # call) — `date_check` held a bound method, not an actual date.
+        # `date.today() == date_check` below was therefore ALWAYS False
+        # (a `datetime.date` can never equal a bound method), so the
+        # "delete only on the same day" guard silently blocked every
+        # delete attempt, even ones made minutes after creation.
+        date_check=customer.created_at.date()
     except ChitFundSettlement.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
     
@@ -1339,6 +1390,17 @@ def distributed_chit_fund(request,pk):
         set2.action=True
         set2.save()
         
+        # NOTE (flagged, not changed): this selects every investor
+        # currently `action=True` on the fund rather than tying back to
+        # this specific distribution event (e.g. via
+        # InvestersProfitDistributionTable.objects.filter(chitt_distribution=customer666),
+        # the way profit_only_chit_fund_edit's DELETE does it). It
+        # happens to work today because `set2.action=False` blocks new
+        # investors from joining once a fund is distributed, but it's
+        # fragile — if that invariant ever changes, this loop could
+        # revert investors unrelated to this distribution. Left as-is
+        # since tightening it changes what gets refunded and needs
+        # confirmation against real distribution records first.
         invest=ChitFundInvesters.objects.filter(chitt_fund=customer666.chitt_fund,action=True)
         for i in invest:
             set2.outer_invest_amount+=i.investment_amt
@@ -1366,6 +1428,16 @@ def distributed_chit_fund(request,pk):
         set2.cash_inhand_amount+=customer666.management_share
         set2.save()
         
+        # NOTE (flagged, not changed): this reversal uses
+        # `customer666.per_head_share_amount`, while the corresponding
+        # POST (add_chitfund_distribution) now computes each investor's
+        # share from `i.collected_share_amount` (a running per-investor
+        # total), with the old uniform per-head calculation commented
+        # out. If `per_head_share_amount` isn't kept in sync with what
+        # was actually distributed, this delete's management-share
+        # refund won't match what was really paid out. Worth confirming
+        # `ChitFundsDistributionSerializer` still populates
+        # `per_head_share_amount` accurately before relying on this.
         if set2.management_retake>0:
             man_share_count=set2.retake_management_share_count
             amount=(set2.management_retake) + ((customer666.per_head_share_amount)*man_share_count)
@@ -1665,18 +1737,29 @@ def profit_only_chit_fund_edit(request,pk):
         set2.profit_retake-=customer666.management_share
         set2.cash_inhand_amount+=customer666.management_share
         set2.save()
-        
-        if set2.management_amt>0:
-            man_share_count=set2.management_share_count
-            amount=(set2.management_amt) + ((customer666.per_head_share_amount)*man_share_count)
-            set_value.cash_in_hand -= amount
-            set_value.save()
-            
-            set2.cash_inhand_amount+=amount
-            set2.profit_amount+=((customer666.per_head_share_amount)*man_share_count)
-            set2.profit_retake-=((customer666.per_head_share_amount)*man_share_count)
-            set2.save()
-            
+
+        # FIX: chitfund_only_profit_distribution's POST never touches
+        # management_amt / management_share_count / management_retake —
+        # that entire "manage share" block is commented out there (see
+        # the POST above). This DELETE used to still reverse it:
+        #
+        #   if set2.management_amt>0:
+        #       man_share_count=set2.management_share_count
+        #       amount=(set2.management_amt) + ((customer666.per_head_share_amount)*man_share_count)
+        #       set_value.cash_in_hand -= amount
+        #       ...
+        #       set2.cash_inhand_amount+=amount
+        #
+        # Since nothing was ever debited from management_amt /
+        # cash_in_hand at creation time (the POST block is disabled),
+        # running this on delete CREDITED cash that was never actually
+        # removed — inflating both ManagementTreasure.cash_in_hand and
+        # the chit fund's cash_inhand_amount on every delete. Removed to
+        # match what the POST actually does today. If management-share
+        # handling for profit-only distributions is implemented in the
+        # POST later, restore the matching reversal here at the same
+        # time.
+
         take_re353=Report.objects.filter(chit_fund=set2,management_profile=management,type_choice='Addition').last()
         if take_re353:
             take_re353.delete()

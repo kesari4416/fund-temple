@@ -2281,10 +2281,44 @@ def edit_collections_details(request, pk):
                         festival_get = PeopleInterestBalanceSheet.objects.get(interest=customer.interest,
                                                                               interest__interest_type="Chit fund Interest",
                                                                               management_profile=management)
+
+                        # FIX (Loss-of-Pay / discount revert): POST folds any
+                        # discount into a "_settled" amount (amount +
+                        # discount_amount) before touching
+                        # principal_balance/penalty_balance_amt, and
+                        # separately accumulates every discount onto
+                        # discount_amt (the Loss-of-Pay source of truth read
+                        # by the Chit Fund view / balance sheet /
+                        # reconciliation). This DELETE branch used to only
+                        # reverse `customer.amount`, never the discount
+                        # portion and never discount_amt itself — leaving
+                        # principal_balance permanently understated and
+                        # Loss-of-Pay permanently inflated by every deleted
+                        # discounted collection. Mirrored here exactly, one
+                        # branch at a time, matching POST's math in reverse.
+                        _discount = float(customer.discount_amount or 0)
+
                         if customer.interest_principle == True and customer.interest_field == False:
-                            festival_get.principal_paid = float(festival_get.principal_paid) - float(customer.amount)
-                            festival_get.principal_balance = float(festival_get.principal_balance) + float(
-                                customer.amount)
+                            _settled = float(customer.amount or 0) + _discount
+                            festival_get.principal_paid = float(festival_get.principal_paid) - _settled
+                            festival_get.principal_balance = float(festival_get.principal_balance) + _settled
+
+                            # FIX: POST's principal-only branch also drains
+                            # penalty_paid_amt/penalty_balance_amt whenever
+                            # the collection carried a penalty portion
+                            # alongside principal (Apply-Penalty checkbox on,
+                            # Interest checkbox off). This branch never
+                            # reversed that half, so the penalty stayed
+                            # marked as collected forever after delete.
+                            _pen = float(customer.penalty_amount or 0)
+                            if _pen > 0:
+                                festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) - _pen
+                                festival_get.penalty_balance_amt = float(festival_get.penalty_balance_amt) + _pen
+
+                            if _discount > 0:
+                                festival_get.discount_amt = max(
+                                    0.0, float(festival_get.discount_amt or 0) - _discount
+                                )
                             festival_get.save()
 
                             if interest_obj.interest_category == "Installment Interest":
@@ -2292,21 +2326,25 @@ def edit_collections_details(request, pk):
                                 interest_obj.save()
 
                         elif customer.interest_field == True and customer.interest_principle == False:
+                            _pen_settled = float(customer.penalty_amount or 0) + _discount
                             festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) - float(
                                 customer.interst_amount)
                             festival_get.intrest_balance_amt = float(festival_get.intrest_balance_amt) + float(
                                 customer.interst_amount)
-                            festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) - float(
-                                customer.penalty_amount)
-                            festival_get.penalty_balance_amt = float(festival_get.penalty_balance_amt) + float(
-                                customer.penalty_amount)
+                            festival_get.penalty_paid_amt = float(festival_get.penalty_paid_amt) - _pen_settled
+                            festival_get.penalty_balance_amt = float(festival_get.penalty_balance_amt) + _pen_settled
+
+                            if _discount > 0:
+                                festival_get.discount_amt = max(
+                                    0.0, float(festival_get.discount_amt or 0) - _discount
+                                )
                             festival_get.save()
 
                         elif customer.interest_field == True and customer.interest_principle == True:
 
-                            festival_get.principal_paid = float(festival_get.principal_paid) - float(customer.amount)
-                            festival_get.principal_balance = float(festival_get.principal_balance) + float(
-                                customer.amount)
+                            _prin_settled = float(customer.amount or 0) + _discount
+                            festival_get.principal_paid = float(festival_get.principal_paid) - _prin_settled
+                            festival_get.principal_balance = float(festival_get.principal_balance) + _prin_settled
                             festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) - float(
                                 customer.interst_amount)
                             festival_get.intrest_balance_amt = float(festival_get.intrest_balance_amt) + float(
@@ -2315,6 +2353,11 @@ def edit_collections_details(request, pk):
                                 customer.penalty_amount)
                             festival_get.penalty_balance_amt = float(festival_get.penalty_balance_amt) + float(
                                 customer.penalty_amount)
+
+                            if _discount > 0:
+                                festival_get.discount_amt = max(
+                                    0.0, float(festival_get.discount_amt or 0) - _discount
+                                )
                             festival_get.save()
 
                             if interest_obj.interest_category == "Installment Interest":
@@ -2323,28 +2366,76 @@ def edit_collections_details(request, pk):
                         chit_fund_obj = ChitFundsDetails.objects.filter(id=customer.interest.chitt_fund.id)
                         if chit_fund_obj:
                             chit_fund_get = ChitFundsDetails.objects.get(id=customer.interest.chitt_fund.id)
-                            if interest_obj.interest_type_new == "percentage":
-                                interest_obj_priciple_amount = (float(interest_obj.principal_amt) * float(
-                                    interest_obj.fix_interest_rate_percent)) / 100
-                                new_pro_amount = float(customer.no_count_install) * float(interest_obj_priciple_amount)
-                                new_principal_amt = float(customer.amount) - float(new_pro_amount)
-                            else:
-                                new_pro_amount = float(customer.no_count_install) * float(
-                                    interest_obj.fix_interest_rate_percent)
-                                new_principal_amt = float(customer.amount) - float(new_pro_amount)
                             if interest_obj.interest_category == "Installment Interest":
+                                # FIX (profit-subtraction bug): this branch used to
+                                # compute new_pro_amount WITHOUT dividing by
+                                # interest_period, in both the percentage and
+                                # non-percentage cases:
+                                #
+                                #   if interest_type_new == "percentage":
+                                #       interest_obj_priciple_amount = (principal_amt * fix_interest_rate_percent) / 100
+                                #       new_pro_amount = no_count_install * interest_obj_priciple_amount
+                                #   else:
+                                #       new_pro_amount = no_count_install * fix_interest_rate_percent
+                                #
+                                # That treated a SINGLE installment's profit share
+                                # as if it carried the loan's ENTIRE interest
+                                # amount (percentage case) or an undivided
+                                # per-period rate (fixed-rate case) — inflating
+                                # new_pro_amount by roughly a factor of
+                                # interest_period. Since profit_amount was then
+                                # reduced by that inflated new_pro_amount, deleting
+                                # a single installment collection could wipe out
+                                # most or all of the chit fund's profit.
+                                #
+                                # POST (add_collection_details) always divides by
+                                # interest_period:
+                                #   percentage: new_pro_amount = interest_amt / interest_period
+                                #   fixed-rate: new_pro_amount = no_count_install * (fix_interest_rate_percent / interest_period)
+                                # Mirrored exactly here so DELETE reverses precisely
+                                # what POST applied.
+                                if interest_obj.interest_type_new == "percentage":
+                                    new_pro_amount = float(interest_obj.interest_amt) / float(
+                                        interest_obj.interest_period)
+                                else:
+                                    new_pro_amount = float(customer.no_count_install) * float(
+                                        interest_obj.fix_interest_rate_percent / interest_obj.interest_period)
+                                new_principal_amt = float(customer.amount) - new_pro_amount
+
+                                # FIX (cash_inhand_amount under-reversal): POST's
+                                # Installment Interest branch credits
+                                # cash_inhand_amount with
+                                # `temp_family.amount + temp_family.penalty_amount`
+                                # (see the matching POST block above — it never
+                                # includes interst_amount here since installment
+                                # loans don't carry a separate interest figure).
+                                # This line used to subtract ONLY
+                                # `customer.amount`, silently dropping the penalty
+                                # portion. For a penalty-only collection
+                                # (customer.amount == 0, e.g. "penalty with
+                                # discount"), that meant NOTHING was subtracted —
+                                # cash_inhand_amount stayed permanently inflated by
+                                # the full penalty amount after every such delete.
                                 chit_fund_get.collected_principal_amount = float(
                                     chit_fund_get.collected_principal_amount) - float(new_principal_amt)
                                 chit_fund_get.cash_inhand_amount = float(chit_fund_get.cash_inhand_amount) - float(
-                                    customer.amount)
+                                    customer.amount) - float(customer.penalty_amount)
                                 chit_fund_get.profit_amount = float(chit_fund_get.profit_amount) - float(
                                     new_pro_amount) - float(customer.penalty_amount)
                                 chit_fund_get.save()
                             else:
+                                # FIX: also reverse interst_amount and
+                                # penalty_amount here — POST's non-installment
+                                # branch credits cash_inhand_amount with
+                                # amount + interst_amount + penalty_amount, but
+                                # this previously only subtracted `amount`,
+                                # leaving cash_inhand_amount permanently
+                                # inflated by whatever interest/penalty was
+                                # collected on that row.
                                 chit_fund_get.collected_principal_amount = float(
                                     chit_fund_get.collected_principal_amount) - float(customer.amount)
                                 chit_fund_get.cash_inhand_amount = float(chit_fund_get.cash_inhand_amount) - float(
-                                    customer.amount)
+                                    customer.amount) - float(customer.interst_amount) - float(customer.penalty_amount)
                                 chit_fund_get.profit_amount = float(chit_fund_get.profit_amount) - float(
                                     customer.interst_amount) - float(customer.penalty_amount)
                                 chit_fund_get.save()
@@ -2756,12 +2847,25 @@ def get_select_member_collection(request):
 
 
             elif data == "Balance":
-                amount = PeoplesAmountDetails.objects.filter(member=mem, management_profile=management)
-                for new_mem in amount:
-                    mem_obj = PeoplesAmountDetails.objects.get(id=new_mem.id)
-                    if mem_obj.penalty_amount > 0:
-                        if mem not in mem_list:
-                            mem_list.append(mem)
+                # FIX: this used to check `mem_obj.penalty_amount > 0` — a field
+                # unrelated to whether the member has any outstanding balance —
+                # so members with total_bal_amt == 0 (and balance_pending_amt == 0)
+                # were still showing up in the "Choose Member" dropdown whenever
+                # penalty_amount happened to be non-zero on some unrelated row.
+                # Mirrors the correct calculation already used in get_member_balance
+                # and get_amount_details: sum unpaid total_bal_amt across all
+                # PeoplesAmountDetails rows for this member, plus their
+                # balance_pending_amt if not yet paid off, and only include the
+                # member when that total is actually > 0.
+                unpaid_rows = PeoplesAmountDetails.objects.filter(
+                    member=mem, management_profile=management, paid=False
+                )
+                total_bal = sum(float(r.total_bal_amt or 0) for r in unpaid_rows)
+                if not mem.balance_amt_paid:
+                    total_bal += float(mem.balance_pending_amt or 0)
+                if total_bal > 0:
+                    if mem not in mem_list:
+                        mem_list.append(mem)
 
             elif data == "Rent":
                 amount = RentalBalanceSheet.objects.filter(rental_new_amt__tenat_member=mem, rental_new_amt__rent=True,
