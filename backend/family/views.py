@@ -65,6 +65,7 @@ def _apply_festival_penalty_for_member(member, management):
         # Apply penalty to running balance exactly once.
         if not bill.penalty:
             bill.penalty = True
+            bill.penalty_applied_date = fest.end_date + datetime.timedelta(days=1)
             bill.amount_balance = float(bill.amount_balance) + float(bill.penalty_amount)
             bill.total_bal_amt = float(bill.total_bal_amt) + float(bill.penalty_amount)
             bill.save()
@@ -87,12 +88,12 @@ def _apply_festival_penalty_for_member(member, management):
             management_profile=management,
             members=member,
             festivals=fest,
-            reportdate=today,
+            reportdate=fest.end_date + datetime.timedelta(days=1),
             credit_amt=bill.penalty_amount,
             balance_amt=prev_bal + float(bill.penalty_amount),
             type_choice="Festival Penalty",
             created_by=bill.created_by,
-        ) 
+        )
 
 
 def death_no():

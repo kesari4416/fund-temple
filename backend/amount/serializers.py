@@ -30,7 +30,7 @@ class PeoplesAmount123DetailsSerializer(serializers.ModelSerializer):
        
         fields=['id','management_profile','member','festival','sub_tariff','marriage','daughters_amt','death','amount',
                 'paid','penalty','penalty_amount','exception_amount','exception','name','amount_balance',
-                'penalty_balance','total_paid_amt','total_bal_amt','created_by','created_at','name_type','member_name','type_name','mobile_number','member_no','date','name_type_no']
+                'penalty_balance','total_paid_amt','total_bal_amt','created_by','created_at','name_type','member_name','type_name','mobile_number','member_no','date','name_type_no',"penalty_applied_date"]
         
     def get_name_type(self, obj):
         if obj.death_id:

@@ -859,19 +859,21 @@ def add_collection_details(request):
                                     new_principal_amt = float(temp_family.amount) - new_pro_amount  # converted to float
 
                             if interest_obj.interest_category == "Installment Interest":
-                                # For EMI/installment loans, `temp_family.amount` is the
-                                # cash the borrower actually handed over (discount is a
-                                # waiver already reflected in festival_get.balance_amt, NOT
-                                # a cash outflow from the fund).  Do NOT subtract discount
-                                # from cash_inhand_amount — that would count the waiver
-                                # twice (once as reduced balance, once as lost cash).
                                 _discount = float(temp_family.discount_amount or 0)
                                 chit_fund_get.collected_principal_amount = float(
                                     chit_fund_get.collected_principal_amount) + new_principal_amt
                                 chit_fund_get.cash_inhand_amount = float(chit_fund_get.cash_inhand_amount) + float(
                                     temp_family.amount) + float(temp_family.penalty_amount)
-                                chit_fund_get.profit_amount = float(
-                                    chit_fund_get.profit_amount) + new_pro_amount + float(temp_family.penalty_amount) - _discount
+                                if temp_family.interest_field and not temp_family.interest_principle:
+                                    # Discount applied against Penalty — profit is NOT reduced.
+                                    chit_fund_get.profit_amount = float(
+                                        chit_fund_get.profit_amount) + new_pro_amount + float(temp_family.penalty_amount)
+                                else:
+                                    # Discount applied against Installment (principal) — profit
+                                    # is reduced by HALF the discount amount.
+                                    chit_fund_get.profit_amount = float(
+                                        chit_fund_get.profit_amount) + new_pro_amount + float(temp_family.penalty_amount)
+
                                 chit_fund_get.save()
                             else:
                                 _discount = float(temp_family.discount_amount or 0)
@@ -880,6 +882,8 @@ def add_collection_details(request):
                                 chit_fund_get.cash_inhand_amount = float(chit_fund_get.cash_inhand_amount) + float(
                                     temp_family.amount) + float(temp_family.interst_amount) + float(
                                     temp_family.penalty_amount)
+
+                                print("DEBUG:", "field=", temp_family.interest_field, "principle=", temp_family.interest_principle, "penalty_amt=", temp_family.penalty_amount, "new_pro_amount=", new_pro_amount)
                                 # Profit calculation:
                                 # Penalty-only path (interest_field=True, interest_principle=False):
                                 #   penalty_amount = net cash received; discount = additional waiver.
@@ -888,11 +892,11 @@ def add_collection_details(request):
                                 #   the net-cash side; discount is the waiver side on top of it).
                                 # Other paths (principal or combined): discount is on principal, keep as-is.
                                 if temp_family.interest_field and not temp_family.interest_principle:
-                                    chit_fund_get.profit_amount = float(chit_fund_get.profit_amount) + float(
-                                        temp_family.interst_amount) + float(temp_family.penalty_amount) + _discount
+                                    chit_fund_get.profit_amount = float(chit_fund_get.profit_amount) + float(temp_family.penalty_amount)
                                 else:
                                     chit_fund_get.profit_amount = float(chit_fund_get.profit_amount) + float(
                                         temp_family.interst_amount) + float(temp_family.penalty_amount) - _discount
+                                
                                 chit_fund_get.save()
 
                             if interest_obj.interest_category == "Installment Interest":
@@ -1168,8 +1172,8 @@ def add_collection_details(request):
                                 amt_obj = 0
                         else:
                             amt_obj = temp_family.amount
-                        festival = PeoplesAmountDetails.objects.filter(member_id=temp_family.member.id, penalty=True,
-                                                                       paid=False)
+                        festival = PeoplesAmountDetails.objects.filter(member_id=temp_family.member.id, paid=False,
+                                               management_profile=management)
                         if amt_obj > 0:
                             print(amt_obj)
                             for fes in festival:
@@ -2806,8 +2810,14 @@ def get_amount_details(request):
             serializer = PeoplesAmountDetailsSerializer(amount_get)
 
         elif data == "Balance":
-            amount_get = PeoplesAmountDetails.objects.filter(member_id=member, management_profile=management).first()
-            serializer = PeoplesAmountDetailsSerializer(amount_get)
+            unpaid_rows = PeoplesAmountDetails.objects.filter(
+                member_id=member, management_profile=management, paid=False
+            )
+            total_bal = sum(float(r.total_bal_amt or 0) for r in unpaid_rows)
+            mem_obj = Member_Details.objects.filter(id=member).first()
+            if mem_obj and not mem_obj.balance_amt_paid:
+                total_bal += float(mem_obj.balance_pending_amt or 0)
+            return Response({'total_bal_amt': total_bal}, status=status.HTTP_200_OK)
 
         elif data == "Rent":
             amount_get = RentalBalanceSheet.objects.filter(rental_new_amt_id=type,
@@ -2911,21 +2921,20 @@ def get_member_balance(request):
 
         if data == "Balance":
 
-
             member = Member_Details.objects.filter(action=True)
             list = []
             for mem in member:
                 dic = {}
                 ser = member_DetailsSerializer(mem)
-                people_amt = PeoplesAmountDetails.objects.filter(member_id=mem.id, paid=False, penalty=True)
+                people_amt = PeoplesAmountDetails.objects.filter(
+                    member_id=mem.id, paid=False, management_profile=management
+                )
                 amt = 0
-                if people_amt:
-                    for peo_amt in people_amt:
-                        people_amt_get = PeoplesAmountDetails.objects.get(id=peo_amt.id)
-                        amt += float(people_amt_get.total_bal_amt)
+                for peo_amt in people_amt:
+                    amt += float(peo_amt.total_bal_amt or 0)
 
                 if mem.balance_amt_paid == False:
-                    amt += float(mem.balance_pending_amt)
+                    amt += float(mem.balance_pending_amt or 0)
                 dic['list'] = ser.data
                 dic['amount'] = amt
                 if amt > 0:
