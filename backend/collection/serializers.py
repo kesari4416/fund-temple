@@ -19,7 +19,9 @@ class CollectionDetailsSerializer(serializers.ModelSerializer):
         model =CollectionDetails
         fields = ['id','management_profile','collaction_no','collection_category','marriage','funds','fund_lease','festivals','rentsandlease','sub_tariff','interest','interest_balance','interest_principle','interest_field','moveablerent','fund_name','death_tariff','amount_link','fund_member','present','fund_type','absent_amt','exception_amt','person_type','member','member_name',
                   'amount','interst_amount','penalty_amount','payment_mode','pay_date','comments','festival_name','death_name','marriage_name','balance_name','moveable_rent_name','rent_name','lease_name','chit_name','chitt_fund','bill_by_name','sub_tariff_no','transaction_type','ref_moverent_bal','bank_link','bank_name','transaction_date','trans_no','upi_no',
-                  'cheque_no','bank_pay','action','created_by','moveable_asset_payment','mobile_number','created_at','updated_at','discount_amount','no_count_install','interest_category']
+                  'cheque_no','bank_pay','action','created_by','moveable_asset_payment','mobile_number','created_at','updated_at','discount_amount','no_count_install','interest_category','balance_split_json']
+
+        read_only_fields = ['balance_split_json']
            
     # def validate_start_date(self, start_date):
     #     if start_date and start_date < timezone.now().date():

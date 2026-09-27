@@ -984,226 +984,229 @@ def add_collection_details(request):
 
 
 
-
                 elif temp_family.collection_category == "Balance":
-                    try:
-                        balance_type = request.data['balance_type']
-                        if balance_type == "Interest Balance":
-                            interest_obj = PeopleInterestDetails.objects.filter(id=temp_family.interest.id).first()
-                            festival = PeopleInterestBalanceSheet.objects.filter(interest=temp_family.interest,
-                                                                                 management_profile=management)
-                            for ssss in festival:
-                                if ssss.interest.interest_type == "Management Interest":
-                                    if ssss.interest.interest_category == "Interest" or "Interest with capital":
+                    member_obj = Member_Details.objects.filter(id=temp_family.member.id).first()
+                    temp_family.member_name = member_obj.member_name
+                    temp_family.member_id = member_obj.id
+                    temp_family.mobile_number = member_obj.member_mobile_number
+                    temp_family.save()
 
-                                        festival_get = PeopleInterestBalanceSheet.objects.get(
-                                            interest=temp_family.interest, management_profile=management)
+                    # FIX: explicit branch instead of bare try/except so a bug inside
+                    # "Interest Balance" can never silently fall through and get
+                    # re-processed as a generic balance payment (double-apply bug).
+                    balance_type = request.data.get('balance_type')
 
-                                        festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + float(
-                                            temp_family.amount)
-                                        festival_get.intrest_balance_amt = float(
-                                            festival_get.intrest_balance_amt) - float(temp_family.amount)
+                    if balance_type == "Interest Balance":
+                        interest_obj = PeopleInterestDetails.objects.filter(id=temp_family.interest.id).first()
+                        festival = PeopleInterestBalanceSheet.objects.filter(interest=temp_family.interest,
+                                                                             management_profile=management)
+                        for ssss in festival:
+                            if ssss.interest.interest_type == "Management Interest":
+                                if ssss.interest.interest_category in ("Interest", "Interest with capital"):
 
-                                        festival_get.balance_amt = float(festival_get.balance_amt) - float(
-                                            temp_family.amount)
-                                        festival_get.debit_amt = float(festival_get.debit_amt) + float(
-                                            temp_family.amount)
+                                    festival_get = PeopleInterestBalanceSheet.objects.get(
+                                        interest=temp_family.interest, management_profile=management)
 
-                                        festival_get.save()
-                                        InterestPeopleReport.objects.create(
-                                            management_profile=festival_get.management_profile,
-                                            interest_id=festival_get.interest.id,
-                                            reportdate=temp_family.created_at.date(), debit_amt=festival_get.debit_amt,
-                                            balance_amt=festival_get.balance_amt, type_choice="Payment",
-                                            created_by=rejin.id, collection=temp_family)
+                                    festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + float(
+                                        temp_family.amount)
+                                    festival_get.intrest_balance_amt = float(
+                                        festival_get.intrest_balance_amt) - float(temp_family.amount)
 
-                                    elif ssss.interest.interest_category == "Installment Interest":
-                                        festival_get = PeopleInterestBalanceSheet.objects.get(
-                                            interest=temp_family.interest, management_profile=management)
+                                    festival_get.balance_amt = float(festival_get.balance_amt) - float(
+                                        temp_family.amount)
+                                    festival_get.debit_amt = float(festival_get.debit_amt) + float(
+                                        temp_family.amount)
 
-                                        festival_get.balance_amt = float(festival_get.balance_amt) - float(
-                                            temp_family.amount)
-                                        festival_get.debit_amt = float(festival_get.debit_amt) + float(
-                                            temp_family.amount)
-                                        count_cal = (temp_family.amount / ssss.interest.installment_amt)
-                                        ssss.interest.paid_counts = (ssss.interest.paid_counts + round(count_cal))
-                                        ssss.save()
-                                        temp_family.no_count_install = temp_family.no_count_install + round(count_cal)
-                                        temp_family.save()
+                                    festival_get.save()
+                                    InterestPeopleReport.objects.create(
+                                        management_profile=festival_get.management_profile,
+                                        interest_id=festival_get.interest.id,
+                                        reportdate=temp_family.created_at.date(), debit_amt=festival_get.debit_amt,
+                                        balance_amt=festival_get.balance_amt, type_choice="Payment",
+                                        created_by=rejin.id, collection=temp_family)
 
-                                        InterestPeopleReport.objects.create(
-                                            management_profile=festival_get.management_profile,
-                                            interest_id=festival_get.interest.id,
-                                            reportdate=temp_family.created_at.date(), debit_amt=festival_get.debit_amt,
-                                            balance_amt=festival_get.balance_amt, type_choice="Payment",
-                                            created_by=rejin.id, collection=temp_family)
-                                    Report.objects.create(management_profile=management, created_by=rejin.id,
-                                                          type_choice="Addition", collection=temp_family,
-                                                          amount=temp_family.amount, interest=temp_family.interest,
-                                                          banks=temp_family.bank_link)
+                                elif ssss.interest.interest_category == "Installment Interest":
+                                    festival_get = PeopleInterestBalanceSheet.objects.get(
+                                        interest=temp_family.interest, management_profile=management)
 
+                                    festival_get.balance_amt = float(festival_get.balance_amt) - float(
+                                        temp_family.amount)
+                                    festival_get.debit_amt = float(festival_get.debit_amt) + float(
+                                        temp_family.amount)
+                                    count_cal = (temp_family.amount / ssss.interest.installment_amt)
+                                    ssss.interest.paid_counts = (ssss.interest.paid_counts + round(count_cal))
+                                    ssss.save()
+                                    temp_family.no_count_install = temp_family.no_count_install + round(count_cal)
+                                    temp_family.save()
 
-                                elif ssss.interest.interest_type == "Chit Interest":
-                                    if ssss.interest.interest_category == "Interest" or "Interest with capital":
-                                        festival_get = PeopleInterestBalanceSheet.objects.get(
-                                            interest=temp_family.interest, management_profile=management)
-                                        festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + float(
-                                            temp_family.amount)
-                                        festival_get.intrest_balance_amt = float(
-                                            festival_get.intrest_balance_amt) - float(temp_family.amount)
-                                        festival_get.balance_amt = float(festival_get.balance_amt) - float(
-                                            temp_family.amount)
-                                        festival_get.debit_amt = float(festival_get.debit_amt) + float(
-                                            temp_family.amount)
-                                        festival_get.save()
-                                        InterestPeopleReport.objects.create(
-                                            management_profile=festival_get.management_profile,
-                                            interest_id=festival_get.interest.id,
-                                            reportdate=temp_family.created_at.date(), debit_amt=festival_get.debit_amt,
-                                            balance_amt=festival_get.balance_amt, type_choice="Payment",
-                                            created_by=rejin.id, collection=temp_family)
+                                    InterestPeopleReport.objects.create(
+                                        management_profile=festival_get.management_profile,
+                                        interest_id=festival_get.interest.id,
+                                        reportdate=temp_family.created_at.date(), debit_amt=festival_get.debit_amt,
+                                        balance_amt=festival_get.balance_amt, type_choice="Payment",
+                                        created_by=rejin.id, collection=temp_family)
+                                Report.objects.create(management_profile=management, created_by=rejin.id,
+                                                      type_choice="Addition", collection=temp_family,
+                                                      amount=temp_family.amount, interest=temp_family.interest,
+                                                      banks=temp_family.bank_link)
 
 
+                            elif ssss.interest.interest_type == "Chit Interest":
+                                if ssss.interest.interest_category in ("Interest", "Interest with capital"):
+                                    festival_get = PeopleInterestBalanceSheet.objects.get(
+                                        interest=temp_family.interest, management_profile=management)
+                                    festival_get.intrest_paid_amt = float(festival_get.intrest_paid_amt) + float(
+                                        temp_family.amount)
+                                    festival_get.intrest_balance_amt = float(
+                                        festival_get.intrest_balance_amt) - float(temp_family.amount)
+                                    festival_get.balance_amt = float(festival_get.balance_amt) - float(
+                                        temp_family.amount)
+                                    festival_get.debit_amt = float(festival_get.debit_amt) + float(
+                                        temp_family.amount)
+                                    festival_get.save()
+                                    InterestPeopleReport.objects.create(
+                                        management_profile=festival_get.management_profile,
+                                        interest_id=festival_get.interest.id,
+                                        reportdate=temp_family.created_at.date(), debit_amt=festival_get.debit_amt,
+                                        balance_amt=festival_get.balance_amt, type_choice="Payment",
+                                        created_by=rejin.id, collection=temp_family)
 
-                                    elif ssss.interest.interest_category == "Installment Interest":
-                                        festival_get = PeopleInterestBalanceSheet.objects.get(
-                                            interest=temp_family.interest, management_profile=management)
 
-                                        festival_get.balance_amt = float(festival_get.balance_amt) - float(
-                                            temp_family.amount)
-                                        festival_get.debit_amt = float(festival_get.debit_amt) + float(
-                                            temp_family.amount)
-                                        count_cal = (temp_family.amount / ssss.interest.installment_amt)
-                                        ssss.interest.paid_counts = (ssss.interest.paid_counts + round(count_cal))
-                                        ssss.save()
-                                        temp_family.no_count_install = temp_family.no_count_install + round(count_cal)
-                                        temp_family.save()
-                                        InterestPeopleReport.objects.create(
-                                            management_profile=festival_get.management_profile,
-                                            interest_id=festival_get.interest.id,
-                                            reportdate=temp_family.created_at.date(), debit_amt=festival_get.debit_amt,
-                                            balance_amt=festival_get.balance_amt, type_choice="Payment",
-                                            created_by=rejin.id, collection=temp_family)
 
-                                    chit_fund_obj = ChitFundsDetails.objects.filter(
+                                elif ssss.interest.interest_category == "Installment Interest":
+                                    festival_get = PeopleInterestBalanceSheet.objects.get(
+                                        interest=temp_family.interest, management_profile=management)
+
+                                    festival_get.balance_amt = float(festival_get.balance_amt) - float(
+                                        temp_family.amount)
+                                    festival_get.debit_amt = float(festival_get.debit_amt) + float(
+                                        temp_family.amount)
+                                    count_cal = (temp_family.amount / ssss.interest.installment_amt)
+                                    ssss.interest.paid_counts = (ssss.interest.paid_counts + round(count_cal))
+                                    ssss.save()
+                                    temp_family.no_count_install = temp_family.no_count_install + round(count_cal)
+                                    temp_family.save()
+                                    InterestPeopleReport.objects.create(
+                                        management_profile=festival_get.management_profile,
+                                        interest_id=festival_get.interest.id,
+                                        reportdate=temp_family.created_at.date(), debit_amt=festival_get.debit_amt,
+                                        balance_amt=festival_get.balance_amt, type_choice="Payment",
+                                        created_by=rejin.id, collection=temp_family)
+
+                                chit_fund_obj = ChitFundsDetails.objects.filter(
+                                    id=temp_family.interest.chitt_fund.id)
+                                if chit_fund_obj:
+                                    chit_fund_get = ChitFundsDetails.objects.get(
                                         id=temp_family.interest.chitt_fund.id)
-                                    if chit_fund_obj:
-                                        chit_fund_get = ChitFundsDetails.objects.get(
-                                            id=temp_family.interest.chitt_fund.id)
-                                        if ssss.interest.interest_category == "Interest" or "Interest with capital":
-                                            # chit_fund_get.collected_principal_amount=float(chit_fund_get.collected_principal_amount) + float(temp_family.amount)
-                                            chit_fund_get.cash_inhand_amount = float(
-                                                chit_fund_get.cash_inhand_amount) + float(temp_family.amount)
-                                            chit_fund_get.profit_amount = float(chit_fund_get.profit_amount) + float(
-                                                temp_family.amount)
-                                            chit_fund_get.save()
-                                        elif ssss.interest.interest_category == "Installment Interest":
-                                            calculate_proft_for_intallment = float(temp_family.amount) / float(
-                                                ssss.interest.installment_amt)
-                                            interest_amount_install_profit = (float(ssss.interest.interest_amt) / int(
-                                                ssss.interest.interest_period)) * int(calculate_proft_for_intallment)
-                                            chit_fund_get.collected_principal_amount = float(
-                                                chit_fund_get.collected_principal_amount) + float(
-                                                temp_family.amount) - interest_amount_install_profit
-                                            chit_fund_get.cash_inhand_amount = float(
-                                                chit_fund_get.cash_inhand_amount) + float(temp_family.amount)
-                                            chit_fund_get.profit_amount = float(chit_fund_get.profit_amount) + float(
-                                                interest_amount_install_profit)
-                                            chit_fund_get.save()
+                                    if ssss.interest.interest_category in ("Interest", "Interest with capital"):
+                                        chit_fund_get.cash_inhand_amount = float(
+                                            chit_fund_get.cash_inhand_amount) + float(temp_family.amount)
+                                        chit_fund_get.profit_amount = float(chit_fund_get.profit_amount) + float(
+                                            temp_family.amount)
+                                        chit_fund_get.save()
+                                    elif ssss.interest.interest_category == "Installment Interest":
+                                        calculate_proft_for_intallment = float(temp_family.amount) / float(
+                                            ssss.interest.installment_amt)
+                                        interest_amount_install_profit = (float(ssss.interest.interest_amt) / int(
+                                            ssss.interest.interest_period)) * int(calculate_proft_for_intallment)
+                                        chit_fund_get.collected_principal_amount = float(
+                                            chit_fund_get.collected_principal_amount) + float(
+                                            temp_family.amount) - interest_amount_install_profit
+                                        chit_fund_get.cash_inhand_amount = float(
+                                            chit_fund_get.cash_inhand_amount) + float(temp_family.amount)
+                                        chit_fund_get.profit_amount = float(chit_fund_get.profit_amount) + float(
+                                            interest_amount_install_profit)
+                                        chit_fund_get.save()
 
-                                    # addddddddddddddddeddd
-                                    invester_list = ChitFundInvesters.objects.filter(chitt_fund=chit_fund_get, action=True)
-                                    if ssss.interest.interest_category == "Installment Interest":
-                                        final_profit_amount1 = (float(interest_amount_install_profit) * float(
-                                            chit_fund_get.set_profit_percent / 100))
-                                    elif ssss.interest.interest_category == "Interest" or "Interest with capital":
-                                        final_profit_amount1 = (float(temp_family.amount) * float(
-                                            chit_fund_get.set_profit_percent / 100))
-                                    final_profit_amount = round((final_profit_amount1), 2)
+                                invester_list = ChitFundInvesters.objects.filter(chitt_fund=chit_fund_get, action=True)
+                                if ssss.interest.interest_category == "Installment Interest":
+                                    final_profit_amount1 = (float(interest_amount_install_profit) * float(
+                                        chit_fund_get.set_profit_percent / 100))
+                                elif ssss.interest.interest_category in ("Interest", "Interest with capital"):
+                                    final_profit_amount1 = (float(temp_family.amount) * float(
+                                        chit_fund_get.set_profit_percent / 100))
+                                final_profit_amount = round((final_profit_amount1), 2)
 
-                                    chit_fund_get.management_amount = float(chit_fund_get.management_amount) + float(
-                                        final_profit_amount)
-                                    chit_fund_get.save()
-                                    balance_profit_amount = float(temp_family.amount) - final_profit_amount
-                                    member_count = chit_fund_get.total_share_count
-                                    shared_amount1 = balance_profit_amount / (member_count)
-                                    shared_amount = round((shared_amount1), 2)
-                                    # invester_share_profit=float(balance_profit_amount) * (chit_fund_get.set_profit_percent/100)
-                                    chit_fund_get.management_amount = (float(chit_fund_get.management_amount) + (
-                                                (chit_fund_get.management_share_count) * float(shared_amount)))
-                                    chit_fund_get.save()
-                                    for ii in invester_list:
-                                        ii.collected_share_amount = float(ii.collected_share_amount) + (
-                                                    float(ii.share_count) * float(shared_amount))
-                                        ii.save()
+                                chit_fund_get.management_amount = float(chit_fund_get.management_amount) + float(
+                                    final_profit_amount)
+                                chit_fund_get.save()
+                                balance_profit_amount = float(temp_family.amount) - final_profit_amount
+                                member_count = chit_fund_get.total_share_count
+                                shared_amount1 = balance_profit_amount / (member_count)
+                                shared_amount = round((shared_amount1), 2)
+                                chit_fund_get.management_amount = (float(chit_fund_get.management_amount) + (
+                                            (chit_fund_get.management_share_count) * float(shared_amount)))
+                                chit_fund_get.save()
+                                for ii in invester_list:
+                                    ii.collected_share_amount = float(ii.collected_share_amount) + (
+                                                float(ii.share_count) * float(shared_amount))
+                                    ii.save()
 
-                                    ChitFundInterestOverallReport.objects.create(chitfund=temp_family.chitt_fund,
-                                                                                 management_profile=management,
-                                                                                 created_by=rejin.id,
-                                                                                 collection=temp_family,
-                                                                                 amount=temp_family.amount,
-                                                                                 interest=temp_family.interest,
-                                                                                 income_choice="Addition")
+                                ChitFundInterestOverallReport.objects.create(chitfund=temp_family.chitt_fund,
+                                                                             management_profile=management,
+                                                                             created_by=rejin.id,
+                                                                             collection=temp_family,
+                                                                             amount=temp_family.amount,
+                                                                             interest=temp_family.interest,
+                                                                             income_choice="Addition")
 
-
-                    except Exception:
-                        member_obj = Member_Details.objects.filter(id=temp_family.member.id).first()
-                        temp_family.member_name = member_obj.member_name
-                        temp_family.member_id = member_obj.id
-                        temp_family.mobile_number = member_obj.member_mobile_number
-                        temp_family.save()
+                    else:
+                        import json
+                        amt_obj = 0
+                        balance_portion = 0.0
                         if member_obj.balance_amt_paid == False:
                             if member_obj.balance_pending_amt <= temp_family.amount:
-                                amt_obj = float(temp_family.amount) - float(member_obj.balance_pending_amt)
-                                member_obj.balance_paid_amount = float(member_obj.balance_paid_amount) + float(
-                                    member_obj.balance_pending_amt)
-
-                                member_obj.balance_pending_amt = float(member_obj.balance_pending_amt) - float(
-                                    member_obj.balance_pending_amt)
+                                balance_portion = float(member_obj.balance_pending_amt)
+                                amt_obj = float(temp_family.amount) - balance_portion
+                                member_obj.balance_paid_amount = float(member_obj.balance_paid_amount) + balance_portion
+                                member_obj.balance_pending_amt = 0.0
                                 member_obj.balance_amt_paid = True
                                 member_obj.save()
-
-                            elif member_obj.balance_pending_amt > temp_family.amount:
-                                member_obj.balance_pending_amt = float(member_obj.balance_pending_amt) - float(
-                                    temp_family.amount)
-                                member_obj.balance_paid_amount = float(member_obj.balance_paid_amount) + float(
-                                    temp_family.amount)
+                            else:
+                                balance_portion = float(temp_family.amount)
+                                member_obj.balance_pending_amt = float(member_obj.balance_pending_amt) - balance_portion
+                                member_obj.balance_paid_amount = float(member_obj.balance_paid_amount) + balance_portion
                                 member_obj.save()
                                 amt_obj = 0
                         else:
                             amt_obj = temp_family.amount
-                        festival = PeoplesAmountDetails.objects.filter(member_id=temp_family.member.id, paid=False,
-                                               management_profile=management)
-                        if amt_obj > 0:
-                            print(amt_obj)
-                            for fes in festival:
-                                fest_obj = PeoplesAmountDetails.objects.filter(id=fes.id).first()
 
-                                if fest_obj.total_bal_amt > amt_obj:
-                                    fest_obj.total_paid_amt = float(fest_obj.total_paid_amt) + float(amt_obj)
-                                    fest_obj.total_bal_amt = float(fest_obj.total_bal_amt) - float(amt_obj)
-                                    fest_obj.save()
+                        festival = PeoplesAmountDetails.objects.filter(
+                            member_id=temp_family.member.id, paid=False, management_profile=management
+                        ).order_by('id')
+
+                        rows_touched = []   # [{'id': int, 'amount': float}, ...]
+                        _touched_last = None
+                        if amt_obj > 0:
+                            remaining = amt_obj
+                            for fes in festival:
+                                if remaining <= 0:
                                     break
-                                elif fest_obj.total_bal_amt == amt_obj:
-                                    fest_obj.total_paid_amt = float(fest_obj.total_paid_amt) + float(amt_obj)
-                                    fest_obj.total_bal_amt = float(fest_obj.total_bal_amt) - float(amt_obj)
+                                fest_obj = PeoplesAmountDetails.objects.filter(id=fes.id).first()
+                                applied = min(float(remaining), float(fest_obj.total_bal_amt))
+                                fest_obj.total_paid_amt = float(fest_obj.total_paid_amt) + applied
+                                fest_obj.total_bal_amt = float(fest_obj.total_bal_amt) - applied
+                                if fest_obj.total_bal_amt <= 0:
+                                    fest_obj.total_bal_amt = 0.0
                                     fest_obj.paid = True
-                                    fest_obj.save()
-                                    break
-                                elif fest_obj.total_bal_amt < amt_obj:
-                                    amt_obj = float(amt_obj) - float(fest_obj.total_bal_amt)
-                                    fest_obj.total_paid_amt = float(fest_obj.total_paid_amt) + float(
-                                        fest_obj.total_bal_amt)
-                                    fest_obj.total_bal_amt = float(fest_obj.total_bal_amt) - float(
-                                        fest_obj.total_bal_amt)
-                                    fest_obj.paid = True
-                                    fest_obj.save()
+                                fest_obj.save()
+                                rows_touched.append({'id': fest_obj.id, 'amount': applied})
+                                _touched_last = fest_obj
+                                remaining = float(remaining) - applied
+
+                        if _touched_last is not None:
+                            temp_family.amount_link = _touched_last
+
+                        temp_family.balance_split_json = json.dumps({
+                            'member_portion': balance_portion,
+                            'rows': rows_touched,
+                        })
+                        temp_family.save()
 
                         rep = Report.objects.create(management_profile=management, created_by=rejin.id,
                                                     type_choice="Addition", collection=temp_family,
                                                     members=temp_family.member, amount=temp_family.amount, balance=True,
                                                     banks=temp_family.bank_link)
-
 
                 elif temp_family.collection_category == "Moveable Rent":
                     festival = MoveableRentBalanceSheet.objects.filter(moveablerent=temp_family.moveablerent,
@@ -1540,17 +1543,27 @@ def edit_collections_details(request, pk):
 
 
                     elif customer.collection_category == "Balance":
-                        festival_new = PeoplesAmountDetails.objects.filter(member=customer.member)
-                        if festival_new:
-                            festival_new_get = PeoplesAmountDetails.objects.get(member=customer.member)
-                            festival_new_get.penalty_balance = float(festival_new_get.penalty_balance) + float(
-                                customer.amount)
-                            festival_new_get.total_paid_amt = float(festival_new_get.total_paid_amt) - float(
-                                customer.amount)
-                            festival_new_get.total_bal_amt = float(festival_new_get.total_bal_amt) + float(
-                                customer.amount)
+                        import json
+                        split = json.loads(customer.balance_split_json or '{}')
+                        member_portion = float(split.get('member_portion', 0) or 0)
+                        rows = split.get('rows', [])
 
-                            festival_new_get.save()
+                        for row in rows:
+                            r = PeoplesAmountDetails.objects.filter(id=row['id']).first()
+                            if r is not None:
+                                applied = float(row['amount'])
+                                r.total_paid_amt = float(r.total_paid_amt) - applied
+                                r.total_bal_amt = float(r.total_bal_amt) + applied
+                                r.paid = False
+                                r.save()
+
+                        if member_portion > 0:
+                            _m = Member_Details.objects.filter(id=customer.member.id).first()
+                            if _m is not None:
+                                _m.balance_paid_amount = float(_m.balance_paid_amount or 0) - member_portion
+                                _m.balance_pending_amt = float(_m.balance_pending_amt or 0) + member_portion
+                                _m.balance_amt_paid = False
+                                _m.save()
 
                     temp_family = serializer876.save()
                     temp_family.created_by = rejin.id
@@ -1649,7 +1662,7 @@ def edit_collections_details(request, pk):
 
                     elif temp_family.collection_category == "Management Interest":
                         festival = PeopleInterestBalanceSheet.objects.filter(interest=temp_family.interest,
-                                                                             interest__people_memberr=temp_family.member,
+                                                                             interest__people_member=temp_family.member,
                                                                              interest__interest_type="Management Interest")
                         if festival:
                             festival_get = PeopleInterestBalanceSheet.objects.get(interest=temp_family.interest,
@@ -1665,7 +1678,7 @@ def edit_collections_details(request, pk):
 
                     elif temp_family.collection_category == "Chit Interest":
                         festival = PeopleInterestBalanceSheet.objects.filter(interest=temp_family.interest,
-                                                                             interest__people_memberr=temp_family.member,
+                                                                             interest__people_member=temp_family.member,
                                                                              interest__interest_type="Chit fund Interest")
                         if festival:
                             festival_get = PeopleInterestBalanceSheet.objects.get(interest=temp_family.interest,
@@ -1680,14 +1693,14 @@ def edit_collections_details(request, pk):
 
 
                     elif temp_family.collection_category == "Balance":
-                        festival = PeoplesAmountDetails.objects.filter(member=temp_family.member)
-                        if festival:
-                            festival_get = PeoplesAmountDetails.objects.get(member=temp_family.member)
-                            festival_get.penalty_balance = float(festival_get.penalty_balance) - float(
-                                temp_family.amount)
+                        festival_get = temp_family.amount_link
+                        if festival_get is None:
+                            festival_get = PeoplesAmountDetails.objects.filter(
+                                member=temp_family.member, paid=False
+                            ).order_by('id').first()
+                        if festival_get is not None:
                             festival_get.total_paid_amt = float(festival_get.total_paid_amt) + float(temp_family.amount)
                             festival_get.total_bal_amt = float(festival_get.total_bal_amt) - float(temp_family.amount)
-
                             festival_get.save()
 
 
@@ -1805,39 +1818,38 @@ def edit_collections_details(request, pk):
 
 
                     elif customer.collection_category == "Management Interest":
-                        festival_new = PeopleInterestBalanceSheet.objects.filter(interest=temp_family.interest,
-                                                                                 interest__people_member=temp_family.member,
+                        festival_new = PeopleInterestBalanceSheet.objects.filter(interest=customer.interest,
+                                                                                 interest__people_member=customer.member,
                                                                                  interest__interest_type="Management Interest")
                         if festival_new:
-                            festival_new_get = PeopleInterestBalanceSheet.objects.get(interest=temp_family.interest,
-                                                                                      interest__people_member=temp_family.member,
+                            festival_new_get = PeopleInterestBalanceSheet.objects.get(interest=customer.interest,
+                                                                                      interest__people_member=customer.member,
                                                                                       interest__interest_type="Management Interest")
-                            festival_new_get.credit_amt = float(festival_new_get.credit_amt) + float(temp_family.amount)
-                            festival_new_get.debit_amt = float(festival_new_get.debit_amt) - float(temp_family.amount)
+                            festival_new_get.credit_amt = float(festival_new_get.credit_amt) + float(customer.amount)
+                            festival_new_get.debit_amt = float(festival_new_get.debit_amt) - float(customer.amount)
                             festival_new_get.balance_amt = float(festival_new_get.balance_amt) + float(
-                                temp_family.amount)
+                                customer.amount)
 
-                            festival_get.save()
+                            festival_new_get.save()
 
 
-
-                    elif temp_family.collection_category == "Chit Interest":
-                        festival = PeopleInterestBalanceSheet.objects.filter(interest=temp_family.interest,
-                                                                             interest__people_member=temp_family.member,
+                    elif customer.collection_category == "Chit Interest":
+                        festival = PeopleInterestBalanceSheet.objects.filter(interest=customer.interest,
+                                                                             interest__people_member=customer.member,
                                                                              interest__interest_type="Chit fund Interest")
                         if festival:
-                            festival_get = PeopleInterestBalanceSheet.objects.get(interest=temp_family.interest,
-                                                                                  interest__people_member=temp_family.member,
+                            festival_get = PeopleInterestBalanceSheet.objects.get(interest=customer.interest,
+                                                                                  interest__people_member=customer.member,
                                                                                   interest__interest_type="Chit fund Interest")
-                            festival_get.credit_amt = float(festival_get.credit_amt) + float(temp_family.amount)
-                            festival_get.debit_amt = float(festival_get.debit_amt) - float(temp_family.amount)
-                            festival_get.balance_amt = float(festival_get.balance_amt) + float(temp_family.amount)
+                            festival_get.credit_amt = float(festival_get.credit_amt) + float(customer.amount)
+                            festival_get.debit_amt = float(festival_get.debit_amt) - float(customer.amount)
+                            festival_get.balance_amt = float(festival_get.balance_amt) + float(customer.amount)
 
                             # Fix C (Feb 2026): reverse the penalty
                             # portion of the collection being edited /
                             # deleted so penalty_paid_amt and
                             # penalty_balance_amt reflect the new state.
-                            _pen_prev = float(temp_family.penalty_amount or 0)
+                            _pen_prev = float(customer.penalty_amount or 0)
                             if _pen_prev > 0:
                                 festival_get.penalty_paid_amt = max(
                                     0.0,
@@ -1853,17 +1865,27 @@ def edit_collections_details(request, pk):
 
 
                     elif customer.collection_category == "Balance":
-                        festival_new = PeoplesAmountDetails.objects.filter(member=customer.member)
-                        if festival_new:
-                            festival_new_get = PeoplesAmountDetails.objects.get(member=customer.member)
-                            festival_new_get.penalty_balance = float(festival_new_get.penalty_balance) + float(
-                                customer.amount)
-                            festival_new_get.total_paid_amt = float(festival_new_get.total_paid_amt) - float(
-                                customer.amount)
-                            festival_new_get.total_bal_amt = float(festival_new_get.total_bal_amt) + float(
-                                customer.amount)
+                        import json
+                        split = json.loads(customer.balance_split_json or '{}')
+                        member_portion = float(split.get('member_portion', 0) or 0)
+                        rows = split.get('rows', [])
 
-                            festival_new_get.save()
+                        for row in rows:
+                            r = PeoplesAmountDetails.objects.filter(id=row['id']).first()
+                            if r is not None:
+                                applied = float(row['amount'])
+                                r.total_paid_amt = float(r.total_paid_amt) - applied
+                                r.total_bal_amt = float(r.total_bal_amt) + applied
+                                r.paid = False
+                                r.save()
+
+                        if member_portion > 0:
+                            _m = Member_Details.objects.filter(id=customer.member.id).first()
+                            if _m is not None:
+                                _m.balance_paid_amount = float(_m.balance_paid_amount or 0) - member_portion
+                                _m.balance_pending_amt = float(_m.balance_pending_amt or 0) + member_portion
+                                _m.balance_amt_paid = False
+                                _m.save()
 
                     temp_family = serializer876.save()
                     temp_family.created_by = rejin.id
@@ -1993,14 +2015,14 @@ def edit_collections_details(request, pk):
 
 
                     elif temp_family.collection_category == "Balance":
-                        festival = PeoplesAmountDetails.objects.filter(member=temp_family.member)
-                        if festival:
-                            festival_get = PeoplesAmountDetails.objects.get(member=temp_family.member)
-                            festival_get.penalty_balance = float(festival_get.penalty_balance) - float(
-                                temp_family.amount)
+                        festival_get = temp_family.amount_link
+                        if festival_get is None:
+                            festival_get = PeoplesAmountDetails.objects.filter(
+                                member=temp_family.member, paid=False
+                            ).order_by('id').first()
+                        if festival_get is not None:
                             festival_get.total_paid_amt = float(festival_get.total_paid_amt) + float(temp_family.amount)
                             festival_get.total_bal_amt = float(festival_get.total_bal_amt) - float(temp_family.amount)
-
                             festival_get.save()
                     return Response(serializer876.data, status=status.HTTP_201_CREATED)
                 else:
@@ -2350,15 +2372,48 @@ def edit_collections_details(request, pk):
 
 
                 elif customer.collection_category == "Balance":
-                    festival_new = PeoplesAmountDetails.objects.filter(id=customer.amount_link.id)
-                    if festival_new:
-                        festival_new_get = PeoplesAmountDetails.objects.get(id=customer.amount_link.id)
-                        # festival_new_get.penalty_balance += float(customer.amount)
-                        festival_new_get.total_paid_amt = float(festival_new_get.total_paid_amt) - float(
-                            customer.amount)
-                        festival_new_get.total_bal_amt = float(festival_new_get.total_bal_amt) + float(customer.amount)
-                        festival_new_get.paid = False
-                        festival_new_get.save()
+                    import json
+                    split = json.loads(customer.balance_split_json or '{}')
+                    member_portion = float(split.get('member_portion', 0) or 0)
+                    rows = split.get('rows', [])
+
+                    for row in rows:
+                        r = PeoplesAmountDetails.objects.filter(id=row['id']).first()
+                        if r is not None:
+                            applied = float(row['amount'])
+                            r.total_paid_amt = float(r.total_paid_amt) - applied
+                            r.total_bal_amt = float(r.total_bal_amt) + applied
+                            r.paid = False
+                            r.save()
+
+                    if member_portion > 0:
+                        _m = Member_Details.objects.filter(id=customer.member.id).first()
+                        if _m is not None:
+                            _m.balance_paid_amount = float(_m.balance_paid_amount or 0) - member_portion
+                            _m.balance_pending_amt = float(_m.balance_pending_amt or 0) + member_portion
+                            _m.balance_amt_paid = False
+                            _m.save()
+
+                    # FIX: also reverse the member's own balance_pending_amt /
+                    # balance_paid_amount (the part add_collection_details applies
+                    # FIRST). The original delete never touched this half at all,
+                    # so repeated delete/recreate cycles permanently drift those
+                    # two fields away from reality.
+                    _member_for_balance = Member_Details.objects.filter(id=customer.member.id).first()
+                    if _member_for_balance is not None:
+                        _reverse_amt = min(
+                            float(customer.amount or 0),
+                            float(_member_for_balance.balance_paid_amount or 0),
+                        )
+                        if _reverse_amt > 0:
+                            _member_for_balance.balance_paid_amount = float(
+                                _member_for_balance.balance_paid_amount or 0
+                            ) - _reverse_amt
+                            _member_for_balance.balance_pending_amt = float(
+                                _member_for_balance.balance_pending_amt or 0
+                            ) + _reverse_amt
+                            _member_for_balance.balance_amt_paid = False
+                            _member_for_balance.save()
                 elif customer.collection_category == "Moveable Rent":
                     festival_new = MoveableRentBalanceSheet.objects.filter(moveablerent=customer.moveablerent)
                     if festival_new:

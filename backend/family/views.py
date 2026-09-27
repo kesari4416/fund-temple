@@ -57,24 +57,22 @@ def _apply_subscription_tariff_penalty_for_member(member, management):
         ).first()
         if not bill:
             continue
- 
-        expected_total = float(bill.amount_balance) + float(bill.penalty_amount)
+
         if not bill.penalty:
-            # First time: apply penalty
+            # First (and only) time: apply penalty exactly once.
+            # FIX: previously there was also an `elif` branch here that
+            # recomputed `expected_total` from the *current* amount_balance
+            # (a moving target, since amount_balance already includes any
+            # penalty added on a prior call). That made the condition true
+            # on every single page load, so the penalty_amount got added
+            # again and again indefinitely. Removed — `bill.penalty` is
+            # now the single source of truth for "has this been applied",
+            # matching _apply_festival_penalty_for_member's pattern.
             bill.penalty = True
-            # FIX: bill.amount_balance / bill.total_bal_amt are Decimal
-            # fields. `Decimal += float` raises TypeError. Reassign with
-            # both sides cast to float, same pattern used in
-            # _apply_festival_penalty_for_member.
             bill.amount_balance = float(bill.amount_balance) + float(bill.penalty_amount)
             bill.total_bal_amt = float(bill.total_bal_amt) + float(bill.penalty_amount)
             bill.save()
-        elif float(bill.total_bal_amt) < expected_total:
-            # Stale record: penalty flag was set by old code but total_bal_amt was never updated
-            bill.amount_balance = float(bill.amount_balance) + float(bill.penalty_amount)
-            bill.total_bal_amt = float(bill.total_bal_amt) + float(bill.penalty_amount)
-            bill.save()
- 
+
         already_in_ledger = TempleMemberReport.objects.filter(
             members=member,
             sub_tariff=tariff,
@@ -82,7 +80,7 @@ def _apply_subscription_tariff_penalty_for_member(member, management):
         ).exists()
         if already_in_ledger:
             continue
- 
+
         last_rep = TempleMemberReport.objects.filter(members=member).last()
         prev_bal = float(last_rep.balance_amt) if last_rep else 0
         TempleMemberReport.objects.create(

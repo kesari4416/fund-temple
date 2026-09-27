@@ -141,6 +141,7 @@ class CollectionDetails(models.Model):
     mobile_number=models.CharField(max_length=255,null=True,validators=[phone_regex])
     created_at=models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at = models.DateTimeField(auto_now=True,null=True,blank=True)
+    balance_split_json = models.TextField(null=True, blank=True)
 
     discount_amount=models.DecimalField(max_digits=65,decimal_places=2,default=0)
 
